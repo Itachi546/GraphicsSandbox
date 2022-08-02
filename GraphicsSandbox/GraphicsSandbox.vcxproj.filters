@@ -1,0 +1,139 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="SOURCE">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="SOURCE\Utils">
+      <UniqueIdentifier>{d8a247be-4ab6-4c31-bb3f-cee878fa6f23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SHADERS">
+      <UniqueIdentifier>{cfa435cb-5f3f-4097-b62e-c7e8bcaf717a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOURCE\Common">
+      <UniqueIdentifier>{a20d544d-c9c5-4ae3-ab32-d23e762f13d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOURCE\Graphics">
+      <UniqueIdentifier>{b4dbcb20-f1bc-4eb1-a7f6-c9f36875308e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOURCE\Input">
+      <UniqueIdentifier>{8aefcb13-977c-45b9-b75a-f6ba466d0293}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SOURCE\ECS">
+      <UniqueIdentifier>{f46fc02a-3fd7-425c-9f6d-1706c984b9cc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Source\Engine\Application.h">
+      <Filter>SOURCE</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GlmIncludes.h">
+      <Filter>SOURCE</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Logger.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Utils.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Timer.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Platform.h">
+      <Filter>SOURCE\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\CommonInclude.h">
+      <Filter>SOURCE\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GLFWInput.h">
+      <Filter>SOURCE\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\EventDispatcher.h">
+      <Filter>SOURCE\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Graphics.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GraphicsDevice.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Input.h">
+      <Filter>SOURCE\Input</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Enums.h">
+      <Filter>SOURCE\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\spirv_reflect.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Shaders\mesh.h">
+      <Filter>SHADERS</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\ECS.h">
+      <Filter>SOURCE\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GraphicsSandbox.h">
+      <Filter>SOURCE</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Scene.h">
+      <Filter>SOURCE\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Components.h">
+      <Filter>SOURCE\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Sandbox.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source\Engine\Application.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Logger.cpp">
+      <Filter>SOURCE\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Utils.cpp">
+      <Filter>SOURCE\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GLFWInput.cpp">
+      <Filter>SOURCE\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\EventDispatcher.cpp">
+      <Filter>SOURCE\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Input.cpp">
+      <Filter>SOURCE\Input</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\VulkanGraphicsDevice.cpp">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\spriv_reflect.c">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Scene.cpp">
+      <Filter>SOURCE\ECS</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Components.cpp">
+      <Filter>SOURCE\ECS</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\ECS.cpp">
+      <Filter>SOURCE\ECS</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\glfwMain.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Sandbox.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\Shaders\main.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Shaders\main.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+  </ItemGroup>
+</Project>

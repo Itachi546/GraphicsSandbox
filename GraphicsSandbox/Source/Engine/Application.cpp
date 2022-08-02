@@ -98,11 +98,17 @@ void Application::Update(float dt)
 {
 	mScene.Update(dt);
 
-	glm::mat4 P = glm::perspective(glm::radians(70.0f), mWidth / float(mHeight), 0.3f, 1000.0f);
-	glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 3.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-	mGlobalUniformData.P = P;
-	mGlobalUniformData.V = V;
-	mGlobalUniformData.VP = P * V;
+	if (mWidth > 0.0f || mHeight > 0.0f)
+	{
+		glm::mat4 P = glm::perspective(glm::radians(70.0f), mWidth / float(mHeight), 0.3f, 1000.0f);
+		mGlobalUniformData.P = P;
+
+		glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 3.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		mGlobalUniformData.V = V;
+		mGlobalUniformData.VP = P * V;
+	}
+
+
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
 
 	Input::Update(mWindow);
@@ -117,8 +123,10 @@ void Application::Update(float dt)
 void Application::Render()
 {
 
-	gfx::CommandList commandList = mDevice->BeginCommandList();
+	if (!mDevice->IsSwapchainReady(mSwapchainRP.get()))
+		return;
 
+	gfx::CommandList commandList = mDevice->BeginCommandList();
 	mDevice->BeginRenderPass(&commandList, mSwapchainRP.get());
 	
 	/*

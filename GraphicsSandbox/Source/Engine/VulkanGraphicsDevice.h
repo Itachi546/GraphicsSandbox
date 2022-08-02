@@ -54,6 +54,8 @@ namespace gfx
 		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 		void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 
+		bool IsSwapchainReady(RenderPass* rp) override;
+
 
 		~VulkanGraphicsDevice();
 	private:

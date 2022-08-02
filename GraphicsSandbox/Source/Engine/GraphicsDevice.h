@@ -40,6 +40,7 @@ namespace gfx
 		virtual void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount) = 0;
 		virtual void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount) = 0;
 
+		virtual bool IsSwapchainReady(RenderPass* rp) = 0;
 
 	protected:
 		ValidationMode mValidationMode = ValidationMode::Enabled;

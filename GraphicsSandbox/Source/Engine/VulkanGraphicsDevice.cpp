@@ -634,6 +634,10 @@ namespace gfx {
 
         VkSurfaceCapabilitiesKHR surfaceCaps = {};
         VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice_, surface, &surfaceCaps));
+
+        if (surfaceCaps.currentExtent.width == 0 || surfaceCaps.currentExtent.height == 0)
+            return false;
+
         desc.width = surfaceCaps.currentExtent.width;
         desc.height = surfaceCaps.currentExtent.height;
 
@@ -1437,9 +1441,6 @@ namespace gfx {
         auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
         VkRenderPass rp = vkRenderpass->renderPass;
 
-		if (isSwapchainResized())
-            createSwapchainInternal(rp);
-
         auto vkCmdList = GetCommandList(commandList);
 
         uint32_t imageIndex = 0;
@@ -1502,6 +1503,15 @@ namespace gfx {
     {
         auto cmd = GetCommandList(commandList);
         vkCmdDrawIndexed(cmd->commandBuffer, indexCount, instanceCount, firstVertex, 0, 0);
+    }
+
+    bool VulkanGraphicsDevice::IsSwapchainReady(RenderPass* rp)
+    {
+        auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(rp->internalState);
+
+        if (isSwapchainResized())
+			return createSwapchainInternal(vkRenderpass->renderPass);
+        return true;
     }
 
     void VulkanGraphicsDevice::BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)

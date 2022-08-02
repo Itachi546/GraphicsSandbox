@@ -28,5 +28,8 @@ int main(int argc, char** argv)
 		glfwSwapBuffers(window);
 	}
 
+	glfwDestroyWindow(window);
+	glfwTerminate();
+
 	return 0;
 }

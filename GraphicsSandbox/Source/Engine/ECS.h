@@ -186,6 +186,11 @@ namespace ecs
 			return (entity.signature & sigHash) == sigHash;
 		}
 
+		/*
+		* We should be careful when keeping this reference for future use.
+		* When the size of vector is not enough, the container is resized
+		* which invalidate all the reference and the pointer.
+		*/
 		template<typename T>
 		T& AddComponent(Entity& entity)
 		{

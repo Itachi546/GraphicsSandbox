@@ -86,6 +86,7 @@
       <Filter>SOURCE\ECS</Filter>
     </ClInclude>
     <ClInclude Include="Source\Sandbox.h" />
+    <ClInclude Include="Source\Engine\GpuMemoryAllocator.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -125,6 +126,9 @@
       <Filter>SOURCE</Filter>
     </ClCompile>
     <ClCompile Include="Source\Sandbox.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\GpuMemoryAllocator.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>

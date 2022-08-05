@@ -58,6 +58,12 @@ namespace gfx
 		None
 	};
 
+	enum class FrontFace
+	{
+		Clockwise,
+		Anticlockwise
+	};
+
 	enum class PolygonMode
 	{
 		Fill,
@@ -157,12 +163,11 @@ namespace gfx
 	struct RasterizationState
 	{
 		CullMode cullMode = CullMode::Back;
+		FrontFace frontFace = FrontFace::Clockwise;
 		PolygonMode polygonMode = PolygonMode::Fill;
 
 		bool enableDepthTest = false;
 		bool enableDepthWrite = false;
-
-		CompareOp depthTestFunc = CompareOp::LessOrEqual;
 
 		float lineWidth = 1.0f;
 		float pointSize = 1.0f;
@@ -229,7 +234,8 @@ namespace gfx
 		ConstantBuffer = 1 << 2,
 		ShaderResource = 1 << 3,
 		RenderTarget = 1 << 4,
-		DepthStencil = 1 << 5
+		DepthStencil = 1 << 5,
+		IndirectBuffer = 1 << 6
 	};
 
 	struct GPUBufferDesc
@@ -243,6 +249,15 @@ namespace gfx
 	struct GPUBuffer : public GPUResource
 	{
 		GPUBufferDesc desc;
+	};
+
+	struct DrawIndirectCommand
+	{
+		uint32_t    indexCount;
+		uint32_t    instanceCount;
+		uint32_t    firstIndex;
+		int32_t     vertexOffset;
+		uint32_t    firstInstance;
 	};
 
 

@@ -118,6 +118,7 @@
     <ClInclude Include="Source\Engine\EventDispatcher.h" />
     <ClInclude Include="Source\Engine\GLFWInput.h" />
     <ClInclude Include="Source\Engine\GlmIncludes.h" />
+    <ClInclude Include="Source\Engine\GpuMemoryAllocator.h" />
     <ClInclude Include="Source\Engine\Graphics.h" />
     <ClInclude Include="Source\Engine\GraphicsDevice.h" />
     <ClInclude Include="Source\Engine\GraphicsSandbox.h" />
@@ -138,6 +139,7 @@
     <ClCompile Include="Source\Engine\Application.cpp" />
     <ClCompile Include="Source\Engine\EventDispatcher.cpp" />
     <ClCompile Include="Source\Engine\GLFWInput.cpp" />
+    <ClCompile Include="Source\Engine\GpuMemoryAllocator.cpp" />
     <ClCompile Include="Source\Engine\Input.cpp" />
     <ClCompile Include="Source\Engine\Logger.cpp" />
     <ClCompile Include="Source\Engine\Scene.cpp" />

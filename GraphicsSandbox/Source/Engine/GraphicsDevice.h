@@ -21,7 +21,7 @@ namespace gfx
 		virtual void CreateGraphicsPipeline(const PipelineDesc* desc, Pipeline* out) =  0;
 		virtual void CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out) = 0;
 
-		virtual void CopyBuffer(GPUBuffer* dst, GPUBuffer* src) = 0;
+		virtual void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0) = 0;
 
 		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount) = 0;
 
@@ -38,8 +38,14 @@ namespace gfx
 		virtual void BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer) = 0;
 		
 		virtual void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount) = 0;
-		virtual void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount) = 0;
-
+		virtual void DrawTriangleIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) = 0;
+		virtual void DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) = 0;
+		/*
+		* This function is used to determine whether the swapchain is 
+		* ready or not. When window is minimized the width and height is
+		* zero. So in such case the swapchain is not ready and we skip rendering
+		* the frame.
+		*/
 		virtual bool IsSwapchainReady(RenderPass* rp) = 0;
 
 	protected:

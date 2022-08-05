@@ -21,6 +21,8 @@ void Application::Initialize()
 
 	Logger::Initialize();
 	Input::Initialize(mWindow);
+	mScene.Initialize();
+
 	EventDispatcher::Subscribe(EventType::WindowResize, BIND_EVENT_FN(Application::windowResizeEvent));
 	mInitialized = true;
 
@@ -41,8 +43,8 @@ void Application::Initialize()
 	pipelineDesc.renderPass = mSwapchainRP.get();
 	pipelineDesc.rasterizationState.enableDepthTest  = true;
 	pipelineDesc.rasterizationState.enableDepthWrite = true;
-	pipelineDesc.rasterizationState.depthTestFunc = gfx::CompareOp::Greater;
 	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Back;
+	pipelineDesc.rasterizationState.frontFace = gfx::FrontFace::Anticlockwise;
 	mDevice->CreateGraphicsPipeline(&pipelineDesc, mTrianglePipeline.get());
 
 	delete[] vertexCode;
@@ -64,9 +66,18 @@ void Application::Initialize()
 	mPerObjectDataBuffer = std::make_shared<gfx::GPUBuffer>();
 	mDevice->CreateBuffer(&bufferDesc, mPerObjectDataBuffer.get());
 
+	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
+	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
+	mDrawIndirectBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mDrawIndirectBuffer.get());
+
 	// Create Cube 
-	mEntity = mScene.CreateCube("cube");
-	mEntityTransform = mScene.GetComponentManager()->GetComponent<TransformComponent>(mEntity);
+	mEntity = mScene.CreateCube("plane1");
+	ecs::Entity plane = mScene.CreatePlane("cube1");
+
+	TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(plane);
+	transform->scale = glm::vec3(5.0f);
+	transform->position = glm::vec3(0.0f, -1.0f, 0.0f);
 }
 
 void Application::Run()
@@ -108,16 +119,15 @@ void Application::Update(float dt)
 		mGlobalUniformData.VP = P * V;
 	}
 
-
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
 
 	Input::Update(mWindow);
 
+	TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(mEntity);
 	static float angle = 0.0f;
-	mEntityTransform->rotation = glm::fquat{glm::vec3(angle)};
-	mEntityTransform->SetDirty(true);
-
-	angle += 0.005f;
+	transform->rotation = glm::fquat{ glm::vec3(0.0f, angle, 0.0f) };
+	transform->SetDirty(true);
+	angle += dt * 0.5f;
 }
 
 void Application::Render()
@@ -139,38 +149,51 @@ void Application::Render()
 	mScene.GenerateDrawData(drawDatas);
 
 	// Copy PerObjectDrawData to the buffer
-	std::vector<PerObjectData> perObjectData;
-	std::for_each(drawDatas.begin(), drawDatas.end(), [&perObjectData](DrawData& drawData) {
-		perObjectData.emplace_back(std::move(drawData.worldTransform));
-		});
-	std::memcpy(mPerObjectDataBuffer->mappedDataPtr, perObjectData.data(), sizeof(PerObjectData) * perObjectData.size());
+	PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr);
+	gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr);
 
-	for (auto& drawData : drawDatas)
+	for (uint32_t i = 0; i < drawDatas.size(); ++i)
 	{
-		gfx::DescriptorInfo descriptorInfos[3] = {};
-		descriptorInfos[0].resource = mGlobalUniformBuffer.get();
-		descriptorInfos[0].offset = 0;
-		descriptorInfos[0].size = sizeof(GlobalUniformData);
-		descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
+		objectDataPtr[i].transform = drawDatas[i].worldTransform;
 
-		gfx::GPUBuffer* vb = drawData.vertexBuffer;
-		descriptorInfos[1].resource = vb;
-		descriptorInfos[1].offset = 0;
-		descriptorInfos[1].size = (uint32_t)vb->desc.size;
-		descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
-
-		gfx::GPUBuffer* perObjectBuffer = mPerObjectDataBuffer.get();
-		descriptorInfos[2].resource = perObjectBuffer;
-		descriptorInfos[2].offset = 0;
-		descriptorInfos[2].size = (uint32_t)perObjectBuffer->desc.size;
-		descriptorInfos[2].type = gfx::DescriptorType::StorageBuffer;
-
-		mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-		mDevice->BindPipeline(&commandList, mTrianglePipeline.get());
-
-		mDevice->BindIndexBuffer(&commandList, drawData.indexBuffer);
-		mDevice->DrawTriangleIndexed(&commandList, drawData.indexCount, 1, 0);
+		drawCommandPtr[i].firstIndex = drawDatas[i].indexBuffer.offset / sizeof(uint32_t);
+		drawCommandPtr[i].indexCount = drawDatas[i].indexCount;
+		drawCommandPtr[i].instanceCount = 1;
+		drawCommandPtr[i].vertexOffset = drawDatas[i].vertexBuffer.offset / sizeof(Vertex);
 	}
+	//std::memcpy(mPerObjectDataBuffer->mappedDataPtr, perObjectData.data(), sizeof(PerObjectData) * perObjectData.size());
+	//std::memcpy(mDrawIndirectBuffer->mappedDataPtr, drawIndirectCommands.data(), drawIndirectCommands.size() * sizeof(gfx::DrawIndirectCommand));
+
+	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
+	gfx::BufferView& vbView = drawDatas[0].vertexBuffer;
+	gfx::BufferView& ibView = drawDatas[0].indexBuffer;
+
+	auto vb = allocator->GetBuffer(vbView.index);
+	auto ib = allocator->GetBuffer(ibView.index);
+ 
+	gfx::DescriptorInfo descriptorInfos[3] = {};
+	descriptorInfos[0].resource = mGlobalUniformBuffer.get();
+	descriptorInfos[0].offset = 0;
+	descriptorInfos[0].size = sizeof(GlobalUniformData);
+	descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
+
+	descriptorInfos[1].resource = vb;
+	descriptorInfos[1].offset = 0;
+	descriptorInfos[1].size = vb->desc.size;
+	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
+
+	gfx::GPUBuffer* perObjectBuffer = mPerObjectDataBuffer.get();
+	descriptorInfos[2].resource = perObjectBuffer;
+	descriptorInfos[2].offset = 0;
+	descriptorInfos[2].size = (uint32_t)perObjectBuffer->desc.size;
+	descriptorInfos[2].type = gfx::DescriptorType::StorageBuffer;
+
+	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	mDevice->BindPipeline(&commandList, mTrianglePipeline.get());
+
+	mDevice->BindIndexBuffer(&commandList, ib);
+	mDevice->DrawIndexedIndirect(&commandList, mDrawIndirectBuffer.get(), 0, (uint32_t)drawDatas.size(), sizeof(gfx::DrawIndirectCommand));
+	
 	mDevice->EndRenderPass(&commandList);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->Present();

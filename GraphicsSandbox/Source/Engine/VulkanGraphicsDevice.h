@@ -37,7 +37,7 @@ namespace gfx
 		void CreateRenderPass(const RenderPassDesc* desc, RenderPass* out)                     override;
 		void CreateGraphicsPipeline(const PipelineDesc* desc, Pipeline* out)                   override;
 		void CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out)                           override;
-		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src)                                        override;
+		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                   override;
 
 		CommandList BeginCommandList()                                                         override;
 		void BeginRenderPass(CommandList* commandList, RenderPass* renderPass)                 override;
@@ -49,11 +49,11 @@ namespace gfx
 		void BindPipeline(CommandList* commandList, Pipeline* pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)                      override;
 
-		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)               override;
+		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)                 override;
 
-		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
+		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)         override;
 		void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
-
+		void DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 		bool IsSwapchainReady(RenderPass* rp) override;
 
 

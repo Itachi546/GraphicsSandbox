@@ -2,6 +2,7 @@
 
 #include "ECS.h"
 #include "Components.h"
+#include "GpuMemoryAllocator.h"
 
 #include <string_view>
 
@@ -16,7 +17,9 @@ public:
 	* is incorrect.
 	* Declaring it in the .cpp file fix the issues
 	*/
-	Scene();
+	Scene(){}
+
+	void Initialize();
 
 	Scene(const Scene&) = delete;
 	void operator=(const Scene&) = delete;
@@ -26,8 +29,8 @@ public:
 		return mComponentManager;
 	}
 
-	ecs::Entity CreateMesh(std::string_view name);
 	ecs::Entity CreateCube(std::string_view name);
+	ecs::Entity CreatePlane(std::string_view name);
 
 	void Update(float dt);
 
@@ -35,13 +38,24 @@ public:
 
 	void Destroy(const ecs::Entity& entity);
 
-	~Scene() {
-		ecs::DestroyEntity(mComponentManager.get(), mCubeEntity);
-	}
+	~Scene(); 
+
 
 private:
 	ecs::Entity mCubeEntity;
+	ecs::Entity mPlaneEntity;
+
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 
 	void UpdateTransformData();
+
+	void InitializePrimitiveMesh();
+	void InitializeCubeMesh(MeshDataComponent* meshComp);
+	void InitializePlaneMesh(MeshDataComponent* meshComp);
 };
+
+/*
+* Create a Buffer Of Arbitary Size
+* Push Data
+* Push Data
+*/

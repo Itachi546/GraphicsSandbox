@@ -1,6 +1,7 @@
 #include "Components.h"
 #include "GraphicsDevice.h"
 
+/*
 void MeshDataComponent::CreateRenderData()
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
@@ -38,4 +39,11 @@ void MeshDataComponent::CreateRenderData()
 
 	}
 
+}
+*/
+
+void MeshDataComponent::CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::BufferIndex vB, gfx::BufferIndex iB)
+{
+	allocator->CopyToBuffer(&vertexBuffer, vB, vertices.data(), (uint32_t)vertices.size() * sizeof(Vertex));
+	allocator->CopyToBuffer(&indexBuffer, iB, indices.data(),  (uint32_t)indices.size() * sizeof(uint32_t));
 }

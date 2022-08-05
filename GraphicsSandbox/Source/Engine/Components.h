@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 
+#include "GpuMemoryAllocator.h"
 struct Vertex
 {
 	glm::vec3 position;
@@ -17,14 +18,14 @@ struct PerObjectData
 {
 	glm::mat4 transform;
 
-	PerObjectData(){}
+	PerObjectData() : transform(1.0f) {}
 	PerObjectData(const glm::mat4& transform) : transform(transform) {}
 };
 
 struct DrawData
 {
-	gfx::GPUBuffer* vertexBuffer;
-	gfx::GPUBuffer* indexBuffer;
+	gfx::BufferView vertexBuffer;
+	gfx::BufferView indexBuffer;
 	glm::mat4 worldTransform;
 	uint32_t indexCount;
 };
@@ -60,10 +61,9 @@ struct AABBComponent
 	glm::vec3 min;
 	glm::vec3 max;
 
-	AABBComponent(glm::vec3* vertices, uint32_t count)
+	AABBComponent(glm::vec3* vertices, uint32_t count) : min(std::numeric_limits<float>::max()), 
+		max(std::numeric_limits<float>::min())
 	{
-		min = glm::vec3(std::numeric_limits<float>::max());
-		max = glm::vec3(std::numeric_limits<float>::min());
 		for (uint32_t i = 0; i < count; ++i)
 		{
 			min = glm::min(min, vertices[i]);
@@ -88,8 +88,8 @@ struct MeshDataComponent
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 
-	gfx::GPUBuffer vertexBuffer;
-	gfx::GPUBuffer indexBuffer;
+	gfx::BufferView vertexBuffer;
+	gfx::BufferView indexBuffer;
 
 	uint32_t GetNumIndices() const { return static_cast<uint32_t>(indices.size()); }
 
@@ -104,7 +104,7 @@ struct MeshDataComponent
 	bool IsRenderable() const { return flags & Renderable; }
 	bool IsDoubleSided() const { return flags & DoubleSided; }
 
-	void CreateRenderData();
+	void CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::BufferIndex vb, gfx::BufferIndex ib);
 
 	~MeshDataComponent() = default;
 };

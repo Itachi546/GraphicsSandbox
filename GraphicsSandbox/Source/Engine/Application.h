@@ -58,6 +58,7 @@ protected:
 	std::shared_ptr<gfx::GPUBuffer> mGlobalUniformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mPerObjectDataBuffer;
+	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
 
 	gfx::Format mSwapchainColorFormat = gfx::Format::B8G8R8A8_UNORM;
 	gfx::Format mSwapchainDepthFormat = gfx::Format::D32_SFLOAT_S8_UINT;
@@ -66,7 +67,6 @@ protected:
 	std::stringstream mWindowTitle;
 
 	ecs::Entity mEntity = {};
-	TransformComponent* mEntityTransform;
 	Scene mScene;
 
 	struct GlobalUniformData

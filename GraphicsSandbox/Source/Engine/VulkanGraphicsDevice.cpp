@@ -175,8 +175,8 @@ namespace gfx {
         default:
             return VK_BLEND_FACTOR_MAX_ENUM;
         }
-            
 	}
+
 
     VkCompareOp _ConvertCompareOp(CompareOp op)
     {
@@ -210,6 +210,19 @@ namespace gfx {
         case CullMode::None:
         default:
 			return VK_CULL_MODE_NONE;
+        }
+    }
+
+    VkFrontFace _ConvertFrontFace(FrontFace frontFace)
+    {
+        switch (frontFace)
+        {
+        case FrontFace::Clockwise:
+            return VK_FRONT_FACE_CLOCKWISE;
+        case FrontFace::Anticlockwise:
+            return VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        default:
+            return VK_FRONT_FACE_MAX_ENUM;
         }
     }
 
@@ -1275,7 +1288,6 @@ namespace gfx {
         createInfo.stageCount = desc->shaderCount;
         createInfo.pStages = stages.data();
 
-        // TODO Should be created from SPV Reflection
         VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
         createInfo.pVertexInputState = &vertexInput;
 
@@ -1292,6 +1304,7 @@ namespace gfx {
         VkPipelineRasterizationStateCreateInfo rasterizationState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
         rasterizationState.lineWidth = rs.lineWidth;
         rasterizationState.cullMode = _ConvertCullMode(rs.cullMode);
+        rasterizationState.frontFace = _ConvertFrontFace(rs.frontFace);
         rasterizationState.polygonMode = _ConvertPolygonMode(rs.polygonMode);
         createInfo.pRasterizationState = &rasterizationState;
 
@@ -1304,7 +1317,7 @@ namespace gfx {
         {
             depthStencilState.depthTestEnable = rs.enableDepthTest;
             depthStencilState.depthWriteEnable = rs.enableDepthWrite;
-            depthStencilState.depthCompareOp = _ConvertCompareOp(rs.depthTestFunc);
+            depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
             depthStencilState.maxDepthBounds = 1.0f;
             depthStencilState.minDepthBounds = 0.0f;
         }
@@ -1334,19 +1347,6 @@ namespace gfx {
         dynamicState.pDynamicStates = dynamicStates;
         createInfo.pDynamicState = &dynamicState;
 
-        /*
-        // Pipeline metadata initialization
-        std::vector<SpirvReflection::SPIRVModule> spvModules(desc->shaderCount);
-        VkShaderStageFlags pushConstantStages = 0;
-        for (uint32_t i = 0; i < desc->shaderCount; ++i)
-        {
-            if (!SpirvReflection::Parse(reinterpret_cast<const uint32_t*>(desc->shaderDesc[i].code), desc->shaderDesc[i].sizeInByte / 4, &spvModules[i]))
-                Logger::Error("Failed to parse spvModule");
-            if (spvModules[i].usesPushConstants)
-                pushConstantStages |= spvModules[i].shaderStage;
-
-        }
-        */
         std::vector<VkPushConstantRange> pushConstantRanges;
         std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings;
         for (auto& shader : shaderReflections)
@@ -1397,7 +1397,8 @@ namespace gfx {
             usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         if (HasFlag(desc->bindFlag, BindFlag::ShaderResource))
             usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
+        if (HasFlag(desc->bindFlag, BindFlag::IndirectBuffer))
+            usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -1449,9 +1450,9 @@ namespace gfx {
 
         swapchain_->currentImageIndex = imageIndex;
 
-        std::vector<VkClearValue> clearValues;
-        clearValues.push_back({ 48.f / 255.f, 10.f / 255.f, 36.f / 255.f, 1 });
-
+        VkClearValue clearValues[2] = {};
+        uint32_t clearValueCount = 1;
+        clearValues[0].color = {48.f / 255.f, 10.f / 255.f, 36.f / 255.f, 1};
         std::vector<VkImageMemoryBarrier> renderBeginBarrier = {
             CreateImageBarrier(swapchain_->images[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
         };
@@ -1459,7 +1460,8 @@ namespace gfx {
         if (renderPass->desc.hasDepthAttachment)
         {
             renderBeginBarrier.push_back(CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
-            clearValues.push_back({ 0.0f, 0 });
+            clearValues[1].depthStencil = {1.0f, 0};
+            clearValueCount += 1;
         }
         vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
 
@@ -1467,8 +1469,8 @@ namespace gfx {
         uint32_t height = (uint32_t)swapchain_->desc.height;
 
         VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-        passBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-        passBeginInfo.pClearValues = clearValues.data();
+        passBeginInfo.clearValueCount = clearValueCount;
+        passBeginInfo.pClearValues = clearValues;
         passBeginInfo.framebuffer = swapchain_->framebuffers[imageIndex];
         passBeginInfo.renderPass = rp;
         passBeginInfo.renderArea.extent.width = width;
@@ -1499,10 +1501,17 @@ namespace gfx {
         vkCmdDraw(cmd->commandBuffer, vertexCount, instanceCount, firstVertex, 0);
     }
 
-    void VulkanGraphicsDevice::DrawTriangleIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstVertex)
+    void VulkanGraphicsDevice::DrawTriangleIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex)
     {
         auto cmd = GetCommandList(commandList);
-        vkCmdDrawIndexed(cmd->commandBuffer, indexCount, instanceCount, firstVertex, 0, 0);
+        vkCmdDrawIndexed(cmd->commandBuffer, indexCount, instanceCount, firstIndex, 0, 0);
+    }
+
+    void VulkanGraphicsDevice::DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride)
+    {
+        auto cmd = GetCommandList(commandList);
+        auto dcb  = std::static_pointer_cast<VulkanBuffer>(indirectBuffer->internalState);
+        vkCmdDrawIndexedIndirect(cmd->commandBuffer, dcb->buffer, offset, drawCount, stride);
     }
 
     bool VulkanGraphicsDevice::IsSwapchainReady(RenderPass* rp)
@@ -1568,7 +1577,7 @@ namespace gfx {
         destroyReleasedResources();
     }
 
-    void VulkanGraphicsDevice::CopyBuffer(GPUBuffer* dst, GPUBuffer* src)
+    void VulkanGraphicsDevice::CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset)
     {
         uint32_t copySize = static_cast<uint32_t>(std::min(dst->desc.size, src->desc.size));
         if (dst->mappedDataPtr && src->mappedDataPtr)
@@ -1584,7 +1593,7 @@ namespace gfx {
 
 			VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
 
-            VkBufferCopy region = {0, 0, VkDeviceSize(copySize)};
+            VkBufferCopy region = {0, dstOffset, VkDeviceSize(copySize)};
 			vkCmdCopyBuffer(stagingCmdBuffer_, srcBuffer->buffer, dstBuffer->buffer, 1, &region);
             
 			VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));

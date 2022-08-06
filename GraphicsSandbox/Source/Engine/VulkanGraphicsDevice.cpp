@@ -1076,6 +1076,7 @@ namespace gfx {
         features2_.features.multiDrawIndirect = true;
         features2_.features.pipelineStatisticsQuery = true;
         features2_.features.shaderInt16 = true;
+        features2_.features.fillModeNonSolid = true;
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
@@ -1452,7 +1453,7 @@ namespace gfx {
 
         VkClearValue clearValues[2] = {};
         uint32_t clearValueCount = 1;
-        clearValues[0].color = {48.f / 255.f, 10.f / 255.f, 36.f / 255.f, 1};
+        clearValues[0].color = {0.0f, 0.0f, 0.0f, 1};
         std::vector<VkImageMemoryBarrier> renderBeginBarrier = {
             CreateImageBarrier(swapchain_->images[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
         };

@@ -29,9 +29,6 @@ namespace Input
 		GLFWInput::GetKeyboardState(&gKeyboard);
 		GLFWInput::GetMouseState(&gMouse);
 #endif
-		if(inputs.size() == 2)
-			fprintf(stdout, "%d\n", (int)inputs.size());
-
 		for (auto iter = inputs.begin(); iter != inputs.end();)
 		{
 			if (Down(iter->first)) {

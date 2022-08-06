@@ -117,7 +117,13 @@ namespace gfx
 	struct RenderPass;
 	struct SwapchainDesc
 	{
-		float clearColor[4] = { 0.188f, 0.039f, 0.141f, 1.0f };
+		union
+		{
+			float val[4] = { 0.188f, 0.039f, 0.141f, 1.0f };
+			struct {
+				float r, g, b, a;
+			};
+		} clearColor;
 		int width;
 		int height;
 		Format colorFormat = Format::R8G8B8A8_UNORM;

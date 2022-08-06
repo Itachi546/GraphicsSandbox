@@ -70,7 +70,7 @@
     <ClInclude Include="Source\Engine\spirv_reflect.h">
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="..\Shaders\mesh.h">
+    <ClInclude Include="..\Shaders\mesh.glsl">
       <Filter>SHADERS</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\ECS.h">
@@ -86,7 +86,9 @@
       <Filter>SOURCE\ECS</Filter>
     </ClInclude>
     <ClInclude Include="Source\Sandbox.h" />
-    <ClInclude Include="Source\Engine\GpuMemoryAllocator.h" />
+    <ClInclude Include="Source\Engine\GpuMemoryAllocator.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -129,7 +131,7 @@
       <Filter>SOURCE</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\GpuMemoryAllocator.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -139,5 +141,10 @@
     <CustomBuild Include="..\Shaders\main.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\Shaders\pbr.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
   </ItemGroup>
 </Project>

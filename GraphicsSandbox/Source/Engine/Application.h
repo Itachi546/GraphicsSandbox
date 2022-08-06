@@ -74,6 +74,8 @@ protected:
 		glm::mat4 P;
 		glm::mat4 V;
 		glm::mat4 VP;
+		glm::vec3 cameraPosition;
+		float dt;
 	} mGlobalUniformData;
 
 

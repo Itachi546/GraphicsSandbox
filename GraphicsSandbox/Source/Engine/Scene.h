@@ -31,6 +31,7 @@ public:
 
 	ecs::Entity CreateCube(std::string_view name);
 	ecs::Entity CreatePlane(std::string_view name);
+	ecs::Entity CreateSphere(std::string_view name);
 
 	void Update(float dt);
 
@@ -44,14 +45,16 @@ public:
 private:
 	ecs::Entity mCubeEntity;
 	ecs::Entity mPlaneEntity;
+	ecs::Entity mSphereEntity;
 
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 
 	void UpdateTransformData();
 
 	void InitializePrimitiveMesh();
-	void InitializeCubeMesh(MeshDataComponent* meshComp);
-	void InitializePlaneMesh(MeshDataComponent* meshComp);
+	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
+	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
+	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
 };
 
 /*

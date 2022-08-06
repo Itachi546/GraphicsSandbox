@@ -72,8 +72,8 @@ void Application::Initialize()
 	mDevice->CreateBuffer(&bufferDesc, mDrawIndirectBuffer.get());
 
 	// Create Cube 
-	mEntity = mScene.CreateCube("plane1");
-	ecs::Entity plane = mScene.CreatePlane("cube1");
+	mEntity = mScene.CreateSphere("sphere1");
+	ecs::Entity plane = mScene.CreatePlane("plane1");
 
 	TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(plane);
 	transform->scale = glm::vec3(5.0f);
@@ -93,6 +93,7 @@ void Application::Run()
 	mDeltaTime = float(std::max(0.0, mTimer.elapsed()));
 	mTimer.record();
 	const float dt = mLockFrameRate ? (1.0f / mTargetFrameRate) : mDeltaTime;
+	mElapsedTime += dt;
 
 	Update(dt);
 
@@ -114,9 +115,11 @@ void Application::Update(float dt)
 		glm::mat4 P = glm::perspective(glm::radians(70.0f), mWidth / float(mHeight), 0.3f, 1000.0f);
 		mGlobalUniformData.P = P;
 
-		glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 3.0f, -5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::mat4 V = glm::lookAt(glm::vec3(0.0f, 3.0f, 5.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 		mGlobalUniformData.V = V;
 		mGlobalUniformData.VP = P * V;
+		mGlobalUniformData.cameraPosition = glm::vec3(0.0f, 3.0f, 5.0f);
+		mGlobalUniformData.dt = mElapsedTime;
 	}
 
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
@@ -124,10 +127,12 @@ void Application::Update(float dt)
 	Input::Update(mWindow);
 
 	TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(mEntity);
-	static float angle = 0.0f;
+	static float angle = 0.75f;
 	transform->rotation = glm::fquat{ glm::vec3(0.0f, angle, 0.0f) };
 	transform->SetDirty(true);
-	angle += dt * 0.5f;
+	/*
+	angle += dt * 0.1f;
+	*/
 }
 
 void Application::Render()
@@ -243,6 +248,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.fullscreen = false;
 	swapchainDesc.enableDepth = bSwapchainDepthSupport;
 	swapchainDesc.renderPass = mSwapchainRP.get();
+	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	mDevice->CreateSwapchain(&swapchainDesc, window);
 

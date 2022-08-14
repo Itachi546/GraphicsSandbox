@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "GpuMemoryAllocator.h"
+
 struct Vertex
 {
 	glm::vec3 position;

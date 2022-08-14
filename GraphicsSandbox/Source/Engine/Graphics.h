@@ -6,6 +6,8 @@
 
 namespace gfx
 {
+	struct GPUResource;
+
 	enum class ValidationMode
 	{
 		Enabled,
@@ -24,6 +26,9 @@ namespace gfx
 		R10G10B10A2_UNORM = 0,
 		B8G8R8A8_UNORM,
 		R8G8B8A8_UNORM,
+		R16B16G16_SFLOAT,
+		R16B16G16A16_SFLOAT,
+		R32B32G32A32_SFLOAT,
 		D32_SFLOAT,
 		D32_SFLOAT_S8_UINT,
 		D24_UNORM_S8_UINT,
@@ -33,15 +38,52 @@ namespace gfx
 	enum class ImageType
 	{
 		I2D,
-		I3D,
-		I2DArray
+		I3D
+	};
+
+	enum class ImageViewType
+	{
+		IV2D,
+		IV2DArray,
+		IV3D,
+		IVCubemap
+	};
+
+	enum class ImageAspect
+	{
+		Color, 
+		Depth
 	};
 
 	enum class ImageLayout
 	{
+		General,
 		ColorAttachmentOptimal,
 		DepthStencilAttachmentOptimal,
-		DepthAttachmentOptimal
+		DepthAttachmentOptimal,
+		TransferSrcOptimal,
+		TransferDstOptimal,
+		ShaderReadOptimal
+	};
+
+	enum class ImageUsage
+	{
+		DepthStencilAttachment,
+		ColorAttachment,
+		ShaderResource
+	};
+
+	enum class TextureFilter
+	{
+		Linear,
+		Nearest,
+	};
+
+	enum class TextureWrapMode
+	{
+		Repeat,
+		ClampToEdge,
+		ClampToBorder
 	};
 
 	enum class Topology
@@ -134,6 +176,51 @@ namespace gfx
 		RenderPass* renderPass = nullptr;
 	};
 
+	struct Semaphore : public GraphicsDeviceResource
+	{
+
+	};
+
+	enum class AccessFlag
+	{
+		None,
+		ShaderRead,
+		ShaderWrite,
+		DepthStencilRead,
+		DepthStencilWrite,
+		ColorAttachmentRead,
+		ColorAttachmentWrite,
+		TransferWriteBit,
+		TransferReadBit
+	};
+
+	enum class PipelineStage
+	{
+		TopOfPipe,
+		FragmentShader,
+		VertexShader,
+		ComputeShader,
+		EarlyFramentTest,
+		LateFramentTest,
+		BottomOfPipe,
+		TransferBit
+	};
+
+	struct ImageBarrierInfo
+	{
+		AccessFlag srcAccessMask;
+		AccessFlag dstAccessMask;
+		ImageLayout newLayout;
+		GPUResource* resource;
+	};
+
+	struct PipelineBarrierInfo {
+		ImageBarrierInfo* barrierInfo;
+		uint32_t barrierInfoCount;
+		PipelineStage srcStage;
+		PipelineStage dstStage;
+	};
+
 	struct Attachment
 	{
 		uint32_t index;
@@ -208,10 +295,10 @@ namespace gfx
 			Buffer,
 			Texture,
 			Unknown
-		} type = Type::Unknown;
+		} resourceType = Type::Unknown;
 
-		constexpr bool IsTexture() const { return type == Type::Texture; }
-		constexpr bool IsBuffer() const { return type == Type::Buffer; }
+		constexpr bool IsTexture() const { return resourceType == Type::Texture; }
+		constexpr bool IsBuffer() const { return resourceType == Type::Buffer; }
 
 		void* mappedDataPtr;
 		std::size_t mappedDataSize;
@@ -255,6 +342,35 @@ namespace gfx
 	struct GPUBuffer : public GPUResource
 	{
 		GPUBufferDesc desc;
+
+	};
+
+	struct SamplerInfo
+	{
+		TextureFilter textureFilter = TextureFilter::Linear;
+		TextureWrapMode wrapMode = TextureWrapMode::ClampToEdge;
+	};
+
+	struct GPUTextureDesc
+	{
+		SamplerInfo samplerInfo;
+		bool bCreateSampler = false;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t depth = 1;
+		uint32_t mipLevels = 1;
+		uint32_t arrayLayers = 1;
+
+		ImageType imageType = ImageType::I2D;
+		BindFlag bindFlag = BindFlag::None;
+		ImageAspect imageAspect = ImageAspect::Color;
+		ImageViewType imageViewType = ImageViewType::IV2D;
+		Format format = Format::R8G8B8A8_UNORM;
+	};
+
+	struct GPUTexture : public GPUResource
+	{
+		GPUTextureDesc desc;
 	};
 
 	struct DrawIndirectCommand
@@ -269,6 +385,12 @@ namespace gfx
 
 	template<>
 	struct enable_bitwise_operation<BindFlag>
+	{
+		static constexpr bool enabled = true;
+	};
+
+	template<>
+	struct enable_bitwise_operation<ImageUsage>
 	{
 		static constexpr bool enabled = true;
 	};

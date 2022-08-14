@@ -64,14 +64,8 @@
     <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h">
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Enums.h">
-      <Filter>SOURCE\Common</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\spirv_reflect.h">
       <Filter>SOURCE\Graphics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Shaders\mesh.glsl">
-      <Filter>SHADERS</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\ECS.h">
       <Filter>SOURCE\ECS</Filter>
@@ -85,10 +79,19 @@
     <ClInclude Include="Source\Engine\Components.h">
       <Filter>SOURCE\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Sandbox.h" />
     <ClInclude Include="Source\Engine\GpuMemoryAllocator.h">
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\EnvironmentMap.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Renderer.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\ImageLoader.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -127,23 +130,47 @@
     <ClCompile Include="Source\glfwMain.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Sandbox.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\GpuMemoryAllocator.cpp">
       <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\EnvironmentMap.cpp">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Renderer.cpp">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\ImageLoader.cpp">
+      <Filter>SOURCE\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Camera.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Shaders\main.vert.glsl">
+    <CustomBuild Include="..\Assets\Shaders\cubemap_converter.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\Shaders\main.frag.glsl">
+    <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\main.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\cubemap.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Shaders\pbr.glsl">
+    <None Include="..\Assets\Shaders\mesh.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="..\Assets\Shaders\pbr.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="..\Assets\Shaders\bindings.glsl">
       <Filter>SHADERS</Filter>
     </None>
   </ItemGroup>

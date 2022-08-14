@@ -2,6 +2,7 @@
 #include "Logger.h"
 
 #include "GpuMemoryAllocator.h"
+
 void Scene::Initialize()
 {
 	mComponentManager = std::make_shared<ecs::ComponentManager>();
@@ -12,6 +13,9 @@ void Scene::Initialize()
 	mComponentManager->RegisterComponent<NameComponent>();
 
 	InitializePrimitiveMesh();
+
+	mEnvMap = std::make_unique<EnvironmentMap>();
+	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/photo_studio.hdr");
 }
 
 void Scene::GenerateDrawData(std::vector<DrawData>& out)
@@ -80,6 +84,7 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 
 void Scene::Update(float dt)
 {
+	mCamera.Update(dt);
 	UpdateTransformData();
 }
 

@@ -36,13 +36,6 @@ namespace ecs
 		return gComponentId++;
 	}
 
-	template<typename T>
-	static uint32_t GetComponentTypeId()
-	{
-		static uint32_t id = GetId();
-		return id;
-	}
-
 	class IComponentArray
 	{
 	public:
@@ -132,12 +125,7 @@ namespace ecs
 		{
 			return components.size();
 		}
-
-		static uint32_t GetTypeId()
-		{
-			return GetComponentTypeId<T>();
-		}
-
+		
 		std::vector<Entity> entities;
 		std::vector<T> components;
 	private:
@@ -153,13 +141,21 @@ namespace ecs
 		template<typename T>
 		void RegisterComponent()
 		{
-			uint32_t componentId = GetComponentTypeId<T>();
-			assert(componentId < 64);
+			std::size_t compHash = typeid(T).hash_code();
+			auto found = componentIdMap.find(compHash);
+			if (found != componentIdMap.end())
+				return;
+			uint32_t id = GetId();
+			componentArray[id] = std::make_shared<ComponentArray<T>>();
+			componentIdMap.insert(std::make_pair(compHash, id));
+		}
 
-			if (componentArray[componentId] == nullptr)
-			{
-				componentArray[componentId] = std::make_shared<ComponentArray<T>>();
-			}
+		template<typename T>
+		uint32_t GetComponentTypeId() {
+			std::size_t compHash = typeid(T).hash_code();
+			auto found = componentIdMap.find(compHash);
+			assert(found != componentIdMap.end());
+			return found->second;
 		}
 
 		template<typename T>
@@ -167,11 +163,16 @@ namespace ecs
 		{
 			uint32_t compId = GetComponentTypeId<T>();
 			assert(compId < MAX_COMPONENTS);
-
 			return std::static_pointer_cast<ComponentArray<T>>(componentArray[compId]);
 		}
 
-		inline std::shared_ptr<IComponentArray> GetComponentArray(uint64_t index)
+		template<typename T>
+		inline std::shared_ptr<ComponentArray<T>> GetComponentArray(int index)
+		{
+			return std::static_pointer_cast<ComponentArray<T>>(componentArray[index]);
+		}
+
+		inline std::shared_ptr<IComponentArray> GetBaseComponentArray(uint64_t index)
 		{
 			assert(index < MAX_COMPONENTS);
 
@@ -198,7 +199,7 @@ namespace ecs
 			assert(compId < MAX_COMPONENTS);
 
 			entity.signature |= (1Ui64 << compId);
-			auto comp = GetComponentArray<T>();
+			auto comp = GetComponentArray<T>(compId);
 			assert(comp != nullptr);
 			return comp->addComponent(entity);
 		}
@@ -206,7 +207,7 @@ namespace ecs
 		template<typename T, typename ...Args>
 		T& AddComponent(Entity& entity, Args&& ...args)
 		{
-			uint32_t compId = GetComponentTypeId<T>();
+			uint32_t compId = GetComponentTypeId<T>(compId);
 			assert(compId < MAX_COMPONENTS);
 
 			entity.signature |= (1Ui64 << compId);
@@ -223,7 +224,7 @@ namespace ecs
 
 			if (HasComponent<T>(entity))
 			{
-				auto comp = GetComponentArray<T>();
+				auto comp = GetComponentArray<T>(compId);
 				assert(comp != nullptr);
 				return comp->getComponent(entity);
 			}
@@ -239,13 +240,14 @@ namespace ecs
 
 			entity.signature &= ~(1Ui64 << compId);
 
-			auto comp = GetComponentArray<T>();
+			auto comp = GetComponentArray<T>(compId);
 			assert(comp != nullptr);
 			return comp->removeComponent(entity);
 		}
 
 		// Global Component Array
 		std::array<std::shared_ptr<IComponentArray>, MAX_COMPONENTS> componentArray;
+		std::unordered_map<std::size_t, uint32_t> componentIdMap;
 	};
 
 	inline Entity CreateEntity()

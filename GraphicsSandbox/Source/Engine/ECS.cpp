@@ -11,7 +11,7 @@ namespace ecs
 			if ((signature & compHash) == compHash)
 			{
 				// Component is present
-				std::shared_ptr<IComponentArray> comp = mgr->GetComponentArray(i);
+				std::shared_ptr<IComponentArray> comp = mgr->GetBaseComponentArray(i);
 				comp->removeEntity(entity);
 			}
 		}

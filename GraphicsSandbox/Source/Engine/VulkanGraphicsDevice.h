@@ -36,14 +36,22 @@ namespace gfx
 		bool CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
 		void CreateRenderPass(const RenderPassDesc* desc, RenderPass* out)                     override;
 		void CreateGraphicsPipeline(const PipelineDesc* desc, Pipeline* out)                   override;
+		void CreateComputePipeline(const PipelineDesc* desc, Pipeline* out)                    override;
 		void CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out)                           override;
-		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                   override;
+		void CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)                        override;
+		void CreateSemaphore(Semaphore* out)                                                   override;
+		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                override;
+		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		
+		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 
 		CommandList BeginCommandList()                                                         override;
+
+		void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)           override;
 		void BeginRenderPass(CommandList* commandList, RenderPass* renderPass)                 override;
 		void EndRenderPass(CommandList* commandList)                                           override;
-		void SubmitCommandList(CommandList* commandList)                                       override;
-		void Present()                                                                         override;
+		void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)           override;
+		void Present(Semaphore* waitSemaphore)                                                 override;
 		void WaitForGPU()                                                                      override;
 
 		void BindPipeline(CommandList* commandList, Pipeline* pipeline)                        override;
@@ -54,6 +62,8 @@ namespace gfx
 		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)         override;
 		void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 		void DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
+		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;
+
 		bool IsSwapchainReady(RenderPass* rp) override;
 
 
@@ -65,8 +75,6 @@ namespace gfx
 		VkDevice device_                    = VK_NULL_HANDLE;
 		VkQueue queue_                      = VK_NULL_HANDLE;
 		VkSurfaceKHR surface_               = VK_NULL_HANDLE;
-		VkSemaphore acquireSemaphore_       = VK_NULL_HANDLE;
-		VkSemaphore releaseSemaphore_       = VK_NULL_HANDLE;
 
 		VkCommandPool   commandPool_        = VK_NULL_HANDLE;
 		VkCommandBuffer commandBuffer_      = VK_NULL_HANDLE;

@@ -1,7 +1,13 @@
 #pragma once
 
 #include <string>
-#include "Enums.h"
+
+enum class MessageType
+{
+	Error = 0,
+	Warning,
+	Info,
+};
 
 namespace Utils
 {

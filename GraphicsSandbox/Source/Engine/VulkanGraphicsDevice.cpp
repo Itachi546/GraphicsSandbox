@@ -41,6 +41,8 @@ namespace gfx {
         std::vector<VkDescriptorSetLayout> destroyedSetLayout_;
         std::vector<VkDescriptorUpdateTemplate> destroyedDescriptorUpdateTemplate_;
         std::vector<std::pair<VkDescriptorSet, VkDescriptorPool>> destroyedDescriptorSet_;
+        std::vector<VkSampler> destroyedSamplers_;
+        std::vector<VkSemaphore> destroyedSemaphore_;
  
        void destroyReleasedResource(VkDevice device, VmaAllocator vmaAllocator)
         {
@@ -82,6 +84,14 @@ namespace gfx {
             for (auto& updateTemplate : destroyedDescriptorUpdateTemplate_)
                 vkDestroyDescriptorUpdateTemplate(device, updateTemplate, nullptr);
 
+            for (auto& sampler : destroyedSamplers_)
+                vkDestroySampler(device, sampler, nullptr);
+
+            for (auto& semaphore : destroyedSemaphore_)
+                vkDestroySemaphore(device, semaphore, nullptr);
+
+            destroyedSemaphore_.clear();
+            destroyedSamplers_.clear();
             destroyedDescriptorSet_.clear();
             destroyedDescriptorUpdateTemplate_.clear();
             destroyedSetLayout_.clear();
@@ -138,6 +148,35 @@ namespace gfx {
         }
     };
 
+    struct VulkanTexture
+    {
+        VmaAllocation allocation = nullptr;
+        VkImage image = VK_NULL_HANDLE;
+        VkImageView imageView = VK_NULL_HANDLE;
+        VkSampler sampler = VK_NULL_HANDLE;
+
+        VkFormat format = VK_FORMAT_UNDEFINED;
+        VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
+        VkImageAspectFlagBits imageAspect = VK_IMAGE_ASPECT_NONE;
+        ~VulkanTexture()
+        {
+            gAllocationHandler.destroyedImages_.push_back(std::make_pair(image, allocation));
+            gAllocationHandler.destroyedImageViews_.push_back(imageView);
+            gAllocationHandler.destroyedSamplers_.push_back(sampler);
+        }
+    };
+
+
+    struct VulkanSemaphore
+    {
+        VkSemaphore semaphore;
+
+        ~VulkanSemaphore()
+        {
+            gAllocationHandler.destroyedSemaphore_.push_back(semaphore);
+        }
+    };
+
     /***********************************************************************************************/
 
     VKAPI_ATTR VkBool32 VKAPI_CALL DebugUtilsMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -155,6 +194,33 @@ namespace gfx {
     }
 
 /***********************************************************************************************/
+
+    VkPipelineStageFlags _ConvertPipelineStageFlags(PipelineStage pipelineStage)
+    {
+        switch (pipelineStage)
+        {
+        case PipelineStage::TopOfPipe:
+            return VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        case PipelineStage::FragmentShader:
+            return VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        case PipelineStage::VertexShader:
+            return VK_PIPELINE_STAGE_VERTEX_SHADER_BIT;
+        case PipelineStage::ComputeShader:
+            return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+        case PipelineStage::EarlyFramentTest:
+			return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        case PipelineStage::LateFramentTest:
+            return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+        case PipelineStage::BottomOfPipe:
+            return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        case PipelineStage::TransferBit:
+            return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        default:
+            assert(!"Undefined pipeline stage flag");
+            return VK_PIPELINE_STAGE_NONE;
+
+        }
+    }
 
     VkBlendFactor _ConvertBlendFactor(BlendFactor blendFactor)
     {
@@ -176,6 +242,34 @@ namespace gfx {
             return VK_BLEND_FACTOR_MAX_ENUM;
         }
 	}
+
+    VkAccessFlags _ConvertAccessFlags(AccessFlag accessFlag)
+    {
+        switch (accessFlag)
+        {
+        case AccessFlag::None:
+            return VK_ACCESS_NONE;
+        case AccessFlag::ShaderRead:
+            return VK_ACCESS_SHADER_READ_BIT;
+        case AccessFlag::ShaderWrite:
+            return VK_ACCESS_SHADER_WRITE_BIT;
+        case AccessFlag::DepthStencilRead:
+            return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        case AccessFlag::DepthStencilWrite:
+            return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+        case AccessFlag::TransferReadBit:
+            return VK_ACCESS_TRANSFER_READ_BIT;
+        case AccessFlag::TransferWriteBit:
+            return VK_ACCESS_TRANSFER_WRITE_BIT;
+        case AccessFlag::ColorAttachmentRead:
+            return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+        case AccessFlag::ColorAttachmentWrite:
+            return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        default:
+            assert(!"Undefined Access Flags");
+            return VK_ACCESS_NONE;
+       }
+    }
 
 
     VkCompareOp _ConvertCompareOp(CompareOp op)
@@ -263,6 +357,12 @@ namespace gfx {
 			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
         case Format::R8G8B8A8_UNORM:
             return VK_FORMAT_R8G8B8A8_UNORM;
+        case Format::R16B16G16_SFLOAT:
+            return VK_FORMAT_R16G16B16_SFLOAT;
+        case Format::R16B16G16A16_SFLOAT:
+            return VK_FORMAT_R16G16B16A16_SFLOAT;
+        case Format::R32B32G32A32_SFLOAT:
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
         case Format::B8G8R8A8_UNORM:
             return VK_FORMAT_B8G8R8A8_UNORM;
         case Format::D32_SFLOAT:
@@ -281,12 +381,20 @@ namespace gfx {
     {
         switch (layout)
         {
+        case ImageLayout::ShaderReadOptimal:
+            return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        case ImageLayout::General:
+            return VK_IMAGE_LAYOUT_GENERAL;
         case ImageLayout::ColorAttachmentOptimal:
             return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         case ImageLayout::DepthStencilAttachmentOptimal:
             return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         case ImageLayout::DepthAttachmentOptimal:
             return VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+        case ImageLayout::TransferSrcOptimal:
+            return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        case ImageLayout::TransferDstOptimal:
+            return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         default:
             assert(!"Undefined Image Layout");
             return VK_IMAGE_LAYOUT_UNDEFINED;
@@ -309,6 +417,97 @@ namespace gfx {
 			return VK_SHADER_STAGE_ALL;
         }
     }
+
+    VkImageUsageFlags _ConvertImageUsage(ImageUsage usage)
+    {
+        VkImageUsageFlags flags = 0;
+        if (HasFlag(usage, ImageUsage::DepthStencilAttachment))
+            flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        if (HasFlag(usage, ImageUsage::ColorAttachment))
+            flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if (HasFlag(usage, ImageUsage::ShaderResource))
+            flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+        return flags;
+    }
+
+    VkImageType _ConvertImageType(ImageType imageType)
+    {
+        switch (imageType)
+        {
+        case ImageType::I2D:
+			return VK_IMAGE_TYPE_2D;
+        case ImageType::I3D:
+            return VK_IMAGE_TYPE_3D;
+        default:
+            assert(!"Undefined image type");
+            return VK_IMAGE_TYPE_MAX_ENUM;
+		}
+    }
+
+    VkImageViewType _ConvertImageViewType(ImageViewType imageViewType)
+    {
+        switch (imageViewType)
+        {
+        case ImageViewType::IV2D:
+            return VK_IMAGE_VIEW_TYPE_2D;
+        case ImageViewType::IV2DArray:
+            return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        case ImageViewType::IV3D:
+            return VK_IMAGE_VIEW_TYPE_3D;
+        case ImageViewType::IVCubemap:
+            return VK_IMAGE_VIEW_TYPE_CUBE;
+        default:
+            assert(!"Undefined ImageView Type");
+            return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+
+        }
+    }
+
+    VkImageAspectFlagBits _ConvertImageAspect(ImageAspect imageAspect)
+    {
+        switch (imageAspect)
+        {
+        case ImageAspect::Color:
+            return VK_IMAGE_ASPECT_COLOR_BIT;
+        case ImageAspect::Depth:
+            return VK_IMAGE_ASPECT_DEPTH_BIT;
+        default:
+            assert(!"Undefined image aspect");
+            return VK_IMAGE_ASPECT_NONE;
+        }
+    }
+
+    VkFilter _ConvertSamplerFilter(TextureFilter filter)
+    {
+        switch (filter)
+        {
+        case TextureFilter::Linear:
+            return VK_FILTER_LINEAR;
+        case TextureFilter::Nearest:
+            return VK_FILTER_NEAREST;
+        default:
+            assert(!"Undefined texture filter");
+            return VK_FILTER_MAX_ENUM;
+        }
+    }
+
+    VkSamplerAddressMode _ConvertSamplerAddressMode(TextureWrapMode wrapMode)
+    {
+        switch (wrapMode)
+        {
+        case TextureWrapMode::Repeat:
+            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        case TextureWrapMode::ClampToEdge:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        case TextureWrapMode::ClampToBorder:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+        default:
+            assert(!"Undefined Sampler Address Mode");
+            return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
+        }
+    }
+
     /***********************************************************************************************/
 
     uint32_t FindGraphicsQueueIndex(VkPhysicalDevice physicalDevice)
@@ -371,14 +570,6 @@ namespace gfx {
         return surface;
     }
 
-    VkSemaphore CreateVkSemaphore(VkDevice device)
-    {
-        VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-
-        VkSemaphore semaphore = 0;
-        VK_CHECK(vkCreateSemaphore(device, &createInfo, nullptr, &semaphore));
-        return semaphore;
-    }
 
 	std::pair<VkImage, VmaAllocation> CreateSwapchainDepthImage(VmaAllocator vmaAllocator, VkFormat depthFormat, uint32_t width, uint32_t height)
     {
@@ -407,7 +598,7 @@ namespace gfx {
         return { image, allocation };
     }
 
-    VkImageView CreateImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect)
+    VkImageView CreateImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, int layerCount = 1, int levelCount = 1)
     {
         VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         createInfo.image = image;
@@ -415,14 +606,34 @@ namespace gfx {
         createInfo.format = format;
         createInfo.subresourceRange.aspectMask = aspect;
         createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.layerCount = layerCount;
         createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
+        createInfo.subresourceRange.levelCount = levelCount;
 
         VkImageView imageView = 0;
         VK_CHECK(vkCreateImageView(device, &createInfo, nullptr, &imageView));
-
         return imageView;
+    }
+
+    VkSampler CreateSampler(VkDevice device, const SamplerInfo* samplerInfo)
+    {
+        VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
+
+        VkFilter filter = _ConvertSamplerFilter(samplerInfo->textureFilter);
+        createInfo.magFilter = filter;
+        createInfo.minFilter = filter;
+
+        VkSamplerAddressMode addressMode = _ConvertSamplerAddressMode(samplerInfo->wrapMode);
+        createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        createInfo.addressModeU = addressMode;
+        createInfo.addressModeV = addressMode;
+        createInfo.addressModeW = addressMode;
+        createInfo.minLod = 0.0f;
+        createInfo.maxLod = 16.0f;
+
+        VkSampler sampler = 0;
+		VK_CHECK(vkCreateSampler(device, &createInfo, nullptr, &sampler));
+        return sampler;
     }
 
     VkFramebuffer CreateFramebuffer(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height)
@@ -582,8 +793,8 @@ namespace gfx {
 
         // Parse Input Variables
         for (uint32_t i = 0; i < inputCount && out->shaderStage != VK_SHADER_STAGE_FRAGMENT_BIT; ++i)
-        {
-            auto& input = inputAttributes[i];
+        { 
+            auto& input = inputAttributes[i];  
             if (input->location > 32)
                 continue;
 
@@ -1099,10 +1310,6 @@ namespace gfx {
         // Get device Queue
         vkGetDeviceQueue(device_, queueFamilyIndices_, 0, &queue_);
 
-        // Create Acquire/Release Semaphore
-        acquireSemaphore_ = CreateVkSemaphore(device_);
-        releaseSemaphore_ = CreateVkSemaphore(device_);
-
         commandPool_ = CreateCommandPool(device_, queueFamilyIndices_);
         commandBuffer_ = CreateCommandBuffer(device_, commandPool_);
 
@@ -1143,7 +1350,8 @@ namespace gfx {
 
         descriptorPool_ = CreateDescriptorPool(device_);
 
-        Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string((int)std::round(timer.elapsed())) + "ms)");
+		//Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string((int)std::round(timer.elapsed())) + "ms)");
+        Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string(timer.elapsedSeconds()) + "s)");
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -1318,7 +1526,7 @@ namespace gfx {
         {
             depthStencilState.depthTestEnable = rs.enableDepthTest;
             depthStencilState.depthWriteEnable = rs.enableDepthWrite;
-            depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
+            depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
             depthStencilState.maxDepthBounds = 1.0f;
             depthStencilState.minDepthBounds = 0.0f;
         }
@@ -1376,12 +1584,42 @@ namespace gfx {
         out->internalState = vkPipeline;
     }
 
+    void VulkanGraphicsDevice::CreateComputePipeline(const PipelineDesc* desc, Pipeline* out)
+    {
+        auto vkPipeline = std::make_shared<VulkanPipeline>();
+        vkPipeline->bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+        out->internalState = vkPipeline;
+
+        assert(desc->shaderCount > 0);
+        ShaderDescription* shaderDesc = desc->shaderDesc;
+        assert(shaderDesc != nullptr);
+
+        ShaderReflection shaderRefl = {};
+        ParseShaderReflection(shaderDesc->code, shaderDesc->sizeInByte, &shaderRefl);
+
+        VkShaderModule shaderModule = createShader(device_, shaderDesc->code, shaderDesc->sizeInByte, VK_SHADER_STAGE_COMPUTE_BIT);
+        VkPipelineShaderStageCreateInfo shaderStage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+        shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        shaderStage.module = shaderModule;
+        shaderStage.pName = "main";
+        vkPipeline->shaderModules.push_back(shaderModule);
+        vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderRefl.descriptorSetLayoutBinding);
+        vkPipeline->pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderRefl.pushConstantRanges);
+
+        VkComputePipelineCreateInfo createInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
+        createInfo.stage = shaderStage;
+        createInfo.layout = vkPipeline->pipelineLayout;
+		VK_CHECK(vkCreateComputePipelines(device_, 0, 1, &createInfo, nullptr, &vkPipeline->pipeline));
+
+        vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline->pipelineLayout, vkPipeline->setLayout, { shaderRefl });
+    }
+
     void VulkanGraphicsDevice::CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out)
     {
         auto internalState = std::make_shared<VulkanBuffer>();
 
         out->internalState = internalState;
-        out->type = GPUResource::Type::Buffer;
+        out->resourceType = GPUResource::Type::Buffer;
         out->mappedDataSize = 0;
         out->mappedDataPtr = nullptr;
         out->desc = *desc;
@@ -1423,6 +1661,79 @@ namespace gfx {
         }
     }
 
+    void VulkanGraphicsDevice::CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)
+    {
+        auto internalState = std::make_shared<VulkanTexture>();
+
+        out->internalState = internalState;
+        out->resourceType = GPUResource::Type::Texture;
+        out->mappedDataSize = 0;
+        out->mappedDataPtr = nullptr;
+        out->desc = *desc;
+
+        VkFormat format = _ConvertFormat(desc->format);
+        internalState->format = format;
+
+        VkImageAspectFlagBits imageAspect = _ConvertImageAspect(desc->imageAspect);
+        internalState->imageAspect = imageAspect;
+
+        VkImageUsageFlags usage = 0;
+        if (HasFlag(desc->bindFlag, BindFlag::DepthStencil))
+            usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        if (HasFlag(desc->bindFlag, BindFlag::RenderTarget))
+            usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        if (HasFlag(desc->bindFlag, BindFlag::ShaderResource))
+            usage |= (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
+
+        usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+		//usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+        VkImageCreateFlags imageCreateFlags = 0;
+        if (desc->imageViewType == ImageViewType::IVCubemap)
+            imageCreateFlags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+
+		VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+        createInfo.flags = imageCreateFlags;
+        createInfo.usage = usage;
+        createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+        createInfo.format = format;
+        createInfo.arrayLayers = desc->arrayLayers;
+        createInfo.mipLevels = desc->mipLevels;
+        createInfo.extent.width = desc->width;
+        createInfo.extent.height = desc->height;
+        createInfo.extent.depth = desc->depth;
+        createInfo.imageType = _ConvertImageType(desc->imageType);
+        createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+        createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+        VkImage image = 0;
+        VmaAllocation allocation = {};
+        VK_CHECK(vmaCreateImage(vmaAllocator_, &createInfo, &allocCreateInfo, &image, &allocation, nullptr));
+		VkImageView imageView = CreateImageView(device_, image, _ConvertImageViewType(desc->imageViewType), format, imageAspect, createInfo.arrayLayers);
+
+        if (desc->bCreateSampler)
+        {
+            VkSampler sampler = CreateSampler(device_, &desc->samplerInfo);
+            internalState->sampler = sampler;
+        }
+        internalState->image = image;
+        internalState->imageView = imageView;
+        internalState->allocation = allocation;
+    }
+
+    void VulkanGraphicsDevice::CreateSemaphore(Semaphore* out)
+    {
+		auto vkSemaphore = std::make_shared<VulkanSemaphore>();
+        VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &vkSemaphore->semaphore));
+        out->internalState = vkSemaphore;
+    }
+
     CommandList VulkanGraphicsDevice::BeginCommandList()
     {
         CommandList commandList = {};
@@ -1438,33 +1749,42 @@ namespace gfx {
         return commandList;
     }
 
-    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPass* renderPass)
+    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)
     {
-        auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
-        VkRenderPass rp = vkRenderpass->renderPass;
-
+        assert(acquireSemaphore != nullptr);
         auto vkCmdList = GetCommandList(commandList);
+        auto vkSemaphore = std::static_pointer_cast<VulkanSemaphore>(acquireSemaphore->internalState);
 
         uint32_t imageIndex = 0;
-        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore_, VK_NULL_HANDLE, &imageIndex));
-        vkCmdList->waitSemaphore.push_back(acquireSemaphore_);
-
+        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, vkSemaphore->semaphore, VK_NULL_HANDLE, &imageIndex));
+        vkCmdList->waitSemaphore.push_back(vkSemaphore->semaphore);
         swapchain_->currentImageIndex = imageIndex;
 
-        VkClearValue clearValues[2] = {};
-        uint32_t clearValueCount = 1;
-        clearValues[0].color = {0.0f, 0.0f, 0.0f, 1};
         std::vector<VkImageMemoryBarrier> renderBeginBarrier = {
             CreateImageBarrier(swapchain_->images[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
         };
 
+        if (swapchain_->depthImages.size() > 0)
+            renderBeginBarrier.push_back(CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+        vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
+    }
+
+    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPass* renderPass)
+    {
+        auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
+        VkRenderPass rp = vkRenderpass->renderPass;
+        auto vkCmdList = GetCommandList(commandList);
+
+        uint32_t imageIndex = swapchain_->currentImageIndex;
+
+        VkClearValue clearValues[2] = {};
+        uint32_t clearValueCount = 1;
+        clearValues[0].color = {0.0f, 0.0f, 0.0f, 1};
         if (renderPass->desc.hasDepthAttachment)
         {
-            renderBeginBarrier.push_back(CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
             clearValues[1].depthStencil = {1.0f, 0};
             clearValueCount += 1;
         }
-        vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
 
         uint32_t width = (uint32_t)swapchain_->desc.width;
         uint32_t height = (uint32_t)swapchain_->desc.height;
@@ -1515,12 +1835,20 @@ namespace gfx {
         vkCmdDrawIndexedIndirect(cmd->commandBuffer, dcb->buffer, offset, drawCount, stride);
     }
 
+    void VulkanGraphicsDevice::DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)
+    {
+        auto cmd = GetCommandList(commandList);
+        vkCmdDispatch(cmd->commandBuffer, groupCountX, groupCountY, groupCountZ);
+    }
+
     bool VulkanGraphicsDevice::IsSwapchainReady(RenderPass* rp)
     {
         auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(rp->internalState);
 
         if (isSwapchainResized())
 			return createSwapchainInternal(vkRenderpass->renderPass);
+
+
         return true;
     }
 
@@ -1540,13 +1868,16 @@ namespace gfx {
 		vkCmdPipelineBarrier(commandBuffer_, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
     }
 
-    void VulkanGraphicsDevice::SubmitCommandList(CommandList* commandList)
+    void VulkanGraphicsDevice::SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)
     {
         VulkanCommandList* cmdList = GetCommandList(commandList);
+        if (signalSemaphore)
+        {
+            auto vkSemaphore = std::static_pointer_cast<VulkanSemaphore>(signalSemaphore->internalState);
+            cmdList->signalSemaphore.push_back(vkSemaphore->semaphore);
+        }
 
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
-
-        cmdList->signalSemaphore.push_back(releaseSemaphore_);
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount = (uint32_t)cmdList->waitSemaphore.size();
@@ -1556,16 +1887,17 @@ namespace gfx {
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
         submitInfo.signalSemaphoreCount = (uint32_t)cmdList->signalSemaphore.size();
         submitInfo.pSignalSemaphores = cmdList->signalSemaphore.data();
-
         vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
-    void VulkanGraphicsDevice::Present()
+    void VulkanGraphicsDevice::Present(Semaphore* waitSemaphore)
     {
+        assert(waitSemaphore != nullptr);
+        auto vkSemaphore = std::static_pointer_cast<VulkanSemaphore>(waitSemaphore->internalState);
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.pImageIndices = &swapchain_->currentImageIndex;
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &releaseSemaphore_;
+        presentInfo.pWaitSemaphores = &vkSemaphore->semaphore;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain_->swapchain;
 
@@ -1606,6 +1938,89 @@ namespace gfx {
         }
     }
 
+    void VulkanGraphicsDevice::CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barriers, uint32_t arrayLevel, uint32_t mipLevel)
+    {
+        auto from = std::static_pointer_cast<VulkanBuffer>(src->internalState);
+        auto to = std::static_pointer_cast<VulkanTexture>(dst->internalState);
+
+        assert(from != nullptr);
+        assert(to != nullptr);
+
+        VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
+
+        VkBufferImageCopy region = {};
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = to->imageAspect;
+        region.imageSubresource.baseArrayLayer = arrayLevel;
+        region.imageSubresource.mipLevel = mipLevel;
+        region.imageSubresource.layerCount = 1;
+
+        region.imageOffset = { 0, 0, 0 };
+        region.imageExtent = {dst->desc.width, dst->desc.height, dst->desc.depth};
+
+        // Check Image Layout
+
+        if (barriers)
+        {
+            assert(barriers->barrierInfoCount == 1);
+            VkImageMemoryBarrier barrier = CreateImageBarrier(to->image,
+				to->imageAspect,
+                _ConvertAccessFlags(barriers->barrierInfo->srcAccessMask),
+                _ConvertAccessFlags(barriers->barrierInfo->dstAccessMask),
+                to->layout,
+                _ConvertLayout(barriers->barrierInfo->newLayout));
+
+            vkCmdPipelineBarrier(stagingCmdBuffer_,
+                _ConvertPipelineStageFlags(barriers->srcStage),
+                _ConvertPipelineStageFlags(barriers->dstStage),
+                0, 0, 0, 0, 0, 1, &barrier);
+            to->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        }
+
+        vkCmdCopyBufferToImage(stagingCmdBuffer_, from->buffer, to->image, to->layout, 1, &region);
+
+        VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &stagingCmdBuffer_;
+        VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
+        vkDeviceWaitIdle(device_);
+    }
+
+    void VulkanGraphicsDevice::PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)
+    {
+        uint32_t barrierCount = barriers->barrierInfoCount;
+        std::vector<VkImageMemoryBarrier> imageBarriers(barrierCount);
+        for (uint32_t i = 0; i < barrierCount; ++i)
+        {
+            ImageBarrierInfo& barrierInfo = barriers->barrierInfo[i];
+            VkImageLayout newLayout = _ConvertLayout(barrierInfo.newLayout);
+            auto texture = std::static_pointer_cast<VulkanTexture>(barrierInfo.resource->internalState);
+            imageBarriers[i] = CreateImageBarrier(texture->image,
+                texture->imageAspect,
+                _ConvertAccessFlags(barrierInfo.srcAccessMask), 
+                _ConvertAccessFlags(barrierInfo.dstAccessMask),
+                texture->layout,
+                newLayout
+               );
+            texture->layout = newLayout;
+        }
+        
+		auto cmdList = GetCommandList(commandList);
+        vkCmdPipelineBarrier(cmdList->commandBuffer,
+            _ConvertPipelineStageFlags(barriers->srcStage),
+            _ConvertPipelineStageFlags(barriers->dstStage),
+            VK_DEPENDENCY_BY_REGION_BIT,
+            0,0, 0, 0,
+            barrierCount, imageBarriers.data());
+    }
+
     void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
     {
 
@@ -1626,7 +2041,15 @@ namespace gfx {
                 descriptorInfos[i].bufferInfo.offset = info.offset;
                 descriptorInfos[i].bufferInfo.range = info.size;
             }
-            else
+            else if (info.resource->IsTexture())
+            {
+                auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
+                descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
+                descriptorInfos[i].imageInfo.imageView = vkTexture->imageView;
+                assert(vkTexture->sampler != VK_NULL_HANDLE);
+                descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
+            }
+            else 
                 assert(!"Unsupported Descriptor Type");
         }
 
@@ -1675,8 +2098,6 @@ namespace gfx {
         vkDestroyCommandPool(device_, stagingCmdPool_, nullptr);
         vkDestroySwapchainKHR(device_, swapchain_->swapchain, nullptr);
         vkDestroySurfaceKHR(instance_, swapchain_->surface, nullptr);
-        vkDestroySemaphore(device_, acquireSemaphore_, nullptr);
-        vkDestroySemaphore(device_, releaseSemaphore_, nullptr);
         vkDestroySurfaceKHR(instance_, surface_, nullptr);
         vkDestroyDevice(device_, nullptr);
         if (mValidationMode == ValidationMode::Enabled)
@@ -1690,9 +2111,4 @@ namespace gfx {
     {
         gAllocationHandler.destroyReleasedResource(device_, vmaAllocator_);
     }
-
-
-
-
-
 };

@@ -73,8 +73,8 @@
       </Command>
     </CustomBuildStep>
     <CustomBuild>
-      <Command>$(VULKAN_SDK)\Bin\glslangValidator.exe %(FullPath) -V -o  $(SolutionDir)SPIRV/%(Filename).spv</Command>
-      <Outputs>$(SolutionDir)SPIRV/%(Filename).spv;%(Outputs)</Outputs>
+      <Command>$(VULKAN_SDK)\Bin\glslangValidator.exe %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
+      <Outputs>$(SolutionDir)Assets/SPIRV/%(Filename).spv;%(Outputs)</Outputs>
       <AdditionalInputs>%(FullPath)</AdditionalInputs>
       <BuildInParallel>true</BuildInParallel>
     </CustomBuild>
@@ -103,18 +103,19 @@
       </Command>
     </CustomBuildStep>
     <CustomBuild>
-      <Command>$(VULKAN_SDK)\Bin\glslangValidator.exe %(FullPath) -V -o  $(SolutionDir)SPIRV/%(Filename).spv</Command>
-      <Outputs>$(SolutionDir)SPIRV/%(Filename).spv;%(Outputs)</Outputs>
+      <Command>$(VULKAN_SDK)\Bin\glslangValidator.exe %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
+      <Outputs>$(SolutionDir)Assets/SPIRV/%(Filename).spv;%(Outputs)</Outputs>
       <AdditionalInputs>%(FullPath)</AdditionalInputs>
       <BuildInParallel>true</BuildInParallel>
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Shaders\mesh.glsl" />
+    <ClInclude Include="Source\Engine\Camera.h" />
+    <ClInclude Include="Source\Engine\ImageLoader.h" />
     <ClInclude Include="Source\Engine\ECS.h" />
     <ClInclude Include="Source\Engine\Application.h" />
     <ClInclude Include="Source\Engine\CommonInclude.h" />
-    <ClInclude Include="Source\Engine\Enums.h" />
+    <ClInclude Include="Source\Engine\EnvironmentMap.h" />
     <ClInclude Include="Source\Engine\EventDispatcher.h" />
     <ClInclude Include="Source\Engine\GLFWInput.h" />
     <ClInclude Include="Source\Engine\GlmIncludes.h" />
@@ -125,40 +126,56 @@
     <ClInclude Include="Source\Engine\Input.h" />
     <ClInclude Include="Source\Engine\Logger.h" />
     <ClInclude Include="Source\Engine\Platform.h" />
+    <ClInclude Include="Source\Engine\Renderer.h" />
     <ClInclude Include="Source\Engine\Scene.h" />
     <ClInclude Include="Source\Engine\Timer.h" />
     <ClInclude Include="Source\Engine\Components.h" />
     <ClInclude Include="Source\Engine\Utils.h" />
     <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h" />
     <ClInclude Include="Source\Engine\spirv_reflect.h" />
-    <ClInclude Include="Source\Sandbox.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Camera.cpp" />
+    <ClCompile Include="Source\Engine\ImageLoader.cpp" />
     <ClCompile Include="Source\Engine\ECS.cpp" />
     <ClCompile Include="Source\Engine\Components.cpp" />
     <ClCompile Include="Source\Engine\Application.cpp" />
+    <ClCompile Include="Source\Engine\EnvironmentMap.cpp" />
     <ClCompile Include="Source\Engine\EventDispatcher.cpp" />
     <ClCompile Include="Source\Engine\GLFWInput.cpp" />
     <ClCompile Include="Source\Engine\GpuMemoryAllocator.cpp" />
     <ClCompile Include="Source\Engine\Input.cpp" />
     <ClCompile Include="Source\Engine\Logger.cpp" />
+    <ClCompile Include="Source\Engine\Renderer.cpp" />
     <ClCompile Include="Source\Engine\Scene.cpp" />
     <ClCompile Include="Source\Engine\Utils.cpp" />
     <ClCompile Include="Source\Engine\VulkanGraphicsDevice.cpp" />
     <ClCompile Include="Source\Engine\spriv_reflect.c" />
     <ClCompile Include="Source\glfwMain.cpp" />
-    <ClCompile Include="Source\Sandbox.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Shaders\main.frag.glsl">
+    <CustomBuild Include="..\Assets\Shaders\cubemap_converter.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Shaders\main.vert.glsl">
+    <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\Shaders\pbr.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\main.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="..\Assets\Shaders\bindings.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\cubemap.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="..\Assets\Shaders\mesh.glsl">
+      <FileType>Document</FileType>
+    </None>
+    <None Include="..\Assets\Shaders\pbr.glsl">
+      <FileType>Document</FileType>
+    </None>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -8,11 +8,13 @@
 #include "GlmIncludes.h"
 #include "ECS.h"
 #include "Scene.h"
+#include "Renderer.h"
 
 #include <sstream>
 #include <memory>
 
 struct gfx::Pipeline;
+class Renderer;
 
 class Application
 {
@@ -35,6 +37,8 @@ public:
 
 	void SetWindow(Platform::WindowType window, bool fullscreen);
 
+	bool IsRunning() const { return bRunning; }
+
 	virtual ~Application();
 
 protected:
@@ -47,18 +51,12 @@ protected:
 
 	float mDeltaTime = 0.0f;
 	float mElapsedTime = 0.0f;
-	const int kMaxEntity = 10'000;
 
 	Platform::WindowType mWindow = nullptr;
-	std::unique_ptr < gfx::GraphicsDevice > mDevice = nullptr;
+	std::shared_ptr<gfx::GraphicsDevice > mDevice = nullptr;
 
 	std::shared_ptr<gfx::RenderPass> mSwapchainRP;
-
-	std::shared_ptr<gfx::Pipeline> mTrianglePipeline;
-	std::shared_ptr<gfx::GPUBuffer> mGlobalUniformBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mPerObjectDataBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
+	std::unique_ptr<Renderer> mRenderer;
 
 	gfx::Format mSwapchainColorFormat = gfx::Format::B8G8R8A8_UNORM;
 	gfx::Format mSwapchainDepthFormat = gfx::Format::D32_SFLOAT_S8_UINT;
@@ -69,17 +67,9 @@ protected:
 	ecs::Entity mEntity = {};
 	Scene mScene;
 
-	struct GlobalUniformData
-	{
-		glm::mat4 P;
-		glm::mat4 V;
-		glm::mat4 VP;
-		glm::vec3 cameraPosition;
-		float dt;
-	} mGlobalUniformData;
-
-
 	int mWidth, mHeight;
+
+	bool bRunning = true;
 
 	bool windowResizeEvent(const Event& event);
 	

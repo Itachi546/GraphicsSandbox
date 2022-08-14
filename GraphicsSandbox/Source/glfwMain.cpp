@@ -1,10 +1,9 @@
-#include "Sandbox.h"
+#include "Engine/GraphicsSandbox.h"
 #include <GLFW/glfw3.h>
 
 int main(int argc, char** argv)
 {
-	TestApplication application;
-
+	Application application;
 
 	if (!glfwInit())
 		glfwInit();
@@ -19,7 +18,7 @@ int main(int argc, char** argv)
 	application.SetWindow(window, false);
 	application.Initialize();
 
-	while (!glfwWindowShouldClose(window))
+	while (!glfwWindowShouldClose(window) && application.IsRunning())
 	{
 		glm::vec2 delta = Input::GetMouseState().delta;
 

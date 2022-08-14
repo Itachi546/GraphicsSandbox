@@ -3,6 +3,8 @@
 #include "ECS.h"
 #include "Components.h"
 #include "GpuMemoryAllocator.h"
+#include "EnvironmentMap.h"
+#include "Camera.h"
 
 #include <string_view>
 
@@ -39,6 +41,12 @@ public:
 
 	void Destroy(const ecs::Entity& entity);
 
+	Camera* GetCamera() {
+		return &mCamera;
+	}
+
+	inline std::unique_ptr<EnvironmentMap>& GetEnvironmentMap() { return mEnvMap; }
+
 	~Scene(); 
 
 
@@ -47,14 +55,18 @@ private:
 	ecs::Entity mPlaneEntity;
 	ecs::Entity mSphereEntity;
 
-	std::shared_ptr<ecs::ComponentManager> mComponentManager;
+	Camera mCamera;
 
+	std::shared_ptr<ecs::ComponentManager> mComponentManager;
+	std::unique_ptr<EnvironmentMap> mEnvMap;
 	void UpdateTransformData();
 
 	void InitializePrimitiveMesh();
 	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
 	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
 	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
+
+	friend class Renderer;
 };
 
 /*

@@ -1,5 +1,6 @@
 #include "Utils.h"
 #include "Platform.h"
+#include "Logger.h"
 
 #include <assert.h>
 
@@ -13,8 +14,6 @@ UINT GetMessageIconType(MessageType messageType)
 		return MB_ICONERROR;
 	case MessageType::Warning:
 		return MB_ICONWARNING;
-	case MessageType::Question:
-		return MB_ICONQUESTION;
 	default:
 		return MB_ICONINFORMATION;
 	}
@@ -32,7 +31,10 @@ char* Utils::ReadFile(const char* path, uint32_t* fileSizeInByte)
 	FILE* file = nullptr;
 	fopen_s(&file, path, "rb");
 	if (!file)
+	{
+		Logger::Error("Failed to load file: " + std::string(path));
 		return nullptr;
+	}
 
 	fseek(file, 0, SEEK_END);
 	long length = ftell(file);

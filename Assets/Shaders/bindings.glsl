@@ -1,5 +1,5 @@
 #ifdef VERTEX_SHADER
-layout(binding = 0) readonly uniform Globals
+layout(binding = 0) uniform readonly Globals
 {
    mat4 P;
    mat4 V;
@@ -17,8 +17,17 @@ layout(binding = 2) readonly buffer PerObject
 {
    PerObjectData aPerObjectData[];
 };
+
+layout(binding = 3) readonly buffer TransformData
+{
+   mat4 aTransformData[];
+};
 #endif
 
 #ifdef FRAGMENT_SHADER
-   layout(binding = 3) uniform samplerCube uEnvMap;
+   layout(binding = 4) readonly buffer MaterialData
+   {
+       Material aMaterialData[];
+   };
+   layout(binding = 5) uniform samplerCube uIrradianceMap;
 #endif

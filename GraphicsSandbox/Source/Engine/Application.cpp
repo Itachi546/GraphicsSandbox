@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <sstream>
 
-void Application::Initialize()
+void Application::initialize_()
 {
 	Timer timer;
 	if (mInitialized)
@@ -29,16 +29,6 @@ void Application::Initialize()
 
 	EventDispatcher::Subscribe(EventType::WindowResize, BIND_EVENT_FN(Application::windowResizeEvent));
 	mInitialized = true;
-
-	
-	// Create Cube 
-	mEntity = mScene.CreateSphere("sphere1");
-	ecs::Entity plane = mScene.CreatePlane("plane1");
-
-	TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(plane);
-	transform->scale = glm::vec3(5.0f);
-	transform->position = glm::vec3(0.0f, -1.0f, 0.0f);
-
 	Logger::Debug("Intialized Application: (" + std::to_string(timer.elapsedSeconds()) + "s)");
 }
 
@@ -57,9 +47,9 @@ void Application::Run()
 	const float dt = mLockFrameRate ? (1.0f / mTargetFrameRate) : mDeltaTime;
 	mElapsedTime += dt;
 
-	Update(dt);
+	update_(dt);
 
-	Render();
+	render_();
 
 	mWindowTitle << "CPU Time: " << timer.elapsedMilliseconds() << "ms ";
 	mWindowTitle << "FPS: " << 1.0f / dt << " FrameTime: " << dt * 1000.0f << "ms ";
@@ -68,48 +58,16 @@ void Application::Run()
 	mWindowTitle.str(std::string());
 }
 
-void Application::Update(float dt)
+void Application::update_(float dt)
 {
-	Camera* camera = mScene.GetCamera();
-
-	const float walkSpeed = 1.0f;
-
-	if (Input::Down(Input::Key::KEY_ESCAPE))
-		bRunning = false;
-
-	if (Input::Down(Input::Key::KEY_W))
-		camera->Walk(-dt * walkSpeed);
-	else if (Input::Down(Input::Key::KEY_S))
-		camera->Walk(dt * walkSpeed);
-	if (Input::Down(Input::Key::KEY_A))
-		camera->Strafe(-dt * walkSpeed);
-	else if (Input::Down(Input::Key::KEY_D))
-		camera->Strafe(dt * walkSpeed);
-	if (Input::Down(Input::Key::KEY_1))
-		camera->Lift(dt * walkSpeed);
-	else if (Input::Down(Input::Key::KEY_2))
-		camera->Lift(-dt * walkSpeed);
-
-	if (Input::Down(Input::Key::MOUSE_BUTTON_LEFT))
-	{
-		auto[x, y] = Input::GetMouseState().delta;
-		camera->Rotate(-y, x, dt);
-	}
-
+	PreUpdate(dt);
 	mScene.Update(dt);
 	mRenderer->Update(dt, mWidth, mHeight);
 	Input::Update(mWindow);
-
-	TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(mEntity);
-	static float angle = 0.75f;
-	transform->rotation = glm::fquat{ glm::vec3(0.0f, angle, 0.0f) };
-	transform->SetDirty(true);
-	/*
-	angle += dt * 0.1f;
-	*/
+	PostUpdate(dt);
 }
 
-void Application::Render()
+void Application::render_()
 {
 
 	if (!mDevice->IsSwapchainReady(mSwapchainRP.get()))
@@ -155,7 +113,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	gfx::SwapchainDesc swapchainDesc = {};
 	swapchainDesc.width = mWidth;
 	swapchainDesc.height = mHeight;
-	swapchainDesc.vsync = false;
+	swapchainDesc.vsync = true;
 	swapchainDesc.colorFormat = mSwapchainColorFormat;
 	swapchainDesc.depthFormat = mSwapchainDepthFormat;	
 	swapchainDesc.fullscreen = false;

@@ -2,27 +2,32 @@
 #include "Utils.h"
 #include "ImageLoader.h"
 
-EnvironmentMap::EnvironmentMap()
+static void CreateComputePipeline(const char* filename, gfx::GraphicsDevice* device, gfx::Pipeline* out)
 {
-	mDevice = gfx::GetDevice();
 	uint32_t codeLen = 0;
-	char* code = Utils::ReadFile("Assets/SPIRV/cubemap_converter.comp.spv", &codeLen);
-
+	char* code = Utils::ReadFile(filename, &codeLen);
 	gfx::ShaderDescription shaderDesc{ code, codeLen };
-
 	gfx::PipelineDesc pipelineDesc;
 	pipelineDesc.shaderCount = 1;
 	pipelineDesc.shaderDesc = &shaderDesc;
-
-	mHdriToCubemap = std::make_shared<gfx::Pipeline>();
-	mDevice->CreateComputePipeline(&pipelineDesc, mHdriToCubemap.get());
+	device->CreateComputePipeline(&pipelineDesc, out);
 	delete[] code;
+}
 
-	mCubemap = std::make_shared<gfx::GPUTexture>();
+EnvironmentMap::EnvironmentMap()
+{
+	mDevice = gfx::GetDevice();
+
+	mHdriToCubemap      = std::make_shared<gfx::Pipeline>();
+	mIrradiancePipeline = std::make_shared<gfx::Pipeline>();
+	CreateComputePipeline("Assets/SPIRV/hdri_converter.comp.spv", mDevice, mHdriToCubemap.get());
+	CreateComputePipeline("Assets/SPIRV/irradiance.comp.spv", mDevice, mIrradiancePipeline.get());
 }
 
 void EnvironmentMap::CreateFromHDRI(const char* hdri)
 {
+	mCubemap = std::make_shared<gfx::GPUTexture>();
+
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 
 	// Load HDRI Image File 
@@ -87,7 +92,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	};
 	device->PipelineBarrier(&commandList, &computeBarrier);
 
-	// Bind resourcezs
+	// Bind resources
 	gfx::DescriptorInfo descriptorInfos[2] = {};
 	descriptorInfos[0].resource = &hdriTexture;
 	descriptorInfos[0].offset = 0;
@@ -100,6 +105,53 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	mDevice->UpdateDescriptor(mHdriToCubemap.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	device->BindPipeline(&commandList, mHdriToCubemap.get());
 	device->DispatchCompute(&commandList, mCubemapWidth / 32, mCubemapHeight / 32, 6);
+	device->SubmitCommandList(&commandList);
+	device->WaitForGPU();
+}
+
+void EnvironmentMap::CalculateIrradiance()
+{
+	gfx::GraphicsDevice* device = gfx::GetDevice();
+
+	mIrradiance = std::make_shared<gfx::GPUTexture>();
+	gfx::GPUTextureDesc irrDesc{};
+	irrDesc.width = mIrrTexWidth;
+	irrDesc.height = mIrrTexHeight;
+	irrDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	irrDesc.imageViewType = gfx::ImageViewType::IVCubemap;
+	irrDesc.arrayLayers = 6;
+	irrDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
+	irrDesc.bCreateSampler = true;
+	device->CreateTexture(&irrDesc, mIrradiance.get());
+
+	// Begin Compute Shader
+	gfx::CommandList commandList = device->BeginCommandList();
+	// Layout transition for shader read/write
+	gfx::ImageBarrierInfo imageBarrier[] = {
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mIrradiance.get()},
+	};
+
+	gfx::PipelineBarrierInfo computeBarrier = {
+		imageBarrier, static_cast<uint32_t>(std::size(imageBarrier)),
+		gfx::PipelineStage::BottomOfPipe,
+		gfx::PipelineStage::ComputeShader,
+	};
+
+	device->PipelineBarrier(&commandList, &computeBarrier);
+
+	// Bind resources
+	gfx::DescriptorInfo descriptorInfos[2] = {};
+	descriptorInfos[0].resource = mCubemap.get();
+	descriptorInfos[0].offset = 0;
+	descriptorInfos[0].type = gfx::DescriptorType::Image;
+
+	descriptorInfos[1].resource = mIrradiance.get();
+	descriptorInfos[1].offset = 0;
+	descriptorInfos[1].type = gfx::DescriptorType::Image;
+
+	mDevice->UpdateDescriptor(mIrradiancePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	device->BindPipeline(&commandList, mIrradiancePipeline.get());
+	device->DispatchCompute(&commandList, mIrrTexWidth / 8, mIrrTexHeight / 8, 6);
 	device->SubmitCommandList(&commandList);
 	device->WaitForGPU();
 }

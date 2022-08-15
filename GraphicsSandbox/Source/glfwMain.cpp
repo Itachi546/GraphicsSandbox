@@ -1,9 +1,10 @@
-#include "Engine/GraphicsSandbox.h"
+#include "Sandbox.h"
 #include <GLFW/glfw3.h>
 
 int main(int argc, char** argv)
 {
-	Application application;
+	Timer timer;
+	Application* application = new SandboxApplication;
 
 	if (!glfwInit())
 		glfwInit();
@@ -15,18 +16,19 @@ int main(int argc, char** argv)
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* window = glfwCreateWindow(1360, 769, "Hello World", 0, 0);
 	glfwSwapInterval(1);
-	application.SetWindow(window, false);
-	application.Initialize();
+	application->SetWindow(window, false);
+	application->Initialize();
+	Logger::Debug("Total initialization: " + std::to_string(timer.elapsedSeconds()));
 
-	while (!glfwWindowShouldClose(window) && application.IsRunning())
+	while (!glfwWindowShouldClose(window) && application->IsRunning())
 	{
 		glm::vec2 delta = Input::GetMouseState().delta;
 
-		application.Run();
+		application->Run();
 
 		glfwSwapBuffers(window);
 	}
-
+	delete application;
 	glfwDestroyWindow(window);
 	glfwTerminate();
 

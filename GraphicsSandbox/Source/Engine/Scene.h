@@ -11,14 +11,7 @@
 class Scene
 {
 public:
-	/*
-	* HACK:
-	* Inlining and Static variable
-	* When the components are registered from here 
-	* the componentId returned from the static GetID() function
-	* is incorrect.
-	* Declaring it in the .cpp file fix the issues
-	*/
+
 	Scene(){}
 
 	void Initialize();
@@ -39,7 +32,7 @@ public:
 
 	void GenerateDrawData(std::vector<DrawData>& out);
 
-	void Destroy(const ecs::Entity& entity);
+	void Destroy(ecs::Entity& entity);
 
 	Camera* GetCamera() {
 		return &mCamera;

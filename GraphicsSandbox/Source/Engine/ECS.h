@@ -15,17 +15,11 @@ namespace ecs
 	using ComponentType = std::uint8_t;
 	const uint8_t MAX_COMPONENTS = 64;
 
-	struct Entity
-	{
-		uint32_t handle = INVALID_ENTITY;
-		uint64_t signature = 0;
+	using Entity = uint32_t;
 
-        Entity() {}
-		Entity(uint32_t handle, uint64_t signature) : handle(handle), signature(signature){}
-
-
-		bool IsValid() const { return handle != INVALID_ENTITY; }
-	};
+	inline bool IsValid(Entity entity) {
+		return entity != INVALID_ENTITY;
+	}
 	/*
 	* This doesn't seem to work when the dll is made and
 	* called from exe?
@@ -41,7 +35,7 @@ namespace ecs
 	public:
 		virtual ~IComponentArray() = default;
 
-		virtual bool removeEntity(const Entity& handle) { return false; }
+		virtual bool removeEntity(Entity& handle) { return false; }
 	};
 
 	template<typename T>
@@ -54,16 +48,16 @@ namespace ecs
 		ComponentArray(const ComponentArray&) = delete; 
 		void operator=(const ComponentArray&) = delete;
 
-		T& addComponent(const Entity& entity) {
+		T& addComponent(Entity entity) {
 			assert(components.size() == entities.size());
 			assert(entities.size() == lookup_.size());
-			assert(entity.IsValid());
+			assert(IsValid(entity));
 
-			auto found = lookup_.find(entity.handle);
+			auto found = lookup_.find(entity);
 			if (found != lookup_.end())
 				return components[found->second];
 
-			lookup_[entity.handle] = components.size();
+			lookup_[entity] = components.size();
 			components.push_back(T());
 			entities.push_back(entity);
 
@@ -71,30 +65,30 @@ namespace ecs
 		}
 
 		template<typename ...Args>
-		T& addComponent(const Entity& entity, Args&& ...args)
+		T& addComponent(Entity entity, Args&& ...args)
 		{
 			assert(components.size() == entities.size());
 			assert(entities.size() == lookup_.size());
 
-			auto found = lookup_.find(entity.handle);
+			auto found = lookup_.find(entity);
 			if (found != lookup_.end())
 				return components[found->second];
 
-			lookup_[entity.handle] = components.size();
+			lookup_[entity] = components.size();
 			components.push_back(T(std::forward<Args>(args)...));
 			entities.push_back(entity);
 			return components.back();
 		}
 
-		bool removeComponent(const Entity& entity) {
-			auto found = lookup_.find(entity.handle);
+		bool removeComponent(Entity entity) {
+			auto found = lookup_.find(entity);
 			if (found != lookup_.end())
 			{
 				uint64_t index = found->second;
 				components[index] = std::move(components.back());
 				entities[index] = entities.back();
-				lookup_[entities[index].handle] = index;
-				lookup_.erase(entity.handle);
+				lookup_[entities[index]] = index;
+				lookup_.erase(entity);
 				components.pop_back();
 				entities.pop_back();
 				return true;
@@ -102,12 +96,12 @@ namespace ecs
 			return false;
 		}
 
-		bool removeEntity(const Entity& entity) override {
+		bool removeEntity(Entity& entity) override {
 			return removeComponent(entity);
 		}
 
-		T* getComponent(const Entity& entity) {
-			auto found = lookup_.find(entity.handle);
+		T* getComponent(Entity entity) {
+			auto found = lookup_.find(entity);
 			if (found != lookup_.end())
 				return &components[found->second];
 			return nullptr;
@@ -115,7 +109,7 @@ namespace ecs
 
 		std::size_t GetIndex(Entity entity)
 		{
-			auto found = lookup_.find(entity.handle);
+			auto found = lookup_.find(entity);
 			if (found != lookup_.end())
 				return found->second;
 			return ~0ull;
@@ -197,8 +191,6 @@ namespace ecs
 		{
 			uint32_t compId = GetComponentTypeId<T>();
 			assert(compId < MAX_COMPONENTS);
-
-			entity.signature |= (1Ui64 << compId);
 			auto comp = GetComponentArray<T>(compId);
 			assert(comp != nullptr);
 			return comp->addComponent(entity);
@@ -209,8 +201,6 @@ namespace ecs
 		{
 			uint32_t compId = GetComponentTypeId<T>(compId);
 			assert(compId < MAX_COMPONENTS);
-
-			entity.signature |= (1Ui64 << compId);
 			auto comp = GetComponentArray<T>();
 			assert(comp != nullptr);
 			return comp->addComponent(entity, std::forward<Args>(args)...);
@@ -222,13 +212,9 @@ namespace ecs
 			uint32_t compId = GetComponentTypeId<T>();
 			assert(compId < MAX_COMPONENTS);
 
-			if (HasComponent<T>(entity))
-			{
-				auto comp = GetComponentArray<T>(compId);
-				assert(comp != nullptr);
-				return comp->getComponent(entity);
-			}
-			return nullptr;
+			auto comp = GetComponentArray<T>(compId);
+			assert(comp != nullptr);
+			return comp->getComponent(entity);
 		}
 
 
@@ -237,9 +223,6 @@ namespace ecs
 		{
 			uint32_t compId = GetComponentTypeId<T>();
 			assert(compId < MAX_COMPONENTS);
-
-			entity.signature &= ~(1Ui64 << compId);
-
 			auto comp = GetComponentArray<T>(compId);
 			assert(comp != nullptr);
 			return comp->removeComponent(entity);
@@ -253,8 +236,8 @@ namespace ecs
 	inline Entity CreateEntity()
 	{
 		static uint32_t id = 0;
-		return Entity{ ++id, 0 };
+		return ++id;
 	}
 
-	void DestroyEntity(ComponentManager* mgr, Entity entity);
+	void DestroyEntity(ComponentManager* mgr, Entity& entity);
 }

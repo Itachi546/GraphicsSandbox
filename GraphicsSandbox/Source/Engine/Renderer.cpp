@@ -2,6 +2,8 @@
 #include "GraphicsDevice.h"
 #include "Utils.h"
 #include "Scene.h"
+#include "Input.h"
+#include "Logger.h"
 
 #include <vector>
 
@@ -17,7 +19,7 @@ Renderer::Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP) : mSwapchainRP(
 	mGlobalUniformBuffer = std::make_shared<gfx::GPUBuffer>();
 	mDevice->CreateBuffer(&uniformBufferDesc, mGlobalUniformBuffer.get());
 
-	// Per Object Transform Buffer
+	// Per Object Data Buffer
 	gfx::GPUBufferDesc bufferDesc = {};
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	bufferDesc.usage = gfx::Usage::Upload;
@@ -25,10 +27,24 @@ Renderer::Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP) : mSwapchainRP(
 	mPerObjectDataBuffer = std::make_shared<gfx::GPUBuffer>();
 	mDevice->CreateBuffer(&bufferDesc, mPerObjectDataBuffer.get());
 
+	// Transform Buffer
+	bufferDesc.size = kMaxEntity * sizeof(glm::mat4);
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	mTransformBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mTransformBuffer.get());
+
+	// Material Component Buffer
+	bufferDesc.size = kMaxEntity * sizeof(MaterialComponent);
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	mMaterialBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mMaterialBuffer.get());
+
+	// Draw Indirect Buffer
 	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
 	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
 	mDrawIndirectBuffer = std::make_shared<gfx::GPUBuffer>();
 	mDevice->CreateBuffer(&bufferDesc, mDrawIndirectBuffer.get());
+
 
 	mDevice->CreateSemaphore(&mAcquireSemaphore);
 	mDevice->CreateSemaphore(&mReleaseSemaphore);
@@ -75,11 +91,22 @@ void Renderer::Render()
 
 	// Copy PerObjectDrawData to the buffer
 	PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr);
-	gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr);
+	glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr);
+	MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr);
 
+	gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr);
 	for (uint32_t i = 0; i < drawDatas.size(); ++i)
 	{
-		objectDataPtr[i].transform = drawDatas[i].worldTransform;
+
+		transformPtr[i] = drawDatas[i].worldTransform;
+		objectDataPtr[i].transformIndex = i;
+		objectDataPtr[i].materialIndex = i;
+
+		MaterialComponent* mat = drawDatas[i].material;
+		materialCompPtr[i].albedo = mat->albedo;
+		materialCompPtr[i].roughness = mat->roughness;
+		materialCompPtr[i].metallic = mat->metallic;
+		materialCompPtr[i].ao = mat->ao;
 
 		drawCommandPtr[i].firstIndex = drawDatas[i].indexBuffer.offset / sizeof(uint32_t);
 		drawCommandPtr[i].indexCount = drawDatas[i].indexCount;
@@ -95,8 +122,9 @@ void Renderer::Render()
 	auto ib = allocator->GetBuffer(ibView.index);
 
 	auto& envMap = mScene->GetEnvironmentMap();
+
 	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[4] = {};
+	gfx::DescriptorInfo descriptorInfos[6] = {};
 	descriptorInfos[0].resource = mGlobalUniformBuffer.get();
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].size = sizeof(GlobalUniformData);
@@ -110,11 +138,23 @@ void Renderer::Render()
 	gfx::GPUBuffer* perObjectBuffer = mPerObjectDataBuffer.get();
 	descriptorInfos[2].resource = perObjectBuffer;
 	descriptorInfos[2].offset = 0;
-	descriptorInfos[2].size = (uint32_t)perObjectBuffer->desc.size;
+	descriptorInfos[2].size = (uint32_t)drawDatas.size() * sizeof(PerObjectData);
 	descriptorInfos[2].type = gfx::DescriptorType::StorageBuffer;
 
-	descriptorInfos[3].resource = envMap->GetCubemap().get();
-	descriptorInfos[3].type = gfx::DescriptorType::Image;
+	gfx::GPUBuffer* transformBuffer = mTransformBuffer.get();
+	descriptorInfos[3].resource = transformBuffer;
+	descriptorInfos[3].offset = 0;
+	descriptorInfos[3].size = (uint32_t)drawDatas.size() * sizeof(glm::mat4);
+	descriptorInfos[3].type = gfx::DescriptorType::StorageBuffer;
+
+	gfx::GPUBuffer* materialBuffer = mMaterialBuffer.get();
+	descriptorInfos[4].resource = materialBuffer;
+	descriptorInfos[4].offset = 0;
+	descriptorInfos[4].size = (uint32_t)drawDatas.size() * sizeof(MaterialComponent);
+	descriptorInfos[4].type = gfx::DescriptorType::StorageBuffer;
+
+	descriptorInfos[5].resource = envMap->GetIrradianceMap().get();
+	descriptorInfos[5].type = gfx::DescriptorType::Image;
 
 	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(&commandList, mTrianglePipeline.get());
@@ -122,7 +162,18 @@ void Renderer::Render()
 	mDevice->BindIndexBuffer(&commandList, ib);
 	mDevice->DrawIndexedIndirect(&commandList, mDrawIndirectBuffer.get(), 0, (uint32_t)drawDatas.size(), sizeof(gfx::DrawIndirectCommand));
 
-	DrawCubemap(&commandList, envMap->GetCubemap().get());
+	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
+
+	static bool bCubemapMode = true;
+	if (Input::Press(Input::Key::KEY_3))
+		bCubemapMode = true;
+	else if (Input::Press(Input::Key::KEY_4))
+		bCubemapMode = false;
+
+	if(bCubemapMode)
+		DrawCubemap(&commandList, envMap->GetCubemap().get());
+	else
+		DrawCubemap(&commandList, envMap->GetIrradianceMap().get());
 
 	mDevice->EndRenderPass(&commandList);
 	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);

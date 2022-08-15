@@ -17,17 +17,17 @@ struct Vertex
 
 struct PerObjectData
 {
-	glm::mat4 transform;
-
-	PerObjectData() : transform(1.0f) {}
-	PerObjectData(const glm::mat4& transform) : transform(transform) {}
+	uint32_t transformIndex;
+	uint32_t materialIndex;
 };
 
+struct MaterialComponent;
 struct DrawData
 {
+	glm::mat4 worldTransform;
+	MaterialComponent* material;
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
-	glm::mat4 worldTransform;
 	uint32_t indexCount;
 };
 
@@ -113,4 +113,12 @@ struct MeshDataComponent
 struct ObjectComponent
 {
 	std::size_t meshId;
+};
+
+struct MaterialComponent {
+	glm::vec4 albedo;
+	float roughness;
+	float metallic;
+	float ao;
+	float unused_;
 };

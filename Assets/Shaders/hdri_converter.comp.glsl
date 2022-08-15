@@ -5,6 +5,10 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 layout(binding = 0) uniform sampler2D uHDRI;
 layout(binding = 1, rgba16f) uniform writeonly imageCube uCubeMap;
 
+#extension GL_GOOGLE_include_directive : require
+#include "cubemap.glsl"
+
+
 //layout(push_constant) uniform UniformData
 //{ 
 //  vec2 uCubemapSize;
@@ -19,22 +23,7 @@ vec2 sphericalCoord(vec3 p)
    return uv;
 }
 
-vec3 uvToXYZ(ivec3 cubeCoord, vec2 cubemapSize)
-{
-   vec2 texCoord = vec2(cubeCoord.xy) / cubemapSize;
-   texCoord = texCoord * 2.0f - 1.0f;
-   switch(cubeCoord.z)
-   {
-      case 0: return vec3( 1.0f,       -texCoord.yx); // +X
-      case 1: return vec3(-1.0f,       -texCoord.y, texCoord.x); // -X
-      case 2: return vec3( texCoord.x,  1.0f,       texCoord.y);  // +Y
-      case 3: return vec3( texCoord.x, -1.0f,       -texCoord.y); // -Y
-      case 4: return vec3( texCoord.x, -texCoord.y,  1.0f); // +Z
-      case 5: return vec3(-texCoord.xy,             -1.0f); // -Z
-   }
 
-   return vec3(0.0);
-}
 
 void main()
 {

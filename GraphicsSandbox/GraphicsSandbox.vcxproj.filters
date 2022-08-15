@@ -92,6 +92,7 @@
       <Filter>SOURCE\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera.h" />
+    <ClInclude Include="Source\Sandbox.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -147,7 +148,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Assets\Shaders\cubemap_converter.comp.glsl">
+    <CustomBuild Include="..\Assets\Shaders\hdri_converter.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
@@ -162,6 +163,9 @@
     <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\irradiance.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">
@@ -171,6 +175,9 @@
       <Filter>SHADERS</Filter>
     </None>
     <None Include="..\Assets\Shaders\bindings.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="..\Assets\Shaders\cubemap.glsl">
       <Filter>SHADERS</Filter>
     </None>
   </ItemGroup>

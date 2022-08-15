@@ -11,11 +11,13 @@ void Scene::Initialize()
 	mComponentManager->RegisterComponent<MeshDataComponent>();
 	mComponentManager->RegisterComponent<ObjectComponent>();
 	mComponentManager->RegisterComponent<NameComponent>();
+	mComponentManager->RegisterComponent<MaterialComponent>();
 
 	InitializePrimitiveMesh();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
 	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/photo_studio.hdr");
+	mEnvMap->CalculateIrradiance();
 }
 
 void Scene::GenerateDrawData(std::vector<DrawData>& out)
@@ -37,6 +39,10 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 
 		TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
 		drawData.worldTransform = transform->world;
+
+		MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
+		drawData.material = material;
+
 		out.push_back(std::move(drawData));
 	}
 }
@@ -88,7 +94,7 @@ void Scene::Update(float dt)
 	UpdateTransformData();
 }
 
-void Scene::Destroy(const ecs::Entity& entity)
+void Scene::Destroy(ecs::Entity& entity)
 {
 	ecs::DestroyEntity(mComponentManager.get(), entity);
 }

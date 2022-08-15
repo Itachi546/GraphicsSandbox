@@ -18,5 +18,6 @@ struct Vertex
 
 struct PerObjectData
 {
-	mat4 worldMatrix;
+	uint transformIndex;
+	uint materialIndex;
 };

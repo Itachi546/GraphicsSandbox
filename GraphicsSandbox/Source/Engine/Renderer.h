@@ -43,6 +43,8 @@ private:
 	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mPerObjectDataBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
+	std::shared_ptr<gfx::GPUBuffer> mMaterialBuffer;
+	
 	gfx::Semaphore mAcquireSemaphore;
 	gfx::Semaphore mReleaseSemaphore;
 
@@ -51,4 +53,5 @@ private:
 
 	std::shared_ptr<gfx::Pipeline> loadPipelines(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
+
 };

@@ -20,14 +20,11 @@ class Application
 {
 
 public:
-
-	virtual void Initialize();
+	virtual void Initialize() = 0;
+	virtual void PreUpdate(float dt){}
+	virtual void PostUpdate(float dt) {}
 
 	void Run();
-
-	virtual void Update(float dt);
-
-	virtual void Render();
 
 	void setTargetFrameRate(float value) { mTargetFrameRate = value; }
 
@@ -42,6 +39,13 @@ public:
 	virtual ~Application();
 
 protected:
+
+	void initialize_();
+
+	void update_(float dt);
+
+	void render_();
+
 
 	Timer mTimer;
 
@@ -64,7 +68,6 @@ protected:
 
 	std::stringstream mWindowTitle;
 
-	ecs::Entity mEntity = {};
 	Scene mScene;
 
 	int mWidth, mHeight;

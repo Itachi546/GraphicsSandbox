@@ -1,23 +1,16 @@
 #include "ECS.h"
 namespace ecs
 {
-	void DestroyEntity(ComponentManager* mgr, Entity entity)
+	void DestroyEntity(ComponentManager* mgr, Entity& entity)
 	{
 
-		uint64_t signature = entity.signature;
 		for (uint32_t i = 0; i < MAX_COMPONENTS; ++i)
 		{
-			uint64_t compHash = (1Ui64 << i);
-			if ((signature & compHash) == compHash)
-			{
-				// Component is present
-				std::shared_ptr<IComponentArray> comp = mgr->GetBaseComponentArray(i);
+			std::shared_ptr<IComponentArray> comp = mgr->GetBaseComponentArray(i);
+			if(comp)
 				comp->removeEntity(entity);
-			}
 		}
-
-		entity.handle = INVALID_ENTITY;
-		entity.signature = 0;
+		entity = 0;
 	}
 
 }

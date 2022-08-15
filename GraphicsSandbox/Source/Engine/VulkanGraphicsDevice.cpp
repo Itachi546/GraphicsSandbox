@@ -1088,10 +1088,17 @@ namespace gfx {
 
 
             vkGetPhysicalDeviceProperties2(physicalDevice, &properties2_);
+#if USE_INTEGRATED_GPU
+            if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+            {
+                return physicalDevice;
+            }
+#else 
             if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
             {
                 return physicalDevice;
             }
+#endif
         }
 
         return devices[0];
@@ -2026,10 +2033,7 @@ namespace gfx {
 
         auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
 
-        // TODO: This is currently static and needs to be changed later when we want to use buffer with offset and size varying every frame
-        if (vkPipeline->descriptorSet)
-            return;
-
+        // lazy initialization of descriptor set
         std::vector<VulkanDescriptorInfo> descriptorInfos(descriptorInfoCount);
         for (uint32_t i = 0; i < descriptorInfoCount; ++i)
         {
@@ -2052,17 +2056,20 @@ namespace gfx {
             else 
                 assert(!"Unsupported Descriptor Type");
         }
-
-        VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-        allocateInfo.descriptorPool = descriptorPool_;
-        allocateInfo.descriptorSetCount = 1;
-        allocateInfo.pSetLayouts = &vkPipeline->setLayout;
         
-        VkDescriptorSet set = 0;
-		VK_CHECK(vkAllocateDescriptorSets(device_, &allocateInfo, &set));
-        vkPipeline->descriptorSet = set;
+        if (vkPipeline->descriptorSet == VK_NULL_HANDLE)
+        {
+            VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+            allocateInfo.descriptorPool = descriptorPool_;
+            allocateInfo.descriptorSetCount = 1;
+            allocateInfo.pSetLayouts = &vkPipeline->setLayout;
 
-        vkUpdateDescriptorSetWithTemplate(device_, set, vkPipeline->updateTemplate,  descriptorInfos.data());
+            VkDescriptorSet set = 0;
+            VK_CHECK(vkAllocateDescriptorSets(device_, &allocateInfo, &set));
+            vkPipeline->descriptorSet = set;
+        }
+
+        vkUpdateDescriptorSetWithTemplate(device_, vkPipeline->descriptorSet, vkPipeline->updateTemplate,  descriptorInfos.data());
     }
 
     void VulkanGraphicsDevice::WaitForGPU()

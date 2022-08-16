@@ -116,9 +116,9 @@ struct ObjectComponent
 };
 
 struct MaterialComponent {
-	glm::vec4 albedo;
-	float roughness;
-	float metallic;
-	float ao;
+	glm::vec4 albedo = glm::vec4(1.0f);
+	float roughness = 0.1f;
+	float metallic = 1.0f;
+	float ao = 1.0f;
 	float unused_;
 };

@@ -30,4 +30,6 @@ layout(binding = 3) readonly buffer TransformData
        Material aMaterialData[];
    };
    layout(binding = 5) uniform samplerCube uIrradianceMap;
+   layout(binding = 6) uniform samplerCube uPrefilterEnvMap;
+   layout(binding = 7) uniform sampler2D   uBRDFLUT;
 #endif

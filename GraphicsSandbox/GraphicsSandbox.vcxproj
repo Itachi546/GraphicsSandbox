@@ -85,7 +85,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;USE_INTEGRATED_GPU</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -171,6 +171,9 @@
     <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\brdf_lut.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="..\Assets\Shaders\cubemap.glsl" />
     <CustomBuild Include="..\Assets\Shaders\irradiance.comp.glsl">
       <FileType>Document</FileType>
@@ -181,6 +184,9 @@
     <None Include="..\Assets\Shaders\pbr.glsl">
       <FileType>Document</FileType>
     </None>
+    <CustomBuild Include="..\Assets\Shaders\prefilter_env.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

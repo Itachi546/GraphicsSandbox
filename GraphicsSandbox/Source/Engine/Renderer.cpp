@@ -89,92 +89,104 @@ void Renderer::Render()
 	std::vector<DrawData> drawDatas;
 	mScene->GenerateDrawData(drawDatas);
 
-	// Copy PerObjectDrawData to the buffer
-	PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr);
-	glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr);
-	MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr);
-
-	gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr);
-	for (uint32_t i = 0; i < drawDatas.size(); ++i)
-	{
-
-		transformPtr[i] = drawDatas[i].worldTransform;
-		objectDataPtr[i].transformIndex = i;
-		objectDataPtr[i].materialIndex = i;
-
-		MaterialComponent* mat = drawDatas[i].material;
-		materialCompPtr[i].albedo = mat->albedo;
-		materialCompPtr[i].roughness = mat->roughness;
-		materialCompPtr[i].metallic = mat->metallic;
-		materialCompPtr[i].ao = mat->ao;
-
-		drawCommandPtr[i].firstIndex = drawDatas[i].indexBuffer.offset / sizeof(uint32_t);
-		drawCommandPtr[i].indexCount = drawDatas[i].indexCount;
-		drawCommandPtr[i].instanceCount = 1;
-		drawCommandPtr[i].vertexOffset = drawDatas[i].vertexBuffer.offset / sizeof(Vertex);
-	}
-
-	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
-	gfx::BufferView& vbView = drawDatas[0].vertexBuffer;
-	gfx::BufferView& ibView = drawDatas[0].indexBuffer;
-
-	auto vb = allocator->GetBuffer(vbView.index);
-	auto ib = allocator->GetBuffer(ibView.index);
-
 	auto& envMap = mScene->GetEnvironmentMap();
+	if (drawDatas.size() > 0)
+	{
+		// Copy PerObjectDrawData to the buffer
+		PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr);
+		glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr);
+		MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr);
 
-	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[6] = {};
-	descriptorInfos[0].resource = mGlobalUniformBuffer.get();
-	descriptorInfos[0].offset = 0;
-	descriptorInfos[0].size = sizeof(GlobalUniformData);
-	descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
+		gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr);
+		for (uint32_t i = 0; i < drawDatas.size(); ++i)
+		{
 
-	descriptorInfos[1].resource = vb;
-	descriptorInfos[1].offset = 0;
-	descriptorInfos[1].size = vb->desc.size;
-	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
+			transformPtr[i] = drawDatas[i].worldTransform;
+			objectDataPtr[i].transformIndex = i;
+			objectDataPtr[i].materialIndex = i;
 
-	gfx::GPUBuffer* perObjectBuffer = mPerObjectDataBuffer.get();
-	descriptorInfos[2].resource = perObjectBuffer;
-	descriptorInfos[2].offset = 0;
-	descriptorInfos[2].size = (uint32_t)drawDatas.size() * sizeof(PerObjectData);
-	descriptorInfos[2].type = gfx::DescriptorType::StorageBuffer;
+			MaterialComponent* mat = drawDatas[i].material;
+			materialCompPtr[i].albedo = mat->albedo;
+			materialCompPtr[i].roughness = mat->roughness;
+			materialCompPtr[i].metallic = mat->metallic;
+			materialCompPtr[i].ao = mat->ao;
 
-	gfx::GPUBuffer* transformBuffer = mTransformBuffer.get();
-	descriptorInfos[3].resource = transformBuffer;
-	descriptorInfos[3].offset = 0;
-	descriptorInfos[3].size = (uint32_t)drawDatas.size() * sizeof(glm::mat4);
-	descriptorInfos[3].type = gfx::DescriptorType::StorageBuffer;
+			drawCommandPtr[i].firstIndex = drawDatas[i].indexBuffer.offset / sizeof(uint32_t);
+			drawCommandPtr[i].indexCount = drawDatas[i].indexCount;
+			drawCommandPtr[i].instanceCount = 1;
+			drawCommandPtr[i].vertexOffset = drawDatas[i].vertexBuffer.offset / sizeof(Vertex);
+		}
 
-	gfx::GPUBuffer* materialBuffer = mMaterialBuffer.get();
-	descriptorInfos[4].resource = materialBuffer;
-	descriptorInfos[4].offset = 0;
-	descriptorInfos[4].size = (uint32_t)drawDatas.size() * sizeof(MaterialComponent);
-	descriptorInfos[4].type = gfx::DescriptorType::StorageBuffer;
+		gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
+		gfx::BufferView& vbView = drawDatas[0].vertexBuffer;
+		gfx::BufferView& ibView = drawDatas[0].indexBuffer;
 
-	descriptorInfos[5].resource = envMap->GetIrradianceMap().get();
-	descriptorInfos[5].type = gfx::DescriptorType::Image;
+		auto vb = allocator->GetBuffer(vbView.index);
+		auto ib = allocator->GetBuffer(ibView.index);
 
-	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-	mDevice->BindPipeline(&commandList, mTrianglePipeline.get());
+		// TODO: Define static Descriptor beforehand
+		gfx::DescriptorInfo descriptorInfos[8] = {};
+		descriptorInfos[0].resource = mGlobalUniformBuffer.get();
+		descriptorInfos[0].offset = 0;
+		descriptorInfos[0].size = sizeof(GlobalUniformData);
+		descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
 
-	mDevice->BindIndexBuffer(&commandList, ib);
-	mDevice->DrawIndexedIndirect(&commandList, mDrawIndirectBuffer.get(), 0, (uint32_t)drawDatas.size(), sizeof(gfx::DrawIndirectCommand));
+		descriptorInfos[1].resource = vb;
+		descriptorInfos[1].offset = 0;
+		descriptorInfos[1].size = vb->desc.size;
+		descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
+
+		gfx::GPUBuffer* perObjectBuffer = mPerObjectDataBuffer.get();
+		descriptorInfos[2].resource = perObjectBuffer;
+		descriptorInfos[2].offset = 0;
+		descriptorInfos[2].size = (uint32_t)drawDatas.size() * sizeof(PerObjectData);
+		descriptorInfos[2].type = gfx::DescriptorType::StorageBuffer;
+
+		gfx::GPUBuffer* transformBuffer = mTransformBuffer.get();
+		descriptorInfos[3].resource = transformBuffer;
+		descriptorInfos[3].offset = 0;
+		descriptorInfos[3].size = (uint32_t)drawDatas.size() * sizeof(glm::mat4);
+		descriptorInfos[3].type = gfx::DescriptorType::StorageBuffer;
+
+		gfx::GPUBuffer* materialBuffer = mMaterialBuffer.get();
+		descriptorInfos[4].resource = materialBuffer;
+		descriptorInfos[4].offset = 0;
+		descriptorInfos[4].size = (uint32_t)drawDatas.size() * sizeof(MaterialComponent);
+		descriptorInfos[4].type = gfx::DescriptorType::StorageBuffer;
+
+		descriptorInfos[5].resource = envMap->GetIrradianceMap().get();
+		descriptorInfos[5].type = gfx::DescriptorType::Image;
+
+		descriptorInfos[6].resource = envMap->GetPrefilterMap().get();
+		descriptorInfos[6].type = gfx::DescriptorType::Image;
+
+		descriptorInfos[7].resource = envMap->GetBRDFLUT().get();
+		descriptorInfos[7].type = gfx::DescriptorType::Image;
+
+		mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(&commandList, mTrianglePipeline.get());
+
+		mDevice->BindIndexBuffer(&commandList, ib);
+		mDevice->DrawIndexedIndirect(&commandList, mDrawIndirectBuffer.get(), 0, (uint32_t)drawDatas.size(), sizeof(gfx::DrawIndirectCommand));
+	}
 
 	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
 
-	static bool bCubemapMode = true;
+	static int cubemapMode = 0;
 	if (Input::Press(Input::Key::KEY_3))
-		bCubemapMode = true;
+		cubemapMode = 0;
 	else if (Input::Press(Input::Key::KEY_4))
-		bCubemapMode = false;
+		cubemapMode = 1;
+	else if (Input::Press(Input::Key::KEY_5))
+		cubemapMode = 2;
+	
 
-	if(bCubemapMode)
+	if(cubemapMode == 0)
 		DrawCubemap(&commandList, envMap->GetCubemap().get());
-	else
+	else if(cubemapMode == 1)
 		DrawCubemap(&commandList, envMap->GetIrradianceMap().get());
-
+	else 
+		DrawCubemap(&commandList, envMap->GetPrefilterMap().get());
 	mDevice->EndRenderPass(&commandList);
 	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
 	mDevice->Present(&mReleaseSemaphore);

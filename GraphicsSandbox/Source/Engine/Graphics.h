@@ -26,6 +26,7 @@ namespace gfx
 		R10G10B10A2_UNORM = 0,
 		B8G8R8A8_UNORM,
 		R8G8B8A8_UNORM,
+		R16G16_SFLOAT,
 		R16B16G16_SFLOAT,
 		R16B16G16A16_SFLOAT,
 		R32B32G32A32_SFLOAT,
@@ -124,10 +125,10 @@ namespace gfx
 
 	enum class ShaderStage
 	{
-		Vertex,
-		Fragment,
-		Compute,
-		Geometry
+		Vertex = 1,
+		Fragment = 1 << 1,
+		Compute  = 1 << 2,
+		Geometry = 1 << 3
 	};
 
 	enum class BlendFactor
@@ -308,7 +309,10 @@ namespace gfx
 	{
 		GPUResource* resource = nullptr;
 		uint32_t offset = 0;
-		uint32_t size = 0;
+		union {
+			uint32_t size = 0;
+			uint32_t mipLevel;
+		};
 		DescriptorType type = DescriptorType::StorageBuffer;
 	};
 
@@ -394,4 +398,11 @@ namespace gfx
 	{
 		static constexpr bool enabled = true;
 	};
+
+	template<>
+	struct enable_bitwise_operation<ShaderStage>
+	{
+		static constexpr bool enabled = true;
+	};
+
 }

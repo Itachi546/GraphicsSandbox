@@ -8,11 +8,11 @@ layout(binding = 1, rgba16f) uniform writeonly imageCube uCubeMap;
 #extension GL_GOOGLE_include_directive : require
 #include "cubemap.glsl"
 
+layout(push_constant) uniform PushConstants
+{
+  float cubemapSize;
+};
 
-//layout(push_constant) uniform UniformData
-//{ 
-//  vec2 uCubemapSize;
-//};
 
 const vec2 invAtan = vec2(0.1591, 0.3183);
 vec2 sphericalCoord(vec3 p)
@@ -28,11 +28,9 @@ vec2 sphericalCoord(vec3 p)
 void main()
 {
     ivec3 cubeCoord = ivec3(gl_GlobalInvocationID.xyz);
-    // TODO: Use push constants
-    vec2 cubemapSize = vec2(512.0f);
 
     // Don't forget to normalize P
-	vec3 p = normalize(uvToXYZ(cubeCoord, cubemapSize));
+	vec3 p = normalize(uvToXYZ(cubeCoord, vec2(cubemapSize)));
 
     vec4 col = texture(uHDRI, sphericalCoord(p));
     imageStore(uCubeMap, cubeCoord, col);

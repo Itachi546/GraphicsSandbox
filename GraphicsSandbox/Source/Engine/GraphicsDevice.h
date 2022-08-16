@@ -26,7 +26,9 @@ namespace gfx
 		virtual void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CreateSemaphore(Semaphore* out) = 0;
 
-		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount) = 0;
+		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic = false) = 0;
+		virtual void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) = 0;
+
 		virtual void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers) = 0;
 
 

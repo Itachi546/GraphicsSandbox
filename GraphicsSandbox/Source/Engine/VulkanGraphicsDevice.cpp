@@ -126,6 +126,7 @@ namespace gfx {
         VkDescriptorSetLayout setLayout;
         VkDescriptorUpdateTemplate updateTemplate;
         VkDescriptorSet descriptorSet;
+
         ~VulkanPipeline()
         {
             gAllocationHandler.destroyedPipeline_.push_back(pipeline);
@@ -152,7 +153,7 @@ namespace gfx {
     {
         VmaAllocation allocation = nullptr;
         VkImage image = VK_NULL_HANDLE;
-        VkImageView imageView = VK_NULL_HANDLE;
+        std::vector<VkImageView> imageViews{};
         VkSampler sampler = VK_NULL_HANDLE;
 
         VkFormat format = VK_FORMAT_UNDEFINED;
@@ -161,7 +162,7 @@ namespace gfx {
         ~VulkanTexture()
         {
             gAllocationHandler.destroyedImages_.push_back(std::make_pair(image, allocation));
-            gAllocationHandler.destroyedImageViews_.push_back(imageView);
+            gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), imageViews.begin(), imageViews.end());
             gAllocationHandler.destroyedSamplers_.push_back(sampler);
         }
     };
@@ -357,6 +358,8 @@ namespace gfx {
 			return VK_FORMAT_A2B10G10R10_UNORM_PACK32;
         case Format::R8G8B8A8_UNORM:
             return VK_FORMAT_R8G8B8A8_UNORM;
+        case Format::R16G16_SFLOAT:
+            return VK_FORMAT_R16G16_SFLOAT;
         case Format::R16B16G16_SFLOAT:
             return VK_FORMAT_R16G16B16_SFLOAT;
         case Format::R16B16G16A16_SFLOAT:
@@ -598,7 +601,7 @@ namespace gfx {
         return { image, allocation };
     }
 
-    VkImageView CreateImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, int layerCount = 1, int levelCount = 1)
+    VkImageView CreateImageView(VkDevice device, VkImage image, VkImageViewType viewType, VkFormat format, VkImageAspectFlags aspect, int layerCount = 1, int levelCount = 1, int baseLevel = 0)
     {
         VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         createInfo.image = image;
@@ -607,7 +610,7 @@ namespace gfx {
         createInfo.subresourceRange.aspectMask = aspect;
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = layerCount;
-        createInfo.subresourceRange.baseMipLevel = 0;
+        createInfo.subresourceRange.baseMipLevel = baseLevel;
         createInfo.subresourceRange.levelCount = levelCount;
 
         VkImageView imageView = 0;
@@ -624,7 +627,7 @@ namespace gfx {
         createInfo.minFilter = filter;
 
         VkSamplerAddressMode addressMode = _ConvertSamplerAddressMode(samplerInfo->wrapMode);
-        createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+        createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
         createInfo.addressModeU = addressMode;
         createInfo.addressModeV = addressMode;
         createInfo.addressModeW = addressMode;
@@ -1568,7 +1571,9 @@ namespace gfx {
         for (auto& shader : shaderReflections)
         {
             if (shader.pushConstantRanges.size() > 0)
+            {
                 pushConstantRanges.insert(pushConstantRanges.end(), shader.pushConstantRanges.begin(), shader.pushConstantRanges.end());
+            }
 
             if (shader.descriptorSetLayoutBinding.size() > 0)
                 setLayoutBindings.insert(setLayoutBindings.end(), shader.descriptorSetLayoutBinding.begin(), shader.descriptorSetLayoutBinding.end());
@@ -1721,15 +1726,18 @@ namespace gfx {
         VkImage image = 0;
         VmaAllocation allocation = {};
         VK_CHECK(vmaCreateImage(vmaAllocator_, &createInfo, &allocCreateInfo, &image, &allocation, nullptr));
-		VkImageView imageView = CreateImageView(device_, image, _ConvertImageViewType(desc->imageViewType), format, imageAspect, createInfo.arrayLayers);
+
+        internalState->imageViews.resize(desc->mipLevels);
+        for (uint32_t i = 0; i < desc->mipLevels; ++i)
+            internalState->imageViews[i] = CreateImageView(device_, image, _ConvertImageViewType(desc->imageViewType), format, imageAspect, createInfo.arrayLayers, desc->mipLevels - i, i);
 
         if (desc->bCreateSampler)
         {
             VkSampler sampler = CreateSampler(device_, &desc->samplerInfo);
             internalState->sampler = sampler;
         }
+
         internalState->image = image;
-        internalState->imageView = imageView;
         internalState->allocation = allocation;
     }
 
@@ -1820,7 +1828,7 @@ namespace gfx {
         auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
         vkCmdBindPipeline(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipeline);
 
-        vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
+		vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
     }
 
     void VulkanGraphicsDevice::DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)
@@ -2028,7 +2036,7 @@ namespace gfx {
             barrierCount, imageBarriers.data());
     }
 
-    void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
+    void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic)
     {
 
         auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
@@ -2049,7 +2057,8 @@ namespace gfx {
             {
                 auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
                 descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
-                descriptorInfos[i].imageInfo.imageView = vkTexture->imageView;
+                assert(vkTexture->imageViews.size() > info.mipLevel);
+                descriptorInfos[i].imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
                 assert(vkTexture->sampler != VK_NULL_HANDLE);
                 descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
             }
@@ -2057,7 +2066,7 @@ namespace gfx {
                 assert(!"Unsupported Descriptor Type");
         }
         
-        if (vkPipeline->descriptorSet == VK_NULL_HANDLE)
+        if ((vkPipeline->descriptorSet == VK_NULL_HANDLE) || dynamic)
         {
             VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
             allocateInfo.descriptorPool = descriptorPool_;
@@ -2070,6 +2079,24 @@ namespace gfx {
         }
 
         vkUpdateDescriptorSetWithTemplate(device_, vkPipeline->descriptorSet, vkPipeline->updateTemplate,  descriptorInfos.data());
+    }
+
+    void VulkanGraphicsDevice::PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset)
+    {
+        auto cmd = GetCommandList(commandList);
+        auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
+
+        VkShaderStageFlags shaderStageFlag = 0;
+        if (HasFlag<>(shaderStages, ShaderStage::Vertex))
+            shaderStageFlag |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (HasFlag<>(shaderStages, ShaderStage::Fragment))
+            shaderStageFlag |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        if (HasFlag<>(shaderStages, ShaderStage::Compute))
+            shaderStageFlag |= VK_SHADER_STAGE_COMPUTE_BIT;
+        if (HasFlag<>(shaderStages, ShaderStage::Geometry))
+            shaderStageFlag |= VK_SHADER_STAGE_GEOMETRY_BIT;
+
+        vkCmdPushConstants(cmd->commandBuffer, vkPipeline->pipelineLayout, shaderStageFlag, offset, size, value);
     }
 
     void VulkanGraphicsDevice::WaitForGPU()

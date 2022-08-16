@@ -57,8 +57,12 @@ namespace gfx
 		void BindPipeline(CommandList* commandList, Pipeline* pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)                      override;
 
-		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)                 override;
-
+		// Dynamic field allows to create new descriptor set 
+		// However it shouldn't be used in loop because there  
+		// is currently no way to free allocated descriptor set
+		// except by destroying descriptor pool.
+		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic = false)    override;
+		void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) override;
 		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)         override;
 		void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 		void DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;

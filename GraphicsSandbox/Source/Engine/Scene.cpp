@@ -16,8 +16,10 @@ void Scene::Initialize()
 	InitializePrimitiveMesh();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
-	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/photo_studio.hdr");
+	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/daytime.hdr");
 	mEnvMap->CalculateIrradiance();
+	mEnvMap->Prefilter();
+	mEnvMap->CalculateBRDFLUT();
 }
 
 void Scene::GenerateDrawData(std::vector<DrawData>& out)

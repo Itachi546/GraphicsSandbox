@@ -166,6 +166,12 @@
     <CustomBuild Include="..\Assets\Shaders\irradiance.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\prefilter_env.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\brdf_lut.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">

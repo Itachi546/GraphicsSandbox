@@ -37,7 +37,7 @@ private:
 	const uint32_t mIrrTexDims    = 32;
 	const uint32_t mPrefilterDims = 512;
 	const uint32_t nMaxMipLevel   = 6;
-	const uint32_t mBRDFDims = 512;
+	const uint32_t mBRDFDims      = 512;
 
 	std::shared_ptr<gfx::GPUTexture> mCubemapTexture;
 	std::shared_ptr<gfx::GPUTexture> mIrradianceTexture;

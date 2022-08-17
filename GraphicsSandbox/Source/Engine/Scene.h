@@ -47,6 +47,7 @@ private:
 	ecs::Entity mCubeEntity;
 	ecs::Entity mPlaneEntity;
 	ecs::Entity mSphereEntity;
+	ecs::Entity mSun;
 
 	Camera mCamera;
 
@@ -58,6 +59,8 @@ private:
 	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
 	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
 	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
+
+	void InitializeLights();
 
 	friend class Renderer;
 };

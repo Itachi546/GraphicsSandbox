@@ -1,4 +1,12 @@
-#ifdef VERTEX_SHADER
+struct LightData
+{
+    vec3 position;
+	float radius;
+	vec3 color;
+	float type;
+};
+
+
 layout(binding = 0) uniform readonly Globals
 {
    mat4 P;
@@ -6,7 +14,12 @@ layout(binding = 0) uniform readonly Globals
    mat4 VP;
    vec3 cameraPosition;
    float dt;
+   vec3 unused_;
+   int nLight;
+   LightData lights[128];
 } globals;
+
+#ifdef VERTEX_SHADER
 
 layout(binding = 1) readonly buffer Vertices 
 {

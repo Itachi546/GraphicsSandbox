@@ -1,6 +1,7 @@
 #include "EnvironmentMap.h"
 #include "Utils.h"
 #include "ImageLoader.h"
+#include "Logger.h"
 
 #include <assert.h>
 
@@ -33,6 +34,7 @@ EnvironmentMap::EnvironmentMap()
 
 void EnvironmentMap::CreateFromHDRI(const char* hdri)
 {
+	Logger::Debug("Converting hdri: " + std::string(hdri));
 	mCubemapTexture = std::make_shared<gfx::GPUTexture>();
 
 	// Load HDRI Image File 
@@ -113,10 +115,13 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	mDevice->DispatchCompute(&commandList, mCubemapDims / 32, mCubemapDims / 32, 6);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
+	Logger::Debug("HDRI Converted Successfully");
+
 }
 
 void EnvironmentMap::CalculateIrradiance()
 {
+	Logger::Debug("Generating Irradiance Texture");
 	assert(mCubemapTexture != nullptr);
 
 	mIrradianceTexture = std::make_shared<gfx::GPUTexture>();
@@ -161,10 +166,12 @@ void EnvironmentMap::CalculateIrradiance()
 	mDevice->DispatchCompute(&commandList, mIrrTexDims / 8, mIrrTexDims / 8, 6);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
+	Logger::Debug("Irradiance Texture Generated");
 }
 
 void EnvironmentMap::Prefilter()
 {
+	Logger::Debug("Generating Prefiltered Environment Texture");
 	assert(mCubemapTexture != nullptr);
 
 	mPrefilterTexture = std::make_shared<gfx::GPUTexture>();
@@ -218,10 +225,12 @@ void EnvironmentMap::Prefilter()
 	}
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
+	Logger::Debug("Prefiltered Environment Texture Generated");
 }
 
 void EnvironmentMap::CalculateBRDFLUT()
 {
+	Logger::Debug("Generating BRDF LUT");
 	assert(mCubemapTexture != nullptr);
 
 	mBRDFTexture = std::make_shared<gfx::GPUTexture>();
@@ -256,8 +265,8 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mDevice->UpdateDescriptor(mBRDFPipeline.get(), &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mBRDFPipeline.get());
 	mDevice->PushConstants(&commandList, mBRDFPipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
-	mDevice->DispatchCompute(&commandList, mBRDFDims / 8, mBRDFDims / 8, 1);
+	mDevice->DispatchCompute(&commandList, mBRDFDims / 32, mBRDFDims / 32, 1);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
-
+	Logger::Debug("BRDF LUT Generated");
 }

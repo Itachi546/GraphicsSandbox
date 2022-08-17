@@ -6,6 +6,7 @@
 #define SPIRV_REFLECT_USE_SYSTEM_SPIRV_H
 #include "spirv_reflect.h"
 
+#include <algorithm>
 #include <unordered_set>
 
 namespace gfx {
@@ -14,10 +15,12 @@ namespace gfx {
 
     struct ShaderReflection
     {
-        VkShaderStageFlagBits shaderStage;
         std::vector<VkVertexInputAttributeDescription> inputDesc;
-        std::vector<VkDescriptorSetLayoutBinding> descriptorSetLayoutBinding;
         std::vector<VkPushConstantRange> pushConstantRanges;
+
+        VkDescriptorSetLayoutBinding descriptorSetLayoutBinding[32];
+        uint32_t descriptorSetLayoutCount = 0;
+        uint32_t bindingFlags = 0;
     };
 
     struct VulkanDescriptorInfo
@@ -693,12 +696,12 @@ namespace gfx {
         return result;
     }
 
-    VkDescriptorSetLayout CreateDescriptorSetLayout(VkDevice device, const std::vector<VkDescriptorSetLayoutBinding>& setBindings)
+    VkDescriptorSetLayout CreateDescriptorSetLayout(VkDevice device, VkDescriptorSetLayoutBinding* setBindings, uint32_t count)
     {
         VkDescriptorSetLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         createInfo.flags = 0;
-        createInfo.bindingCount = uint32_t(setBindings.size());
-        createInfo.pBindings = setBindings.data();
+        createInfo.bindingCount = count;
+        createInfo.pBindings = setBindings;
 
         VkDescriptorSetLayout descriptorSetLayout = 0;
 		VK_CHECK(vkCreateDescriptorSetLayout(device, &createInfo, 0, &descriptorSetLayout));
@@ -726,26 +729,20 @@ namespace gfx {
         return descriptorPool;
     }
 
-    VkDescriptorUpdateTemplate CreateUpdateTemplate(VkDevice device, VkPipelineBindPoint bindPoint, VkPipelineLayout layout, VkDescriptorSetLayout setLayout, const std::vector<ShaderReflection>& shaders)
+    VkDescriptorUpdateTemplate CreateUpdateTemplate(VkDevice device, VkPipelineBindPoint bindPoint, VkPipelineLayout layout, VkDescriptorSetLayout setLayout, const ShaderReflection& shaderRefl)
     {
-        std::vector<VkDescriptorUpdateTemplateEntry> entries;
-
-        uint32_t i = 0;
-        for (auto& shader : shaders)
+        std::vector<VkDescriptorUpdateTemplateEntry> entries(shaderRefl.descriptorSetLayoutCount);
+        for(uint32_t i = 0; i < shaderRefl.descriptorSetLayoutCount; ++i)
         {
-            for (auto& descriptorSet : shader.descriptorSetLayoutBinding)
-            {
-                VkDescriptorUpdateTemplateEntry entry = {};
-                entry.dstBinding = descriptorSet.binding;
-                entry.dstArrayElement = 0;
-                entry.descriptorCount = 1;
-                entry.descriptorType = descriptorSet.descriptorType;
-                entry.offset = sizeof(VulkanDescriptorInfo) * i;
-                entry.stride = sizeof(VulkanDescriptorInfo);
-                entries.push_back(entry);
-                i++;
-			}
-        }
+			VkDescriptorUpdateTemplateEntry entry = {};
+			entry.dstBinding = shaderRefl.descriptorSetLayoutBinding[i].binding;
+			entry.dstArrayElement = 0;
+			entry.descriptorCount = 1;
+			entry.descriptorType = shaderRefl.descriptorSetLayoutBinding[i].descriptorType;
+			entry.offset = sizeof(VulkanDescriptorInfo) * i;
+			entry.stride = sizeof(VulkanDescriptorInfo);
+			entries.push_back(entry);
+		}
 
         VkDescriptorUpdateTemplateCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO };
         createInfo.descriptorUpdateEntryCount = uint32_t(entries.size());
@@ -781,13 +778,13 @@ namespace gfx {
         }
     }
 
-    void ParseShaderReflection(const void* code, uint32_t sizeInByte, ShaderReflection* out)
+    void ParseShaderReflection(const void* code, uint32_t sizeInByte, VkShaderStageFlagBits& shaderStage, ShaderReflection* out)
     {
         SpvReflectShaderModule module;
         SpvReflectResult result = spvReflectCreateShaderModule(sizeInByte, code, &module);
 
         assert(result == SPV_REFLECT_RESULT_SUCCESS);
-        out->shaderStage = GetShaderStage(module.shader_stage);
+		shaderStage = GetShaderStage(module.shader_stage);
 
         uint32_t inputCount = 0;
         result = spvReflectEnumerateInputVariables(&module, &inputCount, nullptr);
@@ -795,7 +792,7 @@ namespace gfx {
         result = spvReflectEnumerateInputVariables(&module, &inputCount, inputAttributes.data());
 
         // Parse Input Variables
-        for (uint32_t i = 0; i < inputCount && out->shaderStage != VK_SHADER_STAGE_FRAGMENT_BIT; ++i)
+        for (uint32_t i = 0; i < inputCount && shaderStage != VK_SHADER_STAGE_FRAGMENT_BIT; ++i)
         { 
             auto& input = inputAttributes[i];  
             if (input->location > 32)
@@ -822,13 +819,21 @@ namespace gfx {
             for (uint32_t i = 0; i < reflDescSet->binding_count; ++i)
             {
                 const auto& reflBinding = reflDescSet->bindings[i];
+                uint32_t binding = reflBinding->binding;
+                if (out->bindingFlags & (1 << binding))
+                {
+                    out->descriptorSetLayoutBinding[binding].stageFlags |= shaderStage;
+                    continue;
+                }
+                out->bindingFlags |= (1 << binding);
+
                 VkDescriptorSetLayoutBinding layoutBinding = {};
-                layoutBinding.binding = reflBinding->binding;
+                layoutBinding.binding = binding;
                 layoutBinding.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type);
                 layoutBinding.descriptorCount = 1;
-                layoutBinding.stageFlags = out->shaderStage;
-
-                out->descriptorSetLayoutBinding.push_back(layoutBinding);
+                layoutBinding.stageFlags = shaderStage;
+                out->descriptorSetLayoutBinding[binding] = layoutBinding;
+                out->descriptorSetLayoutCount++;
             }
         }
 
@@ -845,7 +850,7 @@ namespace gfx {
             VkPushConstantRange pushConstantRange = {};
             pushConstantRange.size = pushConstant->size;
             pushConstantRange.offset = pushConstant->offset;
-            pushConstantRange.stageFlags = out->shaderStage;
+            pushConstantRange.stageFlags = shaderStage;
             out->pushConstantRanges.push_back(pushConstantRange);
         }
         spvReflectDestroyShaderModule(&module);
@@ -1486,14 +1491,13 @@ namespace gfx {
         VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
         std::vector<VkPipelineShaderStageCreateInfo> stages(desc->shaderCount);
-        std::vector<ShaderReflection> shaderReflections(desc->shaderCount);
 
+        ShaderReflection shaderReflection;
         for (uint32_t i = 0; i < desc->shaderCount; ++i)
         {
             ShaderDescription& shader = desc->shaderDesc[i];
-            ParseShaderReflection(shader.code, shader.sizeInByte, &shaderReflections[i]);
-
-            VkShaderStageFlagBits shaderStage = shaderReflections[i].shaderStage;
+            VkShaderStageFlagBits shaderStage = {};
+            ParseShaderReflection(shader.code, shader.sizeInByte, shaderStage, &shaderReflection);
             VkShaderModule shaderModule = createShader(device_, shader.code, shader.sizeInByte, shaderStage);
 
             stages[i].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -1566,23 +1570,21 @@ namespace gfx {
         dynamicState.pDynamicStates = dynamicStates;
         createInfo.pDynamicState = &dynamicState;
 
+        /*
         std::vector<VkPushConstantRange> pushConstantRanges;
         std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings;
         for (auto& shader : shaderReflections)
         {
             if (shader.pushConstantRanges.size() > 0)
-            {
                 pushConstantRanges.insert(pushConstantRanges.end(), shader.pushConstantRanges.begin(), shader.pushConstantRanges.end());
-            }
 
             if (shader.descriptorSetLayoutBinding.size() > 0)
                 setLayoutBindings.insert(setLayoutBindings.end(), shader.descriptorSetLayoutBinding.begin(), shader.descriptorSetLayoutBinding.end());
-
         }
+        */
+		vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderReflection.descriptorSetLayoutBinding, shaderReflection.descriptorSetLayoutCount);
 
-		vkPipeline->setLayout = CreateDescriptorSetLayout(device_, setLayoutBindings);
-
-		VkPipelineLayout pipelineLayout = createPipelineLayout(vkPipeline->setLayout, pushConstantRanges);
+		VkPipelineLayout pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderReflection.pushConstantRanges);
         createInfo.layout = pipelineLayout;
 
 		createInfo.renderPass = std::static_pointer_cast<VulkanRenderPass>(desc->renderPass->internalState)->renderPass;
@@ -1592,7 +1594,7 @@ namespace gfx {
 
         vkPipeline->pipelineLayout = pipelineLayout;
         vkPipeline->pipeline = pipeline;
-        vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, vkPipeline->setLayout, shaderReflections);
+        vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, vkPipeline->setLayout, shaderReflection);
         out->internalState = vkPipeline;
     }
 
@@ -1606,16 +1608,17 @@ namespace gfx {
         ShaderDescription* shaderDesc = desc->shaderDesc;
         assert(shaderDesc != nullptr);
 
+        VkShaderStageFlagBits shaderStageFlag = {};
         ShaderReflection shaderRefl = {};
-        ParseShaderReflection(shaderDesc->code, shaderDesc->sizeInByte, &shaderRefl);
+        ParseShaderReflection(shaderDesc->code, shaderDesc->sizeInByte, shaderStageFlag, &shaderRefl);
 
         VkShaderModule shaderModule = createShader(device_, shaderDesc->code, shaderDesc->sizeInByte, VK_SHADER_STAGE_COMPUTE_BIT);
         VkPipelineShaderStageCreateInfo shaderStage = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-        shaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
+        shaderStage.stage = shaderStageFlag;
         shaderStage.module = shaderModule;
         shaderStage.pName = "main";
         vkPipeline->shaderModules.push_back(shaderModule);
-        vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderRefl.descriptorSetLayoutBinding);
+        vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderRefl.descriptorSetLayoutBinding, shaderRefl.descriptorSetLayoutCount);
         vkPipeline->pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderRefl.pushConstantRanges);
 
         VkComputePipelineCreateInfo createInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};

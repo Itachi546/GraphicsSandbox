@@ -45,7 +45,6 @@ Renderer::Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP) : mSwapchainRP(
 	mDrawIndirectBuffer = std::make_shared<gfx::GPUBuffer>();
 	mDevice->CreateBuffer(&bufferDesc, mDrawIndirectBuffer.get());
 
-
 	mDevice->CreateSemaphore(&mAcquireSemaphore);
 	mDevice->CreateSemaphore(&mReleaseSemaphore);
 
@@ -70,6 +69,30 @@ void Renderer::Update(float dt, int width, int height)
 	mGlobalUniformData.cameraPosition = camera->GetPosition();
 	mGlobalUniformData.dt += dt;
 
+
+	auto compMgr = mScene->GetComponentManager();
+	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
+	std::vector<LightComponent>& lights = lightArrComponent->components;
+	std::vector<ecs::Entity>& entities = lightArrComponent->entities;
+
+	for (int i = 0; i < lights.size(); ++i)
+	{
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
+		glm::vec3 position = glm::vec3(0.0f);
+
+		if (lights[i].type == LightType::Directional)
+			position = glm::toMat4(transform->rotation) * glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+		else if (lights[i].type == LightType::Point)
+			position = transform->position;
+		else {
+			assert(!"Undefined Light Type");
+		}
+		mGlobalUniformData.lights[i] = LightData{ position, lights[i].radius, lights[i].color * lights[i].intensity, (float)lights[i].type };
+	}
+
+	uint32_t nLight = static_cast<uint32_t>(lights.size());
+	mGlobalUniformData.nLight = nLight;
+	//uint32_t uniformDataSize = sizeof(glm::mat4) * 3 + sizeof(float) * 4 + sizeof(int) + nLight * sizeof(LightData);
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
 }
 

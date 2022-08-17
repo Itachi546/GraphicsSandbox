@@ -22,6 +22,13 @@ public:
 	~Renderer() = default;
 
 private:
+	struct LightData
+	{
+		glm::vec3 position;
+		float radius;
+		glm::vec3 color;
+		float lightType;
+	};
 	struct GlobalUniformData
 	{
 		glm::mat4 P;
@@ -29,6 +36,9 @@ private:
 		glm::mat4 VP;
 		glm::vec3 cameraPosition;
 		float dt;
+		glm::vec3 unused_;
+		int nLight;
+		LightData lights[128];
 	} mGlobalUniformData;
 
 	gfx::GraphicsDevice* mDevice;

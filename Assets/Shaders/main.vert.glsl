@@ -13,7 +13,6 @@ layout(location = 0) out VS_OUT
    vec3 normal;
    vec3 worldPos;
    vec3 viewDir;
-   float dt;
    flat uint matId;
 }vs_out;
 
@@ -28,7 +27,6 @@ void main()
    vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
    mat4 worldMatrix = aTransformData[perObjectData.transformIndex];
 
-
    vec4 wP = worldMatrix * vec4(position, 1.0);
    gl_Position = globals.VP * wP;
 
@@ -37,6 +35,5 @@ void main()
    vs_out.worldPos	= wP.xyz;
    vs_out.normal    = mat3(transpose(inverse(worldMatrix))) * vec3(vertex.nx, vertex.ny, vertex.nz);
    vs_out.viewDir   = globals.cameraPosition - wP.xyz;
-   vs_out.dt        = globals.dt;
    vs_out.matId     = perObjectData.materialIndex;
 }

@@ -9,7 +9,6 @@ layout(location = 0) in VS_OUT
    vec3 normal;
    vec3 worldPos;
    vec3 viewDir;
-   float dt;
    flat uint matId;
 } fs_in;
 
@@ -28,16 +27,16 @@ struct Material
 #include "bindings.glsl"
 
 const vec3 viewPos = vec3(0.0, 3.0, 5.0);
-
+/*
 struct Light
 {
    vec3 position;
    vec3 color;
 } light[4];
-
+*/
 void main()
 {
-    float dt = fs_in.dt * 0.1f;
+/*
     light[0].position = vec3(-10.0f, 10.0f, 10.0f);
 	light[0].color = vec3(300.0f);
 
@@ -49,7 +48,7 @@ void main()
 
     light[3].position = vec3(10.0f, -10.0f, 10.0f);
 	light[3].color = vec3(300.0f);
-
+	*/
 
 	Material material = aMaterialData[fs_in.matId];
 	vec4 albedo = material.albedo;
@@ -66,9 +65,13 @@ void main()
 	vec3 Lo = vec3(0.0f);
 
 	vec3 f0	= mix(vec3(0.04), albedo.rgb, metallic);
-	for(int i = 0; i < 4; ++i)
+
+	int nLight = globals.nLight;
+	for(int i = 0; i < nLight; ++i)
 	{
-    	vec3 l = light[i].position - fs_in.worldPos;
+	    LightData light = globals.lights[i];
+		//Light light = light[i];
+    	vec3 l = light.position - fs_in.worldPos;
 		float dist = length(l);
 		l /= dist;
     	vec3 h = normalize(v + l);
@@ -88,10 +91,9 @@ void main()
 		vec3 specular =	D *	F *	V / (4.0f * NoV * NoL + 0.0001f);
 
 		float attenuation = 1.0f;
-		#if 1
-    		attenuation = 1.0f / (dist * dist);
-		#endif
-		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light[i].color * attenuation;
+		if(light.type > 0.2f) // Other than directional light
+		     attenuation = 1.0f / (dist * dist);
+		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation;
 	}
 
 	vec3 Ks = F_SchlickRoughness(NoV, f0, roughness);

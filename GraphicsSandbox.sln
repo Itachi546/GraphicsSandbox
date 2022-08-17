@@ -9,12 +9,15 @@ Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
 		Release|x64 = Release|x64
+		ReleaseIntel|x64 = ReleaseIntel|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{52A83D3D-3D81-4F30-B884-D1208F249720}.Debug|x64.ActiveCfg = Debug|x64
 		{52A83D3D-3D81-4F30-B884-D1208F249720}.Debug|x64.Build.0 = Debug|x64
 		{52A83D3D-3D81-4F30-B884-D1208F249720}.Release|x64.ActiveCfg = Release|x64
 		{52A83D3D-3D81-4F30-B884-D1208F249720}.Release|x64.Build.0 = Release|x64
+		{52A83D3D-3D81-4F30-B884-D1208F249720}.ReleaseIntel|x64.ActiveCfg = ReleaseIntel|x64
+		{52A83D3D-3D81-4F30-B884-D1208F249720}.ReleaseIntel|x64.Build.0 = ReleaseIntel|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,22 +5,11 @@ layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 #extension GL_GOOGLE_include_directive : require
 #include "pbr.glsl"
 
-layout(binding = 0, rg16f) uniform image2D uBRDFTexture;
+layout(binding = 0, rgba16f) uniform image2D uBRDFTexture;
 
-layout(push_constant) uniform PushConstants {
+layout(push_constant, std430) uniform PushConstants {
   float dims;
 };
-
-// ----------------------------------------------------------------------------
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
-{
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
-    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
-
-    return ggx1 * ggx2;
-}
 
 vec2 IntegrateBRDF(float NdotV, float roughness)
 {
@@ -34,7 +23,7 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 
     vec3 N = vec3(0.0, 0.0, 1.0);
 
-    const uint SAMPLE_COUNT = 1024u;
+    const uint SAMPLE_COUNT = 4096u;
     for(uint i = 0u; i < SAMPLE_COUNT; ++i)
     {
         vec2 Xi = Hammersley(i, SAMPLE_COUNT);

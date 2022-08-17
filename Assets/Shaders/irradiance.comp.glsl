@@ -8,7 +8,7 @@ layout(binding = 1, rgba16f) writeonly uniform imageCube  uIrradianceTexture;
 #extension GL_GOOGLE_include_directive : require
 #include "cubemap.glsl"
 
-layout(push_constant) uniform PushConstants
+layout(push_constant, std430) uniform PushConstants
 {
   float cubemapSize;
 };

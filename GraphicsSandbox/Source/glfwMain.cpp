@@ -18,7 +18,7 @@ int main(int argc, char** argv)
 	glfwSwapInterval(1);
 	application->SetWindow(window, false);
 	application->Initialize();
-	Logger::Debug("Total initialization: " + std::to_string(timer.elapsedSeconds()));
+	Logger::Debug("Total Initialization: " + std::to_string(timer.elapsedSeconds()));
 
 	while (!glfwWindowShouldClose(window) && application->IsRunning())
 	{

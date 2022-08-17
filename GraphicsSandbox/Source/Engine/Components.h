@@ -122,3 +122,17 @@ struct MaterialComponent {
 	float ao = 1.0f;
 	float unused_;
 };
+
+enum class LightType
+{
+	Directional = 0,
+	Point
+};
+
+struct LightComponent
+{
+	glm::vec3 color = glm::vec3(1.0f);
+	float intensity = 1.0f;
+	float radius = 1;
+	LightType type = LightType::Directional;
+};

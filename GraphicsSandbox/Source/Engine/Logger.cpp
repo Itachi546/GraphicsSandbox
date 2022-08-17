@@ -2,6 +2,7 @@
 #include <deque>
 
 #include <assert.h>
+#include <fstream>
 
 enum class LogType
 {
@@ -18,13 +19,15 @@ struct LogEntry
 };
 
 std::deque<LogEntry> gHistory;
+const char* logFile = "log.txt";
 int maxLines = 500;
 
 static void AddToLogHistory(const LogEntry& entry)
 {
 	if (gHistory.size() > maxLines)
+	{
 		gHistory.pop_front();
-
+	}
 	gHistory.push_back(entry);
 }
 

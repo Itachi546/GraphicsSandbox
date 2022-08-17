@@ -12,7 +12,8 @@ public:
 		initialize_();
 		mCamera = mScene.GetCamera();
 
-		InitializePrimitiveScene();
+		//InitializePrimitiveScene();
+		InitializePBRTestScene();
 	}
 
 	void PreUpdate(float dt) override {

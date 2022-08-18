@@ -12,8 +12,8 @@ public:
 		initialize_();
 		mCamera = mScene.GetCamera();
 
-		//InitializePrimitiveScene();
-		InitializePBRTestScene();
+		InitializePrimitiveScene();
+		//InitializePBRTestScene();
 	}
 
 	void PreUpdate(float dt) override {
@@ -97,9 +97,9 @@ private:
 		ecs::Entity cube = mScene.CreateCube("TestCube");
 		TransformComponent* cT = compMgr->GetComponent<TransformComponent>(cube);
 		MaterialComponent& cM = compMgr->AddComponent<MaterialComponent>(cube);
-		cM.roughness = 0.3f;
-		cM.albedo = glm::vec4(1.0f);
-		cM.metallic = 0.3f;
+		cM.roughness = 0.01f;
+		cM.albedo = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+		cM.metallic = 1.0f;
 
 		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
 		TransformComponent* sT = compMgr->GetComponent<TransformComponent>(sphere);
@@ -114,9 +114,9 @@ private:
 		pT->scale = glm::vec3(5.0f);
 		pT->position.y -= 1.0f;
 		MaterialComponent& pM = compMgr->AddComponent<MaterialComponent>(plane);
-		pM.roughness = 0.1f;
+		pM.roughness = 1.0f;
 		pM.albedo = glm::vec4(1.0f);
-		pM.metallic = 0.5f;
+		pM.metallic = 0.01f;
 
 		mCamera->SetPosition({ 0.0f, 5.0f, 10.0f });
 		mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });

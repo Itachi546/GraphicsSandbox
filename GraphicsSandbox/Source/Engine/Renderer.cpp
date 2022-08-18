@@ -7,49 +7,16 @@
 
 #include <vector>
 
-Renderer::Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP) : mSwapchainRP(swapchainRP)
+Renderer::Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP) : mSwapchainRP(swapchainRP), mDevice(gfx::GetDevice())
 {
-	mDevice = gfx::GetDevice();
-	
-	// Global Uniform Buffer
-	gfx::GPUBufferDesc uniformBufferDesc = {};
-	uniformBufferDesc.bindFlag = gfx::BindFlag::ConstantBuffer;
-	uniformBufferDesc.usage = gfx::Usage::Upload;
-	uniformBufferDesc.size = sizeof(GlobalUniformData);
-	mGlobalUniformBuffer = std::make_shared<gfx::GPUBuffer>();
-	mDevice->CreateBuffer(&uniformBufferDesc, mGlobalUniformBuffer.get());
-
-	// Per Object Data Buffer
-	gfx::GPUBufferDesc bufferDesc = {};
-	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
-	bufferDesc.usage = gfx::Usage::Upload;
-	bufferDesc.size = sizeof(PerObjectData) * kMaxEntity;
-	mPerObjectDataBuffer = std::make_shared<gfx::GPUBuffer>();
-	mDevice->CreateBuffer(&bufferDesc, mPerObjectDataBuffer.get());
-
-	// Transform Buffer
-	bufferDesc.size = kMaxEntity * sizeof(glm::mat4);
-	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
-	mTransformBuffer = std::make_shared<gfx::GPUBuffer>();
-	mDevice->CreateBuffer(&bufferDesc, mTransformBuffer.get());
-
-	// Material Component Buffer
-	bufferDesc.size = kMaxEntity * sizeof(MaterialComponent);
-	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
-	mMaterialBuffer = std::make_shared<gfx::GPUBuffer>();
-	mDevice->CreateBuffer(&bufferDesc, mMaterialBuffer.get());
-
-	// Draw Indirect Buffer
-	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
-	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
-	mDrawIndirectBuffer = std::make_shared<gfx::GPUBuffer>();
-	mDevice->CreateBuffer(&bufferDesc, mDrawIndirectBuffer.get());
-
+	InitializeBuffers();
 	mDevice->CreateSemaphore(&mAcquireSemaphore);
 	mDevice->CreateSemaphore(&mReleaseSemaphore);
 
 	mTrianglePipeline = loadPipelines("Assets/SPIRV/main.vert.spv", "Assets/SPIRV/main.frag.spv");
 	mCubemapPipeline = loadPipelines("Assets/SPIRV/cubemap.vert.spv", "Assets/SPIRV/cubemap.frag.spv", gfx::CullMode::None);
+
+	gfx::RenderPassDesc desc;
 }
 
 // TODO: temp width and height variable
@@ -81,7 +48,7 @@ void Renderer::Update(float dt, int width, int height)
 		glm::vec3 position = glm::vec3(0.0f);
 
 		if (lights[i].type == LightType::Directional)
-			position = glm::toMat4(transform->rotation) * glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+			position = normalize(glm::toMat4(transform->rotation) * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
 		else if (lights[i].type == LightType::Point)
 			position = transform->position;
 		else {
@@ -244,6 +211,43 @@ std::shared_ptr<gfx::Pipeline> Renderer::loadPipelines(const char* vsPath, const
 	delete[] vertexCode;
 	delete[] fragmentCode;
 	return pipeline;
+}
+
+void Renderer::InitializeBuffers()
+{
+	// Global Uniform Buffer
+	gfx::GPUBufferDesc uniformBufferDesc = {};
+	uniformBufferDesc.bindFlag = gfx::BindFlag::ConstantBuffer;
+	uniformBufferDesc.usage = gfx::Usage::Upload;
+	uniformBufferDesc.size = sizeof(GlobalUniformData);
+	mGlobalUniformBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&uniformBufferDesc, mGlobalUniformBuffer.get());
+
+	// Per Object Data Buffer
+	gfx::GPUBufferDesc bufferDesc = {};
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	bufferDesc.usage = gfx::Usage::Upload;
+	bufferDesc.size = sizeof(PerObjectData) * kMaxEntity;
+	mPerObjectDataBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mPerObjectDataBuffer.get());
+
+	// Transform Buffer
+	bufferDesc.size = kMaxEntity * sizeof(glm::mat4);
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	mTransformBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mTransformBuffer.get());
+
+	// Material Component Buffer
+	bufferDesc.size = kMaxEntity * sizeof(MaterialComponent);
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	mMaterialBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mMaterialBuffer.get());
+
+	// Draw Indirect Buffer
+	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
+	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
+	mDrawIndirectBuffer = std::make_shared<gfx::GPUBuffer>();
+	mDevice->CreateBuffer(&bufferDesc, mDrawIndirectBuffer.get());
 }
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap)

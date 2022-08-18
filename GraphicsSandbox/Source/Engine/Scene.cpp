@@ -18,7 +18,7 @@ void Scene::Initialize()
 	InitializeLights();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
-	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/daytime.hdr");
+	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/photo_studio.hdr");
 	mEnvMap->CalculateIrradiance();
 	mEnvMap->Prefilter();
 	mEnvMap->CalculateBRDFLUT();
@@ -292,21 +292,29 @@ void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& accu
 
 void Scene::InitializeLights()
 {
-	/*
+
 	mSun = ecs::CreateEntity();
 	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(mSun);
-	transform.position = glm::vec3(0.0f, 10.0f, 0.0f);
-
+	transform.position = glm::vec3(5.0f, 5.0f, 5.0f);
+	transform.rotation = glm::fquat(glm::vec3(0.0f, -0.35f, glm::pi<float>()));
 	LightComponent& light = mComponentManager->AddComponent<LightComponent>(mSun);
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
-	light.intensity = 10.0f;
-	light.type = LightType::Directional;
-	*/
+	light.intensity = 50.0f;
+	light.type = LightType::Point;
+
+	/*
 	glm::vec3 positions[] = {
 		glm::vec3(-10.0f, 10.0f, 10.0f),
 		glm::vec3(10.0f, 10.0f, 10.0f),
 		glm::vec3(-10.0f, -10.0f, 10.0f),
         glm::vec3(10.0f, -10.0f, 10.0f)
+	};
+
+	glm::vec3 colors[] = {
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f),
+		glm::vec3(1.0f, 1.0f, 1.0f)
 	};
     
 	for (int i = 0; i < 4; ++i)
@@ -315,11 +323,11 @@ void Scene::InitializeLights()
 		TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(lightEntity);
 		transform.position = positions[i];
 		LightComponent& light = mComponentManager->AddComponent<LightComponent>(lightEntity);
-		light.color = glm::vec3(1.0f);
+		light.color = colors[i];
 		light.intensity = 300.0f;
 		light.type = LightType::Point;
 
 	}
-
+	*/
 
 }

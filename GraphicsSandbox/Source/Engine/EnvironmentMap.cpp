@@ -138,7 +138,7 @@ void EnvironmentMap::CalculateIrradiance()
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mIrradianceTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mIrradianceTexture.get()},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -190,7 +190,7 @@ void EnvironmentMap::Prefilter()
 
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mPrefilterTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mPrefilterTexture.get()},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -240,6 +240,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 	desc.bindFlag = gfx::BindFlag::ShaderResource;
 	desc.imageViewType = gfx::ImageViewType::IV2D;
 	desc.format = gfx::Format::R16G16_SFLOAT;
+	desc.imageAspect = gfx::ImageAspect::Color;
 	desc.bCreateSampler = true;
 	mDevice->CreateTexture(&desc, mBRDFTexture.get());
 
@@ -248,7 +249,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mBRDFTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mBRDFTexture.get()},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -260,7 +261,9 @@ void EnvironmentMap::CalculateBRDFLUT()
 
 	gfx::DescriptorInfo descriptorInfo = {};
 	descriptorInfo.resource = mBRDFTexture.get();
+	descriptorInfo.mipLevel = 0;
 	descriptorInfo.type = gfx::DescriptorType::Image;
+
 	float shaderData[] = { float(mBRDFDims) };
 	mDevice->UpdateDescriptor(mBRDFPipeline.get(), &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mBRDFPipeline.get());

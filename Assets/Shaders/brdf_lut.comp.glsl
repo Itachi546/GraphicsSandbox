@@ -23,7 +23,7 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 
     vec3 N = vec3(0.0, 0.0, 1.0);
 
-    const uint SAMPLE_COUNT = 4096u;
+    const uint SAMPLE_COUNT = 1024u;
     for(uint i = 0u; i < SAMPLE_COUNT; ++i)
     {
         vec2 Xi = Hammersley(i, SAMPLE_COUNT);
@@ -36,7 +36,7 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 
         if(NdotL > 0.0)
         {
-            float G = V_SmithGGXCorrelated(NdotV, NdotL, roughness); 
+            float G = V_SmithGGX(NdotL, NdotV, roughness); 
             float G_Vis = (G * VdotH) / (NdotH * NdotV);
             float Fc = pow(1.0 - VdotH, 5.0);
 
@@ -48,12 +48,11 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
     B /= float(SAMPLE_COUNT);
     return vec2(A, B);
 }
-// ----------------------------------------------------------------------------
+
 void main() 
 {
     ivec2 icoord = ivec2(gl_GlobalInvocationID.xy);
     vec2 uv = vec2(icoord) / dims;
     vec2 integratedBRDF = IntegrateBRDF(uv.x, 1.0f - uv.y);
-
     imageStore(uBRDFTexture, icoord, vec4(integratedBRDF, 1.0f, 1.0f));
 }

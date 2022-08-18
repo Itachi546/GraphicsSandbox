@@ -84,7 +84,7 @@ void main()
 
 		float D	= D_GGX(NoH, alpha);
 		vec3  F	= F_Schlick(LoH, f0);
-		float V	= V_SmithGGXCorrelated(NoV,	NoL, roughness);
+		float V	= V_SmithGGX(NoV, NoL, roughness);
 
 		vec3  Ks = F;
 		vec3  Kd = (1.0f - Ks) * (1.0f - metallic);

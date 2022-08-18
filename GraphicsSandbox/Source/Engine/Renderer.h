@@ -62,6 +62,7 @@ private:
 	const int kMaxEntity = 10'000;
 
 	std::shared_ptr<gfx::Pipeline> loadPipelines(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
+	void InitializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
 
 };

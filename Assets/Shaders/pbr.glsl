@@ -19,8 +19,8 @@ float D_GGX(float NoH, float a) {
 // divide by the denominator while combining it all
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
-    float r = (roughness + 1.0);
-    float k = (r*r) / 8.0;
+    float a = roughness;
+    float k = (a * a) / 2.0;
 
     float nom   = NdotV;
     float denom = NdotV * (1.0 - k) + k;
@@ -28,7 +28,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     return nom / denom;
 }
 
-float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
+float V_SmithGGX(float NoV, float NoL, float roughness) {
 
     float ggx2 = GeometrySchlickGGX(NoV, roughness);
     float ggx1 = GeometrySchlickGGX(NoL, roughness);

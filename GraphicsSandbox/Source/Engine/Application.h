@@ -61,10 +61,7 @@ protected:
 
 	std::shared_ptr<gfx::RenderPass> mSwapchainRP;
 	std::unique_ptr<Renderer> mRenderer;
-
 	gfx::Format mSwapchainColorFormat = gfx::Format::B8G8R8A8_UNORM;
-	gfx::Format mSwapchainDepthFormat = gfx::Format::D32_SFLOAT_S8_UINT;
-	bool bSwapchainDepthSupport = true;
 
 	std::stringstream mWindowTitle;
 

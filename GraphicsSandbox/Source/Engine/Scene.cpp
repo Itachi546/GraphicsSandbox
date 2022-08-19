@@ -98,6 +98,12 @@ void Scene::Update(float dt)
 	UpdateTransformData();
 }
 
+void Scene::SetSize(int width, int height)
+{
+	if (width > 0 || height > 0)
+		mCamera.SetAspect(float(width) / float(height));
+}
+
 void Scene::Destroy(ecs::Entity& entity)
 {
 	ecs::DestroyEntity(mComponentManager.get(), entity);

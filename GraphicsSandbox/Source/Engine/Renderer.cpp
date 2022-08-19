@@ -7,35 +7,48 @@
 
 #include <vector>
 
-Renderer::Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP) : mSwapchainRP(swapchainRP), mDevice(gfx::GetDevice())
+Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
-	InitializeBuffers();
+	initializeBuffers();
 	mDevice->CreateSemaphore(&mAcquireSemaphore);
 	mDevice->CreateSemaphore(&mReleaseSemaphore);
+
+	gfx::RenderPassDesc desc;
+	desc.width = 1920;
+	desc.height = 1080;
+	gfx::Attachment attachments[2] = 
+	{
+		gfx::Attachment{0, gfx::Format::R16B16G16A16_SFLOAT, gfx::ImageLayout::ColorAttachmentOptimal},
+		gfx::Attachment{ 1, mDepthFormat, gfx::ImageLayout::DepthStencilAttachmentOptimal },
+	};
+	desc.attachmentCount = static_cast<uint32_t>(std::size(attachments));
+	desc.attachments = attachments;
+	desc.hasDepthAttachment = true;
+	mHdrRenderPass = std::make_shared<gfx::RenderPass>();
+	mDevice->CreateRenderPass(&desc, mHdrRenderPass.get());
+
+	mHdrFramebuffer = std::make_shared<gfx::Framebuffer>();
+	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get());
 
 	mTrianglePipeline = loadPipelines("Assets/SPIRV/main.vert.spv", "Assets/SPIRV/main.frag.spv");
 	mCubemapPipeline = loadPipelines("Assets/SPIRV/cubemap.vert.spv", "Assets/SPIRV/cubemap.frag.spv", gfx::CullMode::None);
 
-	gfx::RenderPassDesc desc;
+
 }
 
 // TODO: temp width and height variable
-void Renderer::Update(float dt, int width, int height)
+void Renderer::Update(float dt)
 {
 	Camera* camera = mScene->GetCamera();
-	if (width > 0 || height > 0)
-	{
-		camera->SetAspect(width / float(height));
-		glm::mat4 P = camera->GetProjectionMatrix();
-		mGlobalUniformData.P = P;
-	}
+
+	glm::mat4 P = camera->GetProjectionMatrix();
+	mGlobalUniformData.P = P;
 
 	glm::mat4 V = camera->GetViewMatrix();
 	mGlobalUniformData.V = V;
 	mGlobalUniformData.VP = mGlobalUniformData.P * V;
 	mGlobalUniformData.cameraPosition = camera->GetPosition();
 	mGlobalUniformData.dt += dt;
-
 
 	auto compMgr = mScene->GetComponentManager();
 	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
@@ -67,8 +80,19 @@ void Renderer::Render()
 {
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
+	gfx::ImageBarrierInfo barriers[] = {
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
+	};
+
+	gfx::PipelineBarrierInfo colorAttachmentBarrier = { &barriers[0], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput};
+	gfx::PipelineBarrierInfo depthAttachmentBarrier = { &barriers[1], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
+	mDevice->PipelineBarrier(&commandList, &colorAttachmentBarrier);
+	mDevice->PipelineBarrier(&commandList, &depthAttachmentBarrier);
+
+
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
-	mDevice->BeginRenderPass(&commandList, mSwapchainRP.get());
+	mDevice->BeginRenderPass(&commandList, mHdrRenderPass.get(), mHdrFramebuffer.get());
 
 	/*
 	* TODO: Currently PerObjectData is extracted from the
@@ -178,6 +202,14 @@ void Renderer::Render()
 	else 
 		DrawCubemap(&commandList, envMap->GetPrefilterMap().get());
 	mDevice->EndRenderPass(&commandList);
+
+	gfx::GPUTexture* outputTexture = &mHdrFramebuffer->attachments[0];
+	gfx::ImageBarrierInfo transferSrcBarrier = {gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture};
+	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::TransferBit};
+	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
+
+	// Copy the output to swapchain
+	mDevice->CopyToSwapchain(&commandList, outputTexture);
 	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
 	mDevice->Present(&mReleaseSemaphore);
 	mDevice->WaitForGPU();
@@ -199,8 +231,7 @@ std::shared_ptr<gfx::Pipeline> Renderer::loadPipelines(const char* vsPath, const
 	pipelineDesc.shaderCount = 2;
 	pipelineDesc.shaderDesc = shaders.data();
 
-	// TODO: Remove the swapchainRP, copy the final data to swapchain
-	pipelineDesc.renderPass = mSwapchainRP.get();
+	pipelineDesc.renderPass = mHdrRenderPass.get();
 	pipelineDesc.rasterizationState.enableDepthTest = true;
 	pipelineDesc.rasterizationState.enableDepthWrite = true;
 	pipelineDesc.rasterizationState.cullMode = cullMode;
@@ -213,7 +244,7 @@ std::shared_ptr<gfx::Pipeline> Renderer::loadPipelines(const char* vsPath, const
 	return pipeline;
 }
 
-void Renderer::InitializeBuffers()
+void Renderer::initializeBuffers()
 {
 	// Global Uniform Buffer
 	gfx::GPUBufferDesc uniformBufferDesc = {};

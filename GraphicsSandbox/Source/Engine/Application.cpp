@@ -23,8 +23,9 @@ void Application::initialize_()
 	Logger::Initialize();
 	Input::Initialize(mWindow);
    	mScene.Initialize();
+	mScene.SetSize(mWidth, mHeight);
 
-	mRenderer = std::make_unique<Renderer>(mSwapchainRP);
+	mRenderer = std::make_unique<Renderer>();
 	mRenderer->SetScene(&mScene);
 
 	EventDispatcher::Subscribe(EventType::WindowResize, BIND_EVENT_FN(Application::windowResizeEvent));
@@ -62,7 +63,7 @@ void Application::update_(float dt)
 {
 	PreUpdate(dt);
 	mScene.Update(dt);
-	mRenderer->Update(dt, mWidth, mHeight);
+	mRenderer->Update(dt);
 	Input::Update(mWindow);
 	PostUpdate(dt);
 }
@@ -99,14 +100,11 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	renderPassDesc.width = props.width;
 	renderPassDesc.height = props.height;
 
-	gfx::Attachment attachments[2] = {
-		gfx::Attachment{0, mSwapchainColorFormat, gfx::ImageLayout::ColorAttachmentOptimal},
-		gfx::Attachment{ 1, mSwapchainDepthFormat, gfx::ImageLayout::DepthStencilAttachmentOptimal },
-	};
+	gfx::Attachment attachment{ 0, mSwapchainColorFormat, gfx::ImageLayout::ColorAttachmentOptimal };
 
-	renderPassDesc.attachmentCount = static_cast<uint32_t>(bSwapchainDepthSupport ? std::size(attachments) : std::size(attachments) - 1);
-	renderPassDesc.attachments = attachments;
-	renderPassDesc.hasDepthAttachment = bSwapchainDepthSupport;
+	renderPassDesc.attachmentCount = 1;
+	renderPassDesc.attachments = &attachment;
+	renderPassDesc.hasDepthAttachment = false;
 	mDevice->CreateRenderPass(&renderPassDesc, mSwapchainRP.get());
 
 	// Create Swapchain
@@ -115,12 +113,10 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.height = mHeight;
 	swapchainDesc.vsync = true;
 	swapchainDesc.colorFormat = mSwapchainColorFormat;
-	swapchainDesc.depthFormat = mSwapchainDepthFormat;	
 	swapchainDesc.fullscreen = false;
-	swapchainDesc.enableDepth = bSwapchainDepthSupport;
+	swapchainDesc.enableDepth = false;
 	swapchainDesc.renderPass = mSwapchainRP.get();
 	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-
 	mDevice->CreateSwapchain(&swapchainDesc, window);
 }
 
@@ -133,6 +129,7 @@ bool Application::windowResizeEvent(const Event& evt)
 	const WindowResizeEvent& resizeEvt = static_cast<const WindowResizeEvent&>(evt);
 	mWidth = resizeEvt.getWidth();
 	mHeight = resizeEvt.getHeight();
+	mScene.SetSize(mWidth, mHeight);
 	return true;
 }
 

@@ -40,19 +40,21 @@ namespace gfx
 		void CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out)                           override;
 		void CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)                        override;
 		void CreateSemaphore(Semaphore* out)                                                   override;
+		void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out)                       override;          
+		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+
 		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                override;
-		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
-		
+		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0);
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 
 		CommandList BeginCommandList()                                                         override;
 
-		void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)           override;
-		void BeginRenderPass(CommandList* commandList, RenderPass* renderPass)                 override;
-		void EndRenderPass(CommandList* commandList)                                           override;
-		void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)           override;
-		void Present(Semaphore* waitSemaphore)                                                 override;
-		void WaitForGPU()                                                                      override;
+		void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)             override;
+		void BeginRenderPass(CommandList* commandList, RenderPass* renderPass, Framebuffer* fb)  override;
+		void EndRenderPass(CommandList* commandList)                                             override;
+		void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)             override;
+		void Present(Semaphore* waitSemaphore)                                                   override;
+		void WaitForGPU()                                                                        override;
 
 		void BindPipeline(CommandList* commandList, Pipeline* pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)                      override;

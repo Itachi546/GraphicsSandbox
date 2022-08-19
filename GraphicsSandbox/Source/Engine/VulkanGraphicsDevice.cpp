@@ -171,6 +171,16 @@ namespace gfx {
     };
 
 
+    struct VulkanFramebuffer
+    {
+        VkFramebuffer framebuffer;
+
+        ~VulkanFramebuffer()
+        {
+            gAllocationHandler.destroyedFramebuffers_.push_back(framebuffer);
+        }
+    };
+
     struct VulkanSemaphore
     {
         VkSemaphore semaphore;
@@ -219,6 +229,8 @@ namespace gfx {
             return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
         case PipelineStage::TransferBit:
             return VK_PIPELINE_STAGE_TRANSFER_BIT;
+        case PipelineStage::ColorAttachmentOutput:
+                return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         default:
             assert(!"Undefined pipeline stage flag");
             return VK_PIPELINE_STAGE_NONE;
@@ -516,6 +528,11 @@ namespace gfx {
 
     /***********************************************************************************************/
 
+    bool IsAttachmentTypeDepth(VkFormat format)
+    {
+        return (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT);
+    }
+
     uint32_t FindGraphicsQueueIndex(VkPhysicalDevice physicalDevice)
     {
         // Find suitable graphics queue
@@ -642,7 +659,7 @@ namespace gfx {
         return sampler;
     }
 
-    VkFramebuffer CreateFramebuffer(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height)
+    VkFramebuffer createFramebufferInternal(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height)
     {
         VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
         createInfo.renderPass = renderPass;
@@ -859,6 +876,18 @@ namespace gfx {
 
     /***********************************************************************************************/  
 
+    VkImage createImageInternal(VmaAllocator& allocator, VkImageCreateInfo* createInfo, VmaAllocation* allocation)
+    {
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+
+        VkImage image = 0;
+        VK_CHECK(vmaCreateImage(allocator, createInfo, &allocCreateInfo, &image, allocation, nullptr));
+        return image;
+    }
+
+
     bool VulkanGraphicsDevice::createSwapchainInternal(VkRenderPass renderPass)
     {
         VkSurfaceKHR surface = swapchain_->surface;
@@ -939,7 +968,7 @@ namespace gfx {
         createInfo.imageExtent.width = desc.width;
         createInfo.imageExtent.height = desc.height;
         createInfo.imageArrayLayers = 1;
-        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         createInfo.queueFamilyIndexCount = 1;
         createInfo.pQueueFamilyIndices = &queueFamilyIndices_;
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
@@ -1000,7 +1029,7 @@ namespace gfx {
             std::vector<VkImageView> imageViews = { swapchain_->imageViews[i] };
             if (desc.enableDepth)
                 imageViews.push_back(swapchain_->depthImageViews[i]);
-            swapchain_->framebuffers[i] = CreateFramebuffer(device_, renderPass, imageViews.data(), static_cast<uint32_t>(imageViews.size()), width, height);
+            swapchain_->framebuffers[i] = createFramebufferInternal(device_, renderPass, imageViews.data(), static_cast<uint32_t>(imageViews.size()), width, height);
         }
 
         return true;
@@ -1432,7 +1461,7 @@ namespace gfx {
             VkFormat format = _ConvertFormat(attachment.format);
             VkImageLayout layout = _ConvertLayout(attachment.layout);
 
-            if (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+            if (IsAttachmentTypeDepth(format))
             {
                 hasDepthAttachment = true;
                 depthAttachmentIndex = i;
@@ -1481,6 +1510,57 @@ namespace gfx {
         vulkanRenderPass->renderPass = createRenderPass(desc);
         out->internalState = vulkanRenderPass;
         out->desc = *desc;
+    }
+    
+    void VulkanGraphicsDevice::CreateFramebuffer(RenderPass* renderPass, Framebuffer* out)
+    {
+        assert(renderPass != nullptr);
+        auto rp = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
+
+        auto vkFramebuffer = std::make_shared<VulkanFramebuffer>();
+        
+        uint32_t attachmentCount = renderPass->desc.attachmentCount;
+
+        uint32_t width = renderPass->desc.width;
+		uint32_t height = renderPass->desc.height;
+        GPUTextureDesc desc = {};
+        desc.width = width;
+        desc.height = height;
+        desc.depth = 1;
+        desc.arrayLayers = 1;
+        desc.mipLevels = 1;
+        desc.imageType = ImageType::I2D;
+        desc.imageViewType = ImageViewType::IV2D;
+        desc.bCreateSampler = true;
+
+        std::vector<VkImageView> imageViews(attachmentCount);
+        out->attachments.resize(attachmentCount);
+        for (uint32_t i = 0; i < attachmentCount; ++i)
+        {
+            Attachment* attachment = (renderPass->desc.attachments + i);
+            desc.format = attachment->format;
+
+            VkFormat format = _ConvertFormat(attachment->format);
+            if (IsAttachmentTypeDepth(format))
+            {
+                desc.imageAspect = ImageAspect::Depth;
+                desc.bindFlag = BindFlag::DepthStencil;
+                out->depthAttachmentIndex = i;
+            }
+            else
+            {
+                desc.imageAspect = ImageAspect::Color; 
+                desc.bindFlag = BindFlag::RenderTarget | BindFlag::ShaderResource;
+            }
+
+            GPUTexture* texture = &out->attachments[i];
+            CreateTexture(&desc, texture);
+            imageViews[i] = std::static_pointer_cast<VulkanTexture>(texture->internalState)->imageViews[0]; 
+        }
+
+        vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), attachmentCount, width, height);
+        out->internalState = vkFramebuffer;
+
     }
 
     void VulkanGraphicsDevice::CreateGraphicsPipeline(const PipelineDesc* desc, Pipeline* out)
@@ -1693,15 +1773,20 @@ namespace gfx {
         internalState->imageAspect = imageAspect;
 
         VkImageUsageFlags usage = 0;
+        bool depthAttachment = false;
         if (HasFlag(desc->bindFlag, BindFlag::DepthStencil))
+        {
             usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            depthAttachment = true;
+        }
         if (HasFlag(desc->bindFlag, BindFlag::RenderTarget))
             usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
         if (HasFlag(desc->bindFlag, BindFlag::ShaderResource))
             usage |= (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
 
-        usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-		//usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        if(!depthAttachment)
+			usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
         VkImageCreateFlags imageCreateFlags = 0;
         if (desc->imageViewType == ImageViewType::IVCubemap)
@@ -1722,13 +1807,8 @@ namespace gfx {
         createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-        VmaAllocationCreateInfo allocCreateInfo = {};
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-        VkImage image = 0;
         VmaAllocation allocation = {};
-        VK_CHECK(vmaCreateImage(vmaAllocator_, &createInfo, &allocCreateInfo, &image, &allocation, nullptr));
+        VkImage image = createImageInternal(vmaAllocator_, &createInfo, &allocation);
 
         internalState->imageViews.resize(desc->mipLevels);
         for (uint32_t i = 0; i < desc->mipLevels; ++i)
@@ -1787,11 +1867,12 @@ namespace gfx {
         vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
     }
 
-    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPass* renderPass)
+    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPass* renderPass, Framebuffer* framebuffer)
     {
         auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
         VkRenderPass rp = vkRenderpass->renderPass;
         auto vkCmdList = GetCommandList(commandList);
+        auto vkFramebuffer = std::static_pointer_cast<VulkanFramebuffer>(framebuffer->internalState);
 
         uint32_t imageIndex = swapchain_->currentImageIndex;
 
@@ -1804,13 +1885,13 @@ namespace gfx {
             clearValueCount += 1;
         }
 
-        uint32_t width = (uint32_t)swapchain_->desc.width;
-        uint32_t height = (uint32_t)swapchain_->desc.height;
+        uint32_t width = (uint32_t)renderPass->desc.width;
+        uint32_t height = (uint32_t)renderPass->desc.height;
 
         VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
         passBeginInfo.clearValueCount = clearValueCount;
         passBeginInfo.pClearValues = clearValues;
-        passBeginInfo.framebuffer = swapchain_->framebuffers[imageIndex];
+        passBeginInfo.framebuffer = vkFramebuffer->framebuffer;
         passBeginInfo.renderPass = rp;
         passBeginInfo.renderArea.extent.width = width;
         passBeginInfo.renderArea.extent.height = height;
@@ -1879,12 +1960,48 @@ namespace gfx {
 
     void VulkanGraphicsDevice::EndRenderPass(CommandList* commandList)
     {
-        uint32_t imageIndex = swapchain_->currentImageIndex;
         vkCmdEndRenderPass(commandBuffer_);
-
-		VkImageMemoryBarrier renderEndBarrier = CreateImageBarrier(swapchain_->images[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		vkCmdPipelineBarrier(commandBuffer_, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
     }
+
+    void VulkanGraphicsDevice::CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel, uint32_t mipLevel)
+    {
+        auto cmd = GetCommandList(commandList);
+        uint32_t imageIndex = swapchain_->currentImageIndex;
+
+        auto src = std::static_pointer_cast<VulkanTexture>(texture->internalState);
+
+        VkImageMemoryBarrier transferBarrier = CreateImageBarrier(swapchain_->images[imageIndex],
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            0, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        vkCmdPipelineBarrier(commandBuffer_, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &transferBarrier);
+
+        int levelWidth  = std::max(1u, texture->desc.width >> mipLevel);
+        int levelHeight = std::max(1u, texture->desc.height >> mipLevel);
+
+        VkImageBlit blitRegion = {};
+        blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blitRegion.srcSubresource.mipLevel = mipLevel;
+        blitRegion.srcSubresource.layerCount = 1;
+
+        blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blitRegion.dstSubresource.layerCount = 1;
+        blitRegion.srcOffsets[0] = { 0, 0, 0 };
+        blitRegion.srcOffsets[1] = { levelWidth, levelHeight, 1 };
+        blitRegion.dstOffsets[0] = { 0, 0, 0 };
+        blitRegion.dstOffsets[1] = { swapchain_->desc.width, swapchain_->desc.height, 1 };
+
+        vkCmdBlitImage(cmd->commandBuffer, src->image, src->layout, swapchain_->images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+
+        VkImageMemoryBarrier renderEndBarrier = CreateImageBarrier(swapchain_->images[imageIndex],
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            VK_ACCESS_TRANSFER_WRITE_BIT,
+            0,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        vkCmdPipelineBarrier(commandBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
+    }
+
 
     void VulkanGraphicsDevice::SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)
     {
@@ -2013,22 +2130,31 @@ namespace gfx {
 
     void VulkanGraphicsDevice::PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)
     {
-        uint32_t barrierCount = barriers->barrierInfoCount;
-        std::vector<VkImageMemoryBarrier> imageBarriers(barrierCount);
-        for (uint32_t i = 0; i < barrierCount; ++i)
+        std::vector<VkImageMemoryBarrier> imageBarriers;
+        for (uint32_t i = 0; i < barriers->barrierInfoCount; ++i)
         {
             ImageBarrierInfo& barrierInfo = barriers->barrierInfo[i];
+
             VkImageLayout newLayout = _ConvertLayout(barrierInfo.newLayout);
             auto texture = std::static_pointer_cast<VulkanTexture>(barrierInfo.resource->internalState);
-            imageBarriers[i] = CreateImageBarrier(texture->image,
+
+            // @NOTE: for now we don't care about access mask
+            if (texture->layout == newLayout)
+                continue;
+
+            imageBarriers.push_back(CreateImageBarrier(texture->image,
                 texture->imageAspect,
                 _ConvertAccessFlags(barrierInfo.srcAccessMask), 
                 _ConvertAccessFlags(barrierInfo.dstAccessMask),
                 texture->layout,
                 newLayout
-               );
+               ));
             texture->layout = newLayout;
         }
+        
+        uint32_t barrierCount = (uint32_t)imageBarriers.size();
+        if (barrierCount == 0)
+            return;
         
 		auto cmdList = GetCommandList(commandList);
         vkCmdPipelineBarrier(cmdList->commandBuffer,
@@ -2036,7 +2162,7 @@ namespace gfx {
             _ConvertPipelineStageFlags(barriers->dstStage),
             VK_DEPENDENCY_BY_REGION_BIT,
             0,0, 0, 0,
-            barrierCount, imageBarriers.data());
+			barrierCount, imageBarriers.data());
     }
 
     void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic)

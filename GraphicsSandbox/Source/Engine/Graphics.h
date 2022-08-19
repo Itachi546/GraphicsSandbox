@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <string>
+#include <vector>
+
 #include "CommonInclude.h"
 
 namespace gfx
@@ -177,6 +179,8 @@ namespace gfx
 		RenderPass* renderPass = nullptr;
 	};
 
+
+
 	struct Semaphore : public GraphicsDeviceResource
 	{
 
@@ -204,7 +208,8 @@ namespace gfx
 		EarlyFramentTest,
 		LateFramentTest,
 		BottomOfPipe,
-		TransferBit
+		TransferBit,
+		ColorAttachmentOutput
 	};
 
 	struct ImageBarrierInfo
@@ -375,6 +380,12 @@ namespace gfx
 	struct GPUTexture : public GPUResource
 	{
 		GPUTextureDesc desc;
+	};
+
+	struct Framebuffer : public GraphicsDeviceResource
+	{
+		std::vector<GPUTexture> attachments;
+		uint32_t depthAttachmentIndex = ~0u;
 	};
 
 	struct DrawIndirectCommand

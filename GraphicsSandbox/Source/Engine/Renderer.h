@@ -11,9 +11,9 @@ class Scene;
 class Renderer
 {
 public:
-	Renderer(std::shared_ptr<gfx::RenderPass> swapchainRP);
+	Renderer();
 
-	void Update(float dt, int width, int height);
+	void Update(float dt);
 
 	void SetScene(Scene* scene) { mScene = scene; }
 
@@ -42,7 +42,6 @@ private:
 	} mGlobalUniformData;
 
 	gfx::GraphicsDevice* mDevice;
-	std::shared_ptr<gfx::RenderPass> mSwapchainRP;
 	Scene* mScene;
 
 	std::shared_ptr<gfx::Pipeline> mTrianglePipeline;
@@ -54,15 +53,19 @@ private:
 	std::shared_ptr<gfx::GPUBuffer> mPerObjectDataBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mMaterialBuffer;
+
+	std::shared_ptr<gfx::RenderPass> mHdrRenderPass;
+	std::shared_ptr<gfx::Framebuffer> mHdrFramebuffer;
 	
 	gfx::Semaphore mAcquireSemaphore;
 	gfx::Semaphore mReleaseSemaphore;
 
+	gfx::Format mDepthFormat = gfx::Format::D32_SFLOAT;
 	std::vector<gfx::DescriptorInfo> mDescriptorInfos;
 	const int kMaxEntity = 10'000;
 
 	std::shared_ptr<gfx::Pipeline> loadPipelines(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
-	void InitializeBuffers();
+	void initializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
 
 };

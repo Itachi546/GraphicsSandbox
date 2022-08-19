@@ -25,16 +25,18 @@ namespace gfx
 		virtual void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0) = 0;
 		virtual void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CreateSemaphore(Semaphore* out) = 0;
+		virtual void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out) = 0;
 
 		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic = false) = 0;
 		virtual void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) = 0;
 
 		virtual void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers) = 0;
+		virtual void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 
 
 		virtual void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore) = 0;
 		virtual CommandList BeginCommandList() = 0;
-		virtual void BeginRenderPass(CommandList* commandList, RenderPass* renderPass) = 0;
+		virtual void BeginRenderPass(CommandList* commandList, RenderPass* renderPass, Framebuffer* fb) = 0;
 		virtual void EndRenderPass(CommandList* commandList) = 0;
 		virtual void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore = nullptr) = 0;
 		virtual void Present(Semaphore* waitSemaphore) = 0;

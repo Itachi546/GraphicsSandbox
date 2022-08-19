@@ -32,6 +32,8 @@ public:
 
 	void GenerateDrawData(std::vector<DrawData>& out);
 
+	void SetSize(int width, int height);
+
 	void Destroy(ecs::Entity& entity);
 
 	Camera* GetCamera() {

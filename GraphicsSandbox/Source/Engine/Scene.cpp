@@ -1,7 +1,11 @@
 #include "Scene.h"
 #include "Logger.h"
-
 #include "GpuMemoryAllocator.h"
+#include "../Shared/MeshData.h"
+
+#include <execution>
+#include <algorithm>
+#include <fstream>
 
 void Scene::Initialize()
 {
@@ -18,7 +22,7 @@ void Scene::Initialize()
 	InitializeLights();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
-	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/photo_studio.hdr");
+	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/daytime.hdr");
 	mEnvMap->CalculateIrradiance();
 	mEnvMap->Prefilter();
 	mEnvMap->CalculateBRDFLUT();
@@ -37,17 +41,19 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 		auto& object = objectComponentArray->components[i];
 		auto& meshData = meshDataComponentArray->components[object.meshId];
 
-		drawData.vertexBuffer = meshData.vertexBuffer;
-		drawData.indexBuffer =  meshData.indexBuffer;
-		drawData.indexCount = meshData.GetNumIndices();
+		if (meshData.IsRenderable())
+		{
+			drawData.vertexBuffer = meshData.vertexBuffer;
+			drawData.indexBuffer = meshData.indexBuffer;
+			drawData.indexCount = meshData.GetNumIndices();
 
-		TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-		drawData.worldTransform = transform->world;
+			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
+			drawData.worldTransform = transform->world;
 
-		MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
-		drawData.material = material;
-
-		out.push_back(std::move(drawData));
+			MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
+			drawData.material = material;
+			out.push_back(std::move(drawData));
+		}
 	}
 }
 
@@ -92,6 +98,54 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 	return entity;
 }
 
+ecs::Entity Scene::CreateMesh(const char* file)
+{
+	std::ifstream inFile(file, std::ios::binary);
+	if (!inFile)
+	{
+		Logger::Warn("Failed to load: " + std::string(file));
+		return ecs::INVALID_ENTITY;
+	}
+
+	ecs::Entity entity = ecs::CreateEntity();
+	mComponentManager->AddComponent<NameComponent>(entity).name = std::string("teapot");
+	mComponentManager->AddComponent<TransformComponent>(entity);
+	MeshDataComponent& meshData = mComponentManager->AddComponent<MeshDataComponent>(entity);
+
+	MeshFileHeader header = {};
+	inFile.read(reinterpret_cast<char*>(&header), sizeof(MeshFileHeader));
+	assert(header.magicNumber == 0x12345678u);
+
+	uint32_t nVertices = header.vertexDataSize / (sizeof(float) * 8);
+	uint32_t nIndices = header.indexDataSize / sizeof(uint32_t);
+	
+	meshData.vertices.resize(nVertices);
+	inFile.read(reinterpret_cast<char*>(meshData.vertices.data()), header.vertexDataSize);
+
+	meshData.indices.resize(nIndices);
+	inFile.read(reinterpret_cast<char*>(meshData.indices.data()), header.indexDataSize);
+
+	inFile.close();
+
+	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
+	gfx::GPUBufferDesc vbDesc;
+	vbDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	vbDesc.usage = gfx::Usage::Default;
+	vbDesc.size = header.vertexDataSize;
+	gfx::BufferIndex vb = gpuAllocator->AllocateBuffer(&vbDesc);
+
+	gfx::GPUBufferDesc ibDesc;
+	ibDesc.bindFlag = gfx::BindFlag::IndexBuffer;
+	ibDesc.usage = gfx::Usage::Default;
+	ibDesc.size = header.indexDataSize;
+	gfx::BufferIndex ib = gpuAllocator->AllocateBuffer(&ibDesc);
+	meshData.CopyDataToBuffer(gpuAllocator, vb, ib);
+
+	ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
+	objectComp.meshId = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(entity);
+	return entity;
+}
+
 void Scene::Update(float dt)
 {
 	mCamera.Update(dt);
@@ -118,12 +172,10 @@ Scene::~Scene()
 void Scene::UpdateTransformData()
 {
 	auto transforms = mComponentManager->GetComponentArray<TransformComponent>();
-
 	for (auto& transform : transforms->components)
 	{
 		if (transform.dirty)
 			transform.CalculateWorldMatrix();
-
 	}
 }
 
@@ -149,7 +201,7 @@ void Scene::InitializePrimitiveMesh()
 	MeshDataComponent* cubeMesh = mComponentManager->GetComponent<MeshDataComponent>(mCubeEntity);
 	InitializeCubeMesh(cubeMesh, vertexCount, indexCount);
 	MeshDataComponent* planeMesh = mComponentManager->GetComponent<MeshDataComponent>(mPlaneEntity);
-	InitializePlaneMesh(planeMesh, vertexCount, indexCount);
+	InitializePlaneMesh(planeMesh, vertexCount, indexCount, 32);
 	MeshDataComponent* sphereMesh = mComponentManager->GetComponent<MeshDataComponent>(mSphereEntity);
 	InitializeSphereMesh(sphereMesh, vertexCount, indexCount);
 
@@ -221,18 +273,43 @@ void Scene::InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& accumV
 		accumIndexCount += (uint32_t)meshComp->indices.size();
 }
 
-void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount)
+void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount, uint32_t vertexCount)
 {
-	meshComp->vertices = {
-			Vertex{glm::vec3(-1.0f, 0.0f, +1.0f), glm::vec3(+0.0f, 1.0f, +0.0f), glm::vec2(0.0f)},
-			Vertex{glm::vec3(+1.0f, 0.0f, +1.0f), glm::vec3(+0.0f, 1.0f, +0.0f), glm::vec2(0.0f)},
-			Vertex{glm::vec3(+1.0f, 0.0f, -1.0f), glm::vec3(+0.0f, 1.0f, +0.0f), glm::vec2(0.0f)},
-			Vertex{glm::vec3(-1.0f, 0.0f, -1.0f), glm::vec3(+0.0f, 1.0f, +0.0f), glm::vec2(0.0f)},
-	};
+	meshComp->vertices.reserve(vertexCount * vertexCount);
+	float dims = (float)vertexCount;
 
-	meshComp->indices = {
-		0,   1,  2,  0,  2,  3
-	};
+	float stepSize = 2.0f / float(vertexCount);
+
+	std::vector<Vertex>& vertices = meshComp->vertices;
+	for (uint32_t y = 0; y < vertexCount; ++y)
+	{
+		float yPos = y * stepSize - 1.0f;
+		for (uint32_t x = 0; x < vertexCount; ++x)
+		{
+			vertices.push_back(Vertex{ glm::vec3(x * stepSize - 1.0f, 0.0f, yPos),
+				glm::vec3(0.0f, 1.0f, 0.0f),
+				glm::vec2(x * stepSize, y * stepSize) });
+		}
+	}
+
+	uint32_t totalGrid = (vertexCount - 1) * (vertexCount - 1);
+	uint32_t nIndices =  totalGrid * 6;
+
+	std::vector<unsigned int>& indices = meshComp->indices;
+	meshComp->indices.reserve(nIndices);
+	for (uint32_t y = 0; y < vertexCount - 1; ++y)
+	{
+		for (uint32_t x = 0; x < vertexCount - 1; ++x)
+		{
+			uint32_t i0 = y * vertexCount + x;
+			uint32_t i1 = i0 + 1;
+			uint32_t i2 = i0 + vertexCount;
+			uint32_t i3 = i2 + 1;
+
+			indices.push_back(i0);  indices.push_back(i2); indices.push_back(i1);
+			indices.push_back(i2);  indices.push_back(i3); indices.push_back(i1);
+		}
+	}
 
 	accumVertexCount += (uint32_t)meshComp->vertices.size();
 	accumIndexCount += (uint32_t)meshComp->indices.size();

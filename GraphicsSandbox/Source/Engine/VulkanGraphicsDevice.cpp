@@ -128,6 +128,9 @@ namespace gfx {
         VkPipelineBindPoint bindPoint;
         VkDescriptorSetLayout setLayout;
         VkDescriptorUpdateTemplate updateTemplate;
+        // Only stores the reference of descriptor set created from 
+        // the pools. It is not created as per pipeline basis but dynamically
+        // allocated every frame
         VkDescriptorSet descriptorSet;
 
         ~VulkanPipeline()
@@ -381,6 +384,8 @@ namespace gfx {
             return VK_FORMAT_R16G16B16A16_SFLOAT;
         case Format::R32B32G32A32_SFLOAT:
             return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case Format::R32G32_SFLOAT:
+            return VK_FORMAT_R32G32_SFLOAT;
         case Format::B8G8R8A8_UNORM:
             return VK_FORMAT_B8G8R8A8_UNORM;
         case Format::D32_SFLOAT:
@@ -1392,8 +1397,6 @@ namespace gfx {
 
 		VK_CHECK(vmaCreateAllocator(&vmaCreateInfo, &vmaAllocator_));
 
-        descriptorPool_ = CreateDescriptorPool(device_);
-
 		//Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string((int)std::round(timer.elapsed())) + "ms)");
         Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string(timer.elapsedSeconds()) + "s)");
     }
@@ -1834,6 +1837,19 @@ namespace gfx {
 
     CommandList VulkanGraphicsDevice::BeginCommandList()
     {
+        // Initialize Descriptor Pools
+        if (descriptorPools_.size() == 0)
+        {
+            descriptorPools_.resize(swapchain_->imageCount);
+            for(uint32_t i = 0; i < swapchain_->imageCount; ++i)
+				descriptorPools_[i] = CreateDescriptorPool(device_);
+        }
+
+        // Reset Next Descriptor Pool
+        uint32_t imageCount = swapchain_->imageCount;
+        uint32_t currentIndex = swapchain_->currentImageIndex;
+        vkResetDescriptorPool(device_, descriptorPools_[(currentIndex + 1) % imageCount], 0);
+
         CommandList commandList = {};
         commandList.internalState = commandList_.get();
 
@@ -2165,7 +2181,7 @@ namespace gfx {
 			barrierCount, imageBarriers.data());
     }
 
-    void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic)
+    void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
     {
 
         auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
@@ -2194,19 +2210,19 @@ namespace gfx {
             else 
                 assert(!"Unsupported Descriptor Type");
         }
-        
-        if ((vkPipeline->descriptorSet == VK_NULL_HANDLE) || dynamic)
-        {
-            VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-            allocateInfo.descriptorPool = descriptorPool_;
-            allocateInfo.descriptorSetCount = 1;
-            allocateInfo.pSetLayouts = &vkPipeline->setLayout;
 
-            VkDescriptorSet set = 0;
-            VK_CHECK(vkAllocateDescriptorSets(device_, &allocateInfo, &set));
-            vkPipeline->descriptorSet = set;
-        }
+        VkDescriptorPool descriptorPool = descriptorPools_[swapchain_->currentImageIndex];
+		VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		allocateInfo.descriptorPool = descriptorPool;
+		allocateInfo.descriptorSetCount = 1;
+		allocateInfo.pSetLayouts = &vkPipeline->setLayout;
 
+		VkDescriptorSet set = 0;
+		VK_CHECK(vkAllocateDescriptorSets(device_, &allocateInfo, &set));
+
+        // This is just a reference to created descriptor set and used in 
+        // subsequent rendering process
+		vkPipeline->descriptorSet = set;
         vkUpdateDescriptorSetWithTemplate(device_, vkPipeline->descriptorSet, vkPipeline->updateTemplate,  descriptorInfos.data());
     }
 
@@ -2254,7 +2270,10 @@ namespace gfx {
         destroyReleasedResources();
 
         vmaDestroyAllocator(vmaAllocator_);
-        vkDestroyDescriptorPool(device_, descriptorPool_, nullptr);
+
+        for(int i = 0; i < descriptorPools_.size(); ++i)
+			vkDestroyDescriptorPool(device_, descriptorPools_[i], nullptr);
+
         vkFreeCommandBuffers(device_, commandPool_, 1, &commandBuffer_);
         vkFreeCommandBuffers(device_, stagingCmdPool_, 1, &stagingCmdBuffer_);
         vkDestroyCommandPool(device_, commandPool_, nullptr);

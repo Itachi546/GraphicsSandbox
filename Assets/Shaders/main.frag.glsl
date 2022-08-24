@@ -26,29 +26,10 @@ struct Material
 #include "pbr.glsl"
 #include "bindings.glsl"
 
-const vec3 viewPos = vec3(0.0, 3.0, 5.0);
-/*
-struct Light
-{
-   vec3 position;
-   vec3 color;
-} light[4];
-*/
 void main()
 {
-/*
-    light[0].position = vec3(-10.0f, 10.0f, 10.0f);
-	light[0].color = vec3(300.0f);
-
-    light[1].position = vec3(10.0f, 10.0f, 10.0f);
-	light[1].color = vec3(300.0f);
-
-    light[2].position = vec3(-10.0f, -10.0f, 10.0f);
-	light[2].color = vec3(300.0f);
-
-    light[3].position = vec3(10.0f, -10.0f, 10.0f);
-	light[3].color = vec3(300.0f);
-	*/
+	vec2 uv = fs_in.worldPos.xz;
+	float checker = mod(floor(uv.x) + floor(uv.y), 2.0f);
 
 	Material material = aMaterialData[fs_in.matId];
 	vec4 albedo = material.albedo;
@@ -56,12 +37,14 @@ void main()
 	float ao = material.ao;
 	float metallic = material.metallic;
 
+	if(albedo.w < 0.5f)
+	    albedo.rgb *= checker;
 
     vec3 n = normalize(fs_in.normal);
     vec3 v = normalize(fs_in.viewDir);
 	vec3 r = reflect(-v, n);
 
-	float NoV =	abs(dot(n, v));
+	float NoV =	max(dot(n, v), 0.0);
 	vec3 Lo = vec3(0.0f);
 
 	vec3 f0	= mix(vec3(0.04), albedo.rgb, metallic);
@@ -80,9 +63,7 @@ void main()
 		float LoH =	clamp(dot(l, h), 0.0, 1.0);
 		float NoH =	clamp(dot(n, h), 0.0, 1.0);
 
-		float alpha	= roughness * roughness;
-
-		float D	= D_GGX(NoH, alpha);
+		float D	= D_GGX(NoH, roughness * roughness);
 		vec3  F	= F_Schlick(LoH, f0);
 		float V	= V_SmithGGX(NoV, NoL, roughness);
 

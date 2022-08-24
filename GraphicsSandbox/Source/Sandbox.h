@@ -55,8 +55,8 @@ private:
 
 	void InitializePBRTestScene()
 	{
-		const float nrRows = 7;
-		const float nrColumns = 7;
+		const float nrRows = 50;
+		const float nrColumns = 50;
 		const float spacing = 2.5f;
 		auto compManager = mScene.GetComponentManager();
 		for (int row = 0; row < nrRows; ++row)
@@ -93,32 +93,57 @@ private:
 	void InitializePrimitiveScene()
 	{
 		auto compMgr = mScene.GetComponentManager();
+		{
+			ecs::Entity cube = mScene.CreateCube("TestCube");
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
+			material.roughness = 0.01f;
+			material.albedo = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+			material.metallic = 1.0f;
+		}
+		{
+			ecs::Entity cube = mScene.CreateCube("TestCube");
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
+			transform->position = glm::vec3(-2.5f, 1.0f, 0.0f);
+			transform->scale = glm::vec3(1.0f, 2.0f, 1.0f);
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
+			material.roughness = 1.0f;
+			material.albedo = glm::vec4(1.0f);
+			material.metallic = 0.2f;
+		}
+		{
+			ecs::Entity sphere = mScene.CreateSphere("TestSphere");
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
+			transform->position.x += 2.5f;
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
+			material.roughness = 0.3f;
+			material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+			material.metallic = 0.9f;
+		}
+		{
+			ecs::Entity plane = mScene.CreatePlane("TestPlane");
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(plane);
+			transform->scale = glm::vec3(40.0f);
+			transform->position.y -= 1.0f;
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(plane);
+			material.roughness = 1.0f;
+			material.albedo = glm::vec4(0.5f, 0.5f, 0.5f, 0.1f);
+			material.metallic = 0.0f;
+		}
+		{
+			ecs::Entity teapot = mScene.CreateMesh("Assets/Models/suzanne.sbox");
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(teapot);
+			transform->scale = glm::vec3(1.0f);
+			transform->position.x += 5.0f;
+			transform->position.y -= 1.0f;
 
-		ecs::Entity cube = mScene.CreateCube("TestCube");
-		TransformComponent* cT = compMgr->GetComponent<TransformComponent>(cube);
-		MaterialComponent& cM = compMgr->AddComponent<MaterialComponent>(cube);
-		cM.roughness = 0.01f;
-		cM.albedo = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-		cM.metallic = 1.0f;
-
-		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
-		TransformComponent* sT = compMgr->GetComponent<TransformComponent>(sphere);
-		sT->position.x += 2.0f;
-		MaterialComponent& sM = compMgr->AddComponent<MaterialComponent>(sphere);
-		sM.roughness = 0.3f;
-		sM.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		sM.metallic = 0.7f;
-
-		ecs::Entity plane = mScene.CreatePlane("TestPlane");
-		TransformComponent* pT = compMgr->GetComponent<TransformComponent>(plane);
-		pT->scale = glm::vec3(5.0f);
-		pT->position.y -= 1.0f;
-		MaterialComponent& pM = compMgr->AddComponent<MaterialComponent>(plane);
-		pM.roughness = 1.0f;
-		pM.albedo = glm::vec4(1.0f);
-		pM.metallic = 0.01f;
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(teapot);
+			material.roughness = 0.2f;
+			material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
+			material.metallic = 1.0f;
+		}
 
 		mCamera->SetPosition({ 0.0f, 5.0f, 10.0f });
 		mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
+
 	}
 };

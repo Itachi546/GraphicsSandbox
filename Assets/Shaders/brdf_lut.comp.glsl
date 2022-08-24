@@ -36,7 +36,7 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 
         if(NdotL > 0.0)
         {
-            float G = V_SmithGGX(NdotL, NdotV, roughness); 
+            float G = V_SmithGGX(NdotV, NdotL, roughness); 
             float G_Vis = (G * VdotH) / (NdotH * NdotV);
             float Fc = pow(1.0 - VdotH, 5.0);
 
@@ -52,7 +52,9 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 void main() 
 {
     ivec2 icoord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = vec2(icoord) / dims;
+
+    // half pixel offset solves the problem of black outline at 90 
+    vec2 uv = (vec2(icoord) + 0.5)  / dims;
     vec2 integratedBRDF = IntegrateBRDF(uv.x, 1.0f - uv.y);
     imageStore(uBRDFTexture, icoord, vec4(integratedBRDF, 1.0f, 1.0f));
 }

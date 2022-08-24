@@ -3,9 +3,11 @@
 #include "GlmIncludes.h"
 #include "Graphics.h"
 #include "GraphicsDevice.h"
+#include "Components.h"
 
 #include <vector>
 
+class gfx::GpuMemoryAllocator;
 class Scene;
 
 class Renderer
@@ -67,5 +69,6 @@ private:
 	std::shared_ptr<gfx::Pipeline> loadPipelines(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
+	void DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& drawData, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator);
 
 };

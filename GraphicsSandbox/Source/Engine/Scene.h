@@ -27,6 +27,7 @@ public:
 	ecs::Entity CreateCube(std::string_view name);
 	ecs::Entity CreatePlane(std::string_view name);
 	ecs::Entity CreateSphere(std::string_view name);
+	ecs::Entity CreateMesh(const char* file);
 
 	void Update(float dt);
 
@@ -59,7 +60,7 @@ private:
 
 	void InitializePrimitiveMesh();
 	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
-	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
+	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount, uint32_t vertexCount = 2);
 	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
 
 	void InitializeLights();

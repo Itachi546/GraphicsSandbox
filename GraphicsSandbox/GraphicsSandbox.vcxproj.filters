@@ -93,6 +93,8 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Sandbox.h" />
+    <ClInclude Include="Source\Shared\MeshData.h" />
+    <ClInclude Include="Source\Shared\MathUtils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

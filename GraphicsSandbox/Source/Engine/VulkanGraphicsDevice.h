@@ -63,7 +63,7 @@ namespace gfx
 		// However it shouldn't be used in loop because there  
 		// is currently no way to free allocated descriptor set
 		// except by destroying descriptor pool.
-		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic = false)    override;
+		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)    override;
 		void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) override;
 		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)         override;
 		void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
@@ -86,7 +86,8 @@ namespace gfx
 		VkCommandBuffer commandBuffer_      = VK_NULL_HANDLE;
 		VkCommandPool   stagingCmdPool_     = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_   = VK_NULL_HANDLE;
-		VkDescriptorPool descriptorPool_    = VK_NULL_HANDLE;
+		
+		std::vector<VkDescriptorPool> descriptorPools_;
 
 		VmaAllocator vmaAllocator_ = nullptr;
 

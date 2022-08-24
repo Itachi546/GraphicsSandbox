@@ -27,7 +27,7 @@ namespace gfx
 		virtual void CreateSemaphore(Semaphore* out) = 0;
 		virtual void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out) = 0;
 
-		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount, bool dynamic = false) = 0;
+		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount) = 0;
 		virtual void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) = 0;
 
 		virtual void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers) = 0;

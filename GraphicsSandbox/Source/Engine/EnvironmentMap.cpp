@@ -217,7 +217,7 @@ void EnvironmentMap::Prefilter()
 
 		float shaderData[] = { (float)dims, roughness };
 
-		mDevice->UpdateDescriptor(mPrefilterPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)), true);
+		mDevice->UpdateDescriptor(mPrefilterPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(&commandList, mPrefilterPipeline.get());
 		mDevice->PushConstants(&commandList, mPrefilterPipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
 		mDevice->DispatchCompute(&commandList, dims / 8, dims / 8, 6);

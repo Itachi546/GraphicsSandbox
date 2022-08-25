@@ -4,6 +4,8 @@
 #include "Input.h"
 #include "Logger.h"
 
+#include "FX/Bloom.h"
+
 #include <vector>
 #include <algorithm>
 
@@ -16,11 +18,13 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	gfx::RenderPassDesc desc;
 	desc.width = 1920;
 	desc.height = 1080;
-	gfx::Attachment attachments[2] = 
+	gfx::Attachment attachments[3] = 
 	{
-		gfx::Attachment{0, gfx::Format::R16B16G16A16_SFLOAT, gfx::ImageLayout::ColorAttachmentOptimal},
-		gfx::Attachment{ 1, mDepthFormat, gfx::ImageLayout::DepthStencilAttachmentOptimal },
+		gfx::Attachment{0, mHDRColorFormat, gfx::ImageLayout::ColorAttachmentOptimal},
+		gfx::Attachment{1, mHDRColorFormat, gfx::ImageLayout::ColorAttachmentOptimal},
+		gfx::Attachment{ 2, mHDRDepthFormat, gfx::ImageLayout::DepthStencilAttachmentOptimal },
 	};
+
 	desc.attachmentCount = static_cast<uint32_t>(std::size(attachments));
 	desc.attachments = attachments;
 	desc.hasDepthAttachment = true;
@@ -30,10 +34,10 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mHdrFramebuffer = std::make_shared<gfx::Framebuffer>();
 	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get());
 
-	mTrianglePipeline = loadPipelines("Assets/SPIRV/main.vert.spv", "Assets/SPIRV/main.frag.spv");
-	mCubemapPipeline = loadPipelines("Assets/SPIRV/cubemap.vert.spv", "Assets/SPIRV/cubemap.frag.spv", gfx::CullMode::None);
+	mTrianglePipeline = loadHDRPipeline("Assets/SPIRV/main.vert.spv", "Assets/SPIRV/main.frag.spv");
+	mCubemapPipeline = loadHDRPipeline("Assets/SPIRV/cubemap.vert.spv", "Assets/SPIRV/cubemap.frag.spv", gfx::CullMode::None);
 
-
+	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
 }
 
 // TODO: temp width and height variable
@@ -82,11 +86,12 @@ void Renderer::Render()
 
 	gfx::ImageBarrierInfo barriers[] = {
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mHdrFramebuffer->attachments[2]},
 	};
 
-	gfx::PipelineBarrierInfo colorAttachmentBarrier = { &barriers[0], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput};
-	gfx::PipelineBarrierInfo depthAttachmentBarrier = { &barriers[1], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
+	gfx::PipelineBarrierInfo colorAttachmentBarrier = { barriers, 2, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput};
+	gfx::PipelineBarrierInfo depthAttachmentBarrier = { &barriers[2], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
 	mDevice->PipelineBarrier(&commandList, &colorAttachmentBarrier);
 	mDevice->PipelineBarrier(&commandList, &depthAttachmentBarrier);
 
@@ -106,6 +111,7 @@ void Renderer::Render()
 
 	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
 
+	mDevice->BeginDebugMarker(&commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
 	if (drawDatas.size() > 0)
 	{
 		//DrawBatch(&commandList, drawDatas, allocator);
@@ -127,9 +133,10 @@ void Renderer::Render()
 			bufferOffset += (uint32_t)sortedDrawDatas[i].size();
 		}
 	}
+	mDevice->EndDebugMarker(&commandList);
+
 
 	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
-
 	static int cubemapMode = 0;
 	if (Input::Press(Input::Key::KEY_3))
 		cubemapMode = 0;
@@ -138,28 +145,44 @@ void Renderer::Render()
 	else if (Input::Press(Input::Key::KEY_5))
 		cubemapMode = 2;
 	
-
+	mDevice->BeginDebugMarker(&commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
 	if(cubemapMode == 0)
 		DrawCubemap(&commandList, envMap->GetCubemap().get());
 	else if(cubemapMode == 1)
 		DrawCubemap(&commandList, envMap->GetIrradianceMap().get());
 	else 
 		DrawCubemap(&commandList, envMap->GetPrefilterMap().get());
+
+	mDevice->EndDebugMarker(&commandList);
+
 	mDevice->EndRenderPass(&commandList);
 
+	// Bloom Pass
+	gfx::GPUTexture* hdrTexture = &mHdrFramebuffer->attachments[1];
+	mBloomFX->Generate(&commandList, hdrTexture);
+
+#if 0
+	gfx::GPUTexture* outputTexture = mBloomFX->GetTexture();
+	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
+	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
+#else 
 	gfx::GPUTexture* outputTexture = &mHdrFramebuffer->attachments[0];
-	gfx::ImageBarrierInfo transferSrcBarrier = {gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture};
-	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::TransferBit};
+	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
+	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::TransferBit };
+#endif
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
 
 	// Copy the output to swapchain
-	mDevice->CopyToSwapchain(&commandList, outputTexture);
+	mDevice->BeginDebugMarker(&commandList, "Copy To Swapchain", 1.0f, 1.0f, 1.0f, 1.0f);
+	mDevice->CopyToSwapchain(&commandList, outputTexture, 0, 0);
+	mDevice->EndDebugMarker(&commandList);
+
 	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
 	mDevice->Present(&mReleaseSemaphore);
 	mDevice->WaitForGPU();
 }
 
-std::shared_ptr<gfx::Pipeline> Renderer::loadPipelines(const char* vsPath, const char* fsPath, gfx::CullMode cullMode)
+std::shared_ptr<gfx::Pipeline> Renderer::loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode)
 {
 	// Create PBR Pipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
@@ -180,6 +203,10 @@ std::shared_ptr<gfx::Pipeline> Renderer::loadPipelines(const char* vsPath, const
 	pipelineDesc.rasterizationState.enableDepthWrite = true;
 	pipelineDesc.rasterizationState.cullMode = cullMode;
 	pipelineDesc.rasterizationState.frontFace = gfx::FrontFace::Anticlockwise;
+
+	gfx::BlendState blendState[2] = {};
+	pipelineDesc.blendState = blendState;
+	pipelineDesc.blendStateCount = static_cast<uint32_t>(std::size(blendState));
 
 	auto pipeline = std::make_shared<gfx::Pipeline>();
 	mDevice->CreateGraphicsPipeline(&pipelineDesc, pipeline.get());
@@ -270,10 +297,7 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& d
 		objectDataPtr[i].materialIndex = i;
 
 		MaterialComponent* mat = drawDatas[i].material;
-		materialCompPtr[i].albedo = mat->albedo;
-		materialCompPtr[i].roughness = mat->roughness;
-		materialCompPtr[i].metallic = mat->metallic;
-		materialCompPtr[i].ao = mat->ao;
+		std::memcpy(materialCompPtr + i, mat, sizeof(MaterialComponent));
 
 		drawCommandPtr[i].firstIndex = drawDatas[i].indexBuffer.offset / sizeof(uint32_t);
 		drawCommandPtr[i].indexCount = drawDatas[i].indexCount;

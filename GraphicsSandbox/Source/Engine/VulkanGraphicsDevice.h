@@ -59,6 +59,8 @@ namespace gfx
 		void BindPipeline(CommandList* commandList, Pipeline* pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)                      override;
 
+		void BeginDebugMarker(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) override;
+		void EndDebugMarker(CommandList* commandList) override;
 		// Dynamic field allows to create new descriptor set 
 		// However it shouldn't be used in loop because there  
 		// is currently no way to free allocated descriptor set

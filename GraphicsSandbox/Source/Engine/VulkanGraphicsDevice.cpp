@@ -272,6 +272,8 @@ namespace gfx {
             return VK_ACCESS_SHADER_READ_BIT;
         case AccessFlag::ShaderWrite:
             return VK_ACCESS_SHADER_WRITE_BIT;
+        case AccessFlag::ShaderReadWrite:
+            return VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
         case AccessFlag::DepthStencilRead:
             return VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
         case AccessFlag::DepthStencilWrite:
@@ -702,7 +704,7 @@ namespace gfx {
         return commandPool;
     }
 
-    VkImageMemoryBarrier CreateImageBarrier(VkImage image, VkImageAspectFlagBits aspect, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout)
+    VkImageMemoryBarrier CreateImageBarrier(VkImage image, VkImageAspectFlagBits aspect, VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t mipLevel = 0, uint32_t arrLayer = 0, uint32_t mipCount = ~0u, uint32_t layerCount = ~0u)
     {
         VkImageMemoryBarrier result = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         result.srcAccessMask = srcAccessMask;
@@ -713,8 +715,10 @@ namespace gfx {
         result.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         result.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         result.subresourceRange.aspectMask = aspect;
-        result.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        result.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+        result.subresourceRange.baseMipLevel = mipLevel;
+        result.subresourceRange.baseArrayLayer = arrLayer;
+        result.subresourceRange.levelCount = mipCount;
+        result.subresourceRange.layerCount = layerCount;
         return result;
     }
 
@@ -756,14 +760,12 @@ namespace gfx {
         std::vector<VkDescriptorUpdateTemplateEntry> entries(shaderRefl.descriptorSetLayoutCount);
         for(uint32_t i = 0; i < shaderRefl.descriptorSetLayoutCount; ++i)
         {
-			VkDescriptorUpdateTemplateEntry entry = {};
-			entry.dstBinding = shaderRefl.descriptorSetLayoutBinding[i].binding;
-			entry.dstArrayElement = 0;
-			entry.descriptorCount = 1;
-			entry.descriptorType = shaderRefl.descriptorSetLayoutBinding[i].descriptorType;
-			entry.offset = sizeof(VulkanDescriptorInfo) * i;
-			entry.stride = sizeof(VulkanDescriptorInfo);
-			entries.push_back(entry);
+			entries[i].dstBinding = shaderRefl.descriptorSetLayoutBinding[i].binding;
+			entries[i].dstArrayElement = 0;
+			entries[i].descriptorCount = 1;
+			entries[i].descriptorType = shaderRefl.descriptorSetLayoutBinding[i].descriptorType;
+			entries[i].offset = sizeof(VulkanDescriptorInfo) * i;
+			entries[i].stride = sizeof(VulkanDescriptorInfo);
 		}
 
         VkDescriptorUpdateTemplateCreateInfo createInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO };
@@ -1042,8 +1044,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::findAvailableInstanceExtensions(const std::vector<VkExtensionProperties>& availableExtensions, std::vector<const char*>& outExtensions)
     {
-        const char* requiredExtensions[] = {
-            VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+		std::vector<const char*> requiredExtensions = {
             VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
             VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
             VK_KHR_SURFACE_EXTENSION_NAME,
@@ -1051,6 +1052,13 @@ namespace gfx {
             VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
     #endif
         };
+
+        if (mValidationMode == ValidationMode::Enabled)
+        {
+            requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            requiredExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+			requiredExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        }
 
         for (auto required : requiredExtensions)
         {
@@ -1255,6 +1263,8 @@ namespace gfx {
         // Begin Timer
         Timer timer;
 
+        mValidationMode = validationMode;
+
         // Initialize Volk make sure not to link vulkan-1.lib
         VK_CHECK(volkInitialize());
 
@@ -1310,8 +1320,11 @@ namespace gfx {
 
         // List required device extension
         std::vector<const char*> requiredDeviceExtensions = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         };
+
+        if (validationMode == ValidationMode::Enabled)
+            requiredDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 
         // Create physical device
         physicalDevice_ = findSuitablePhysicalDevice(requiredDeviceExtensions);
@@ -1629,21 +1642,24 @@ namespace gfx {
         }
         createInfo.pDepthStencilState = &depthStencilState;
 
-        const BlendState& bs = desc->blendState;
-        VkPipelineColorBlendAttachmentState colorAttachmentState = {};
-        if (bs.enable)
+        std::vector< VkPipelineColorBlendAttachmentState> colorAttachmentState(desc->blendStateCount);
+        for (uint32_t i = 0; i < desc->blendStateCount; ++i)
         {
-            colorAttachmentState.blendEnable = true;
-            colorAttachmentState.srcColorBlendFactor = _ConvertBlendFactor(bs.srcColor);
-            colorAttachmentState.dstColorBlendFactor = _ConvertBlendFactor(bs.dstColor);
-            colorAttachmentState.srcAlphaBlendFactor = _ConvertBlendFactor(bs.srcAlpha);
-            colorAttachmentState.dstAlphaBlendFactor = _ConvertBlendFactor(bs.dstAlpha);
+            const BlendState* bs = (desc->blendState + i);
+            if (bs->enable)
+            {
+                colorAttachmentState[i].blendEnable = true;
+                colorAttachmentState[i].srcColorBlendFactor = _ConvertBlendFactor(bs->srcColor);
+                colorAttachmentState[i].dstColorBlendFactor = _ConvertBlendFactor(bs->dstColor);
+                colorAttachmentState[i].srcAlphaBlendFactor = _ConvertBlendFactor(bs->srcAlpha);
+                colorAttachmentState[i].dstAlphaBlendFactor = _ConvertBlendFactor(bs->dstAlpha);
+                colorAttachmentState[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            }
         }
-        colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
         VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-        colorBlendState.attachmentCount = 1;
-        colorBlendState.pAttachments = &colorAttachmentState;
+        colorBlendState.attachmentCount = desc->blendStateCount;
+        colorBlendState.pAttachments = colorAttachmentState.data();
         createInfo.pColorBlendState = &colorBlendState;
 
         VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -1892,21 +1908,22 @@ namespace gfx {
 
         uint32_t imageIndex = swapchain_->currentImageIndex;
 
-        VkClearValue clearValues[2] = {};
-        uint32_t clearValueCount = 1;
-        clearValues[0].color = {0.0f, 0.0f, 0.0f, 1};
-        if (renderPass->desc.hasDepthAttachment)
+        uint32_t attachmentCount = renderPass->desc.attachmentCount;
+        std::vector<VkClearValue> clearValues(attachmentCount);
+        for (uint32_t i = 0; i < attachmentCount; ++i)
         {
-            clearValues[1].depthStencil = {1.0f, 0};
-            clearValueCount += 1;
+            if (i == framebuffer->depthAttachmentIndex)
+                clearValues[i].depthStencil = { 1.0f, 0 };
+            else
+                clearValues[i].color = { 0.0f, 0.0f, 0.0f, 1 };
         }
 
         uint32_t width = (uint32_t)renderPass->desc.width;
         uint32_t height = (uint32_t)renderPass->desc.height;
 
         VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-        passBeginInfo.clearValueCount = clearValueCount;
-        passBeginInfo.pClearValues = clearValues;
+        passBeginInfo.clearValueCount = attachmentCount;
+        passBeginInfo.pClearValues = clearValues.data();
         passBeginInfo.framebuffer = vkFramebuffer->framebuffer;
         passBeginInfo.renderPass = rp;
         passBeginInfo.renderArea.extent.width = width;
@@ -2125,7 +2142,11 @@ namespace gfx {
                 _ConvertAccessFlags(barriers->barrierInfo->srcAccessMask),
                 _ConvertAccessFlags(barriers->barrierInfo->dstAccessMask),
                 to->layout,
-                _ConvertLayout(barriers->barrierInfo->newLayout));
+                _ConvertLayout(barriers->barrierInfo->newLayout),
+                barriers->barrierInfo->baseMipLevel,
+                barriers->barrierInfo->baseArrayLevel,
+                barriers->barrierInfo->mipCount,
+                barriers->barrierInfo->layerCount);
 
             vkCmdPipelineBarrier(stagingCmdBuffer_,
                 _ConvertPipelineStageFlags(barriers->srcStage),
@@ -2155,15 +2176,19 @@ namespace gfx {
             auto texture = std::static_pointer_cast<VulkanTexture>(barrierInfo.resource->internalState);
 
             // @NOTE: for now we don't care about access mask
-            if (texture->layout == newLayout)
-                continue;
+			//if (texture->layout == newLayout)
+            //    continue;
 
             imageBarriers.push_back(CreateImageBarrier(texture->image,
                 texture->imageAspect,
                 _ConvertAccessFlags(barrierInfo.srcAccessMask), 
                 _ConvertAccessFlags(barrierInfo.dstAccessMask),
                 texture->layout,
-                newLayout
+                newLayout,
+                barrierInfo.baseMipLevel,
+                barrierInfo.baseArrayLevel,
+                barrierInfo.mipCount,
+                barrierInfo.layerCount
                ));
             texture->layout = newLayout;
         }
@@ -2287,6 +2312,28 @@ namespace gfx {
 
         vkDestroyInstance(instance_, nullptr);
 
+    }
+
+
+    void VulkanGraphicsDevice::BeginDebugMarker(CommandList* commandList, const char* name, float r, float g, float b, float a)
+    {
+        if (mValidationMode == ValidationMode::Disabled)
+            return;
+        VkDebugMarkerMarkerInfoEXT markerInfo = { VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT };
+        float color[4] = { r, g, b, a };
+        std::memcpy(markerInfo.color, color, sizeof(float) * 4);
+        markerInfo.pMarkerName = name;
+
+        auto cmd = GetCommandList(commandList);
+        vkCmdDebugMarkerBeginEXT(cmd->commandBuffer, &markerInfo);
+    }
+
+    void VulkanGraphicsDevice::EndDebugMarker(CommandList* commandList)
+    {
+        if (mValidationMode == ValidationMode::Disabled)
+            return;
+        auto cmd = GetCommandList(commandList);
+        vkCmdDebugMarkerEndEXT(cmd->commandBuffer);
     }
 
     void VulkanGraphicsDevice::destroyReleasedResources()

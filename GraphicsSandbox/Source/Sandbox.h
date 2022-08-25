@@ -142,8 +142,32 @@ private:
 			material.metallic = 1.0f;
 		}
 
+
 		mCamera->SetPosition({ 0.0f, 5.0f, 10.0f });
 		mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
+
+		glm::vec3 lightPosition = glm::vec3(0.0f, 2.0f, 5.0f);
+		glm::vec3 lightColor = glm::vec3(0.0f, 0.0f, 1.0f);
+		{
+			ecs::Entity light = mScene.CreateLight("light1");
+			TransformComponent* lightTransform = compMgr->GetComponent<TransformComponent>(light);
+			lightTransform->position = lightPosition;
+			LightComponent* lightComponent = compMgr->GetComponent<LightComponent>(light);
+			lightComponent->color = lightColor;
+			lightComponent->intensity = 100.0f;
+			lightComponent->type = LightType::Point;
+		}
+		{
+			ecs::Entity lightCube = mScene.CreateCube("lightCube");
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(lightCube);
+			transform->position = lightPosition;
+			transform->scale = glm::vec3(0.1f);
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(lightCube);
+			material.roughness = 1.0f;
+			material.albedo = glm::vec4(lightColor, 1.0f);
+			material.metallic = 0.0f;
+			material.emissive = glm::vec4(lightColor * 2.0f, 1.0f);
+		}
 
 	}
 };

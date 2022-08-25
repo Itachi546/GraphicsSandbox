@@ -146,6 +146,14 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	return entity;
 }
 
+ecs::Entity Scene::CreateLight(std::string_view name)
+{
+	ecs::Entity entity = ecs::CreateEntity();
+	mComponentManager->AddComponent<TransformComponent>(entity);
+	mComponentManager->AddComponent<LightComponent>(entity);
+	return entity;
+}
+
 void Scene::Update(float dt)
 {
 	mCamera.Update(dt);

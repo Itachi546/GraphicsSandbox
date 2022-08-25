@@ -3,6 +3,7 @@
 #extension GL_GOOGLE_include_directive: require
 
 layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 brightColor;
 
 layout(location = 0) in VS_OUT 
 {
@@ -15,6 +16,7 @@ layout(location = 0) in VS_OUT
 struct Material
 {
    vec4 albedo;
+   vec4 emissive;
    float roughness;
    float metallic;
    float ao;
@@ -22,9 +24,12 @@ struct Material
 
 };
 
+const float bloomThreshold = 1.0f;
+
 #define FRAGMENT_SHADER
 #include "pbr.glsl"
 #include "bindings.glsl"
+
 
 void main()
 {
@@ -36,10 +41,10 @@ void main()
 	float roughness = material.roughness;
 	float ao = material.ao;
 	float metallic = material.metallic;
-
+	/*
 	if(albedo.w < 0.5f)
 	    albedo.rgb *= checker;
-
+		*/
     vec3 n = normalize(fs_in.normal);
     vec3 v = normalize(fs_in.viewDir);
 	vec3 r = reflect(-v, n);
@@ -88,9 +93,15 @@ void main()
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
 	vec3 ambient = (Kd * diffuse + specular) * ao;
-	Lo += ambient;
+	Lo += ambient + material.emissive.rgb;
 
-	Lo /=(1.0f + Lo);
-    Lo = pow(Lo, vec3(0.4545));
+    float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
+	if(length(material.emissive) > 0 || luminance > bloomThreshold)
+     	brightColor = vec4(Lo, 1.0f);
+	else 
+	    brightColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	//Lo /=(1.0f + Lo);
+    //Lo = pow(Lo, vec3(0.4545));
 	fragColor =	vec4(Lo, 1.0f);
 }

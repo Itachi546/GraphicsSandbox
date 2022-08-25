@@ -192,6 +192,7 @@ namespace gfx
 		None,
 		ShaderRead,
 		ShaderWrite,
+		ShaderReadWrite,
 		DepthStencilRead,
 		DepthStencilWrite,
 		ColorAttachmentRead,
@@ -219,6 +220,10 @@ namespace gfx
 		AccessFlag dstAccessMask;
 		ImageLayout newLayout;
 		GPUResource* resource;
+		uint32_t baseMipLevel = 0;
+		uint32_t baseArrayLevel = 0;
+		uint32_t mipCount = ~0u;
+		uint32_t layerCount = ~0u;
 	};
 
 	struct PipelineBarrierInfo {
@@ -275,7 +280,7 @@ namespace gfx
 
 	struct BlendState
 	{
-		bool enable = false;
+		bool enable = true;
 		BlendFactor srcColor = BlendFactor::SrcColor;
 		BlendFactor dstColor = BlendFactor::OneMinusSrcColor;
 		BlendFactor srcAlpha = BlendFactor::SrcAlpha;
@@ -291,7 +296,8 @@ namespace gfx
 		ShaderDescription* shaderDesc = nullptr;
 		Topology topology = Topology::TriangleList;
 		RasterizationState rasterizationState = {};
-		BlendState blendState = {};
+		BlendState* blendState = nullptr;
+		uint32_t blendStateCount = 0;
 		RenderPass* renderPass = nullptr;
 	};
 

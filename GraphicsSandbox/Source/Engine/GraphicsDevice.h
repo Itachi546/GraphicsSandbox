@@ -33,6 +33,9 @@ namespace gfx
 		virtual void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers) = 0;
 		virtual void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 
+		virtual void BeginDebugMarker(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) = 0;
+		virtual void EndDebugMarker(CommandList* commandList) = 0;
+
 
 		virtual void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore) = 0;
 		virtual CommandList BeginCommandList() = 0;

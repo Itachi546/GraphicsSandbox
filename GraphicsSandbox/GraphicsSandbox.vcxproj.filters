@@ -23,6 +23,9 @@
     <Filter Include="SOURCE\ECS">
       <UniqueIdentifier>{f46fc02a-3fd7-425c-9f6d-1706c984b9cc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SOURCE\FX">
+      <UniqueIdentifier>{8168d990-2c62-4743-bcd3-0f7c485087b1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\Application.h">
@@ -91,10 +94,18 @@
     <ClInclude Include="Source\Engine\ImageLoader.h">
       <Filter>SOURCE\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Sandbox.h" />
     <ClInclude Include="Source\Shared\MeshData.h" />
     <ClInclude Include="Source\Shared\MathUtils.h" />
+    <ClInclude Include="Source\Engine\FX\Bloom.h">
+      <Filter>SOURCE\FX</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Camera.h">
+      <Filter>SOURCE\ECS</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GraphicsUtils.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -145,14 +156,14 @@
     <ClCompile Include="Source\Engine\ImageLoader.cpp">
       <Filter>SOURCE\Utils</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\FX\Bloom.cpp">
+      <Filter>SOURCE\FX</Filter>
+    </ClCompile>
     <ClCompile Include="Source\Engine\Camera.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>SOURCE\ECS</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Assets\Shaders\hdri_converter.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
@@ -165,13 +176,22 @@
     <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\irradiance.comp.glsl">
+    <CustomBuild Include="..\Assets\Shaders\envmap\brdf_lut.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\prefilter_env.comp.glsl">
+    <CustomBuild Include="..\Assets\Shaders\bloom\downsample.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\brdf_lut.comp.glsl">
+    <CustomBuild Include="..\Assets\Shaders\envmap\hdri_converter.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\envmap\irradiance.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\envmap\prefilter_env.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\bloom\upsample.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>
@@ -185,7 +205,7 @@
     <None Include="..\Assets\Shaders\bindings.glsl">
       <Filter>SHADERS</Filter>
     </None>
-    <None Include="..\Assets\Shaders\cubemap.glsl">
+    <None Include="..\Assets\Shaders\envmap\cubemap.glsl">
       <Filter>SHADERS</Filter>
     </None>
   </ItemGroup>

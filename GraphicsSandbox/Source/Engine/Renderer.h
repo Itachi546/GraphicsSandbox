@@ -10,6 +10,10 @@
 class gfx::GpuMemoryAllocator;
 class Scene;
 
+namespace fx {
+	class Bloom;
+};
+
 class Renderer
 {
 public:
@@ -49,7 +53,6 @@ private:
 	std::shared_ptr<gfx::Pipeline> mTrianglePipeline;
 	std::shared_ptr<gfx::Pipeline> mCubemapPipeline;
 
-
 	std::shared_ptr<gfx::GPUBuffer> mGlobalUniformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mPerObjectDataBuffer;
@@ -62,11 +65,16 @@ private:
 	gfx::Semaphore mAcquireSemaphore;
 	gfx::Semaphore mReleaseSemaphore;
 
-	gfx::Format mDepthFormat = gfx::Format::D32_SFLOAT;
+	gfx::Format mHDRDepthFormat = gfx::Format::D32_SFLOAT;
+	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
+
+	// fx Variables
+	std::shared_ptr<fx::Bloom> mBloomFX;
+
 	std::vector<gfx::DescriptorInfo> mDescriptorInfos;
 	const int kMaxEntity = 10'000;
 
-	std::shared_ptr<gfx::Pipeline> loadPipelines(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
+	std::shared_ptr<gfx::Pipeline> loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
 	void DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& drawData, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator);

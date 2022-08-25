@@ -28,6 +28,7 @@ public:
 	ecs::Entity CreatePlane(std::string_view name);
 	ecs::Entity CreateSphere(std::string_view name);
 	ecs::Entity CreateMesh(const char* file);
+	ecs::Entity CreateLight(std::string_view name = "");
 
 	void Update(float dt);
 

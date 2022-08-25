@@ -1,34 +1,22 @@
 #include "EnvironmentMap.h"
-#include "Utils.h"
+#include "GraphicsUtils.h"
 #include "ImageLoader.h"
 #include "Logger.h"
 
 #include <assert.h>
-
-static void CreateComputePipeline(const char* filename, gfx::GraphicsDevice* device, gfx::Pipeline* out)
-{
-	uint32_t codeLen = 0;
-	char* code = Utils::ReadFile(filename, &codeLen);
-	gfx::ShaderDescription shaderDesc{ code, codeLen };
-	gfx::PipelineDesc pipelineDesc;
-	pipelineDesc.shaderCount = 1;
-	pipelineDesc.shaderDesc = &shaderDesc;
-	device->CreateComputePipeline(&pipelineDesc, out);
-	delete[] code;
-}
 
 EnvironmentMap::EnvironmentMap()
 {
 	mDevice = gfx::GetDevice();
 
 	mHdriToCubemap = std::make_shared<gfx::Pipeline>();
-	CreateComputePipeline("Assets/SPIRV/hdri_converter.comp.spv", mDevice, mHdriToCubemap.get());
+	gfx::CreateComputePipeline("Assets/SPIRV/hdri_converter.comp.spv", mDevice, mHdriToCubemap.get());
 	mIrradiancePipeline = std::make_shared<gfx::Pipeline>();
-	CreateComputePipeline("Assets/SPIRV/irradiance.comp.spv", mDevice, mIrradiancePipeline.get());
+	gfx::CreateComputePipeline("Assets/SPIRV/irradiance.comp.spv", mDevice, mIrradiancePipeline.get());
 	mPrefilterPipeline = std::make_shared<gfx::Pipeline>();
-	CreateComputePipeline("Assets/SPIRV/prefilter_env.comp.spv", mDevice, mPrefilterPipeline.get());
+	gfx::CreateComputePipeline("Assets/SPIRV/prefilter_env.comp.spv", mDevice, mPrefilterPipeline.get());
 	mBRDFPipeline = std::make_shared<gfx::Pipeline>();
-	CreateComputePipeline("Assets/SPIRV/brdf_lut.comp.spv", mDevice, mBRDFPipeline.get());
+	gfx::CreateComputePipeline("Assets/SPIRV/brdf_lut.comp.spv", mDevice, mBRDFPipeline.get());
 
 }
 
@@ -112,7 +100,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	mDevice->UpdateDescriptor(mHdriToCubemap.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(&commandList, mHdriToCubemap.get());
 	mDevice->PushConstants(&commandList, mHdriToCubemap.get(), gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
-	mDevice->DispatchCompute(&commandList, mCubemapDims / 32, mCubemapDims / 32, 6);
+	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mCubemapDims, 32), gfx::GetWorkSize(mCubemapDims, 32), 6);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("HDRI Converted Successfully");
@@ -163,7 +151,7 @@ void EnvironmentMap::CalculateIrradiance()
 	mDevice->UpdateDescriptor(mIrradiancePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(&commandList, mIrradiancePipeline.get());
 	mDevice->PushConstants(&commandList, mHdriToCubemap.get(), gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
-	mDevice->DispatchCompute(&commandList, mIrrTexDims / 8, mIrrTexDims / 8, 6);
+	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mIrrTexDims, 8), gfx::GetWorkSize(mIrrTexDims, 8), 6);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("Irradiance Texture Generated");
@@ -220,7 +208,7 @@ void EnvironmentMap::Prefilter()
 		mDevice->UpdateDescriptor(mPrefilterPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(&commandList, mPrefilterPipeline.get());
 		mDevice->PushConstants(&commandList, mPrefilterPipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
-		mDevice->DispatchCompute(&commandList, dims / 8, dims / 8, 6);
+		mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(dims, 8), gfx::GetWorkSize(dims, 8), 6);
 		dims /= 2;
 	}
 	mDevice->SubmitCommandList(&commandList);
@@ -234,7 +222,6 @@ void EnvironmentMap::CalculateBRDFLUT()
 	assert(mCubemapTexture != nullptr);
 
 	mBRDFTexture = std::make_shared<gfx::GPUTexture>();
-
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mBRDFDims;
 	desc.bindFlag = gfx::BindFlag::ShaderResource;
@@ -268,7 +255,20 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mDevice->UpdateDescriptor(mBRDFPipeline.get(), &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mBRDFPipeline.get());
 	mDevice->PushConstants(&commandList, mBRDFPipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
-	mDevice->DispatchCompute(&commandList, mBRDFDims / 32, mBRDFDims / 32, 1);
+	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mBRDFDims, 32), gfx::GetWorkSize(mBRDFDims, 32), 1);
+
+	// Layout transition for shader read/write
+	gfx::ImageBarrierInfo imageBarrier2[] = {
+		gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mBRDFTexture.get()},
+	};
+
+	gfx::PipelineBarrierInfo computeBarrier2 = {
+		imageBarrier, static_cast<uint32_t>(std::size(imageBarrier2)),
+		gfx::PipelineStage::ComputeShader,
+		gfx::PipelineStage::FragmentShader,
+	};
+	mDevice->PipelineBarrier(&commandList, &computeBarrier2);
+
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("BRDF LUT Generated");

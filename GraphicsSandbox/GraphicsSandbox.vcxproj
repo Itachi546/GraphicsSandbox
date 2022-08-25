@@ -159,6 +159,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\Camera.h" />
+    <ClInclude Include="Source\Engine\FX\Bloom.h" />
+    <ClInclude Include="Source\Engine\GraphicsUtils.h" />
     <ClInclude Include="Source\Engine\ImageLoader.h" />
     <ClInclude Include="Source\Engine\ECS.h" />
     <ClInclude Include="Source\Engine\Application.h" />
@@ -187,6 +189,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Camera.cpp" />
+    <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
     <ClCompile Include="Source\Engine\ECS.cpp" />
     <ClCompile Include="Source\Engine\Components.cpp" />
@@ -205,9 +208,6 @@
     <ClCompile Include="Source\glfwMain.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Assets\Shaders\hdri_converter.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
@@ -221,22 +221,31 @@
     <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\brdf_lut.comp.glsl">
+    <CustomBuild Include="..\Assets\Shaders\bloom\downsample.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="..\Assets\Shaders\cubemap.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\irradiance.comp.glsl">
+    <CustomBuild Include="..\Assets\Shaders\bloom\upsample.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\envmap\brdf_lut.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\envmap\hdri_converter.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\envmap\irradiance.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\envmap\prefilter_env.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />
     <None Include="..\Assets\Shaders\mesh.glsl">
       <FileType>Document</FileType>
     </None>
     <None Include="..\Assets\Shaders\pbr.glsl">
       <FileType>Document</FileType>
     </None>
-    <CustomBuild Include="..\Assets\Shaders\prefilter_env.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

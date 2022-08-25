@@ -13,7 +13,7 @@ layout(push_constant) uniform PushConstants
 };
 
 #include "cubemap.glsl"
-#include "pbr.glsl"
+#include "../pbr.glsl"
 
 void main()
 {

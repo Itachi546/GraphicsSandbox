@@ -158,17 +158,16 @@ void Renderer::Render()
 	mDevice->EndRenderPass(&commandList);
 
 	// Bloom Pass
-	gfx::GPUTexture* hdrTexture = &mHdrFramebuffer->attachments[1];
-	mBloomFX->Generate(&commandList, hdrTexture);
-
+	mBloomFX->Generate(&commandList, &mHdrFramebuffer->attachments[1]);
+	mBloomFX->Composite(&commandList, &mHdrFramebuffer->attachments[0]);
 #if 0
 	gfx::GPUTexture* outputTexture = mBloomFX->GetTexture();
 	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
 	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
 #else 
 	gfx::GPUTexture* outputTexture = &mHdrFramebuffer->attachments[0];
-	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
-	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::TransferBit };
+	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
+	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
 #endif
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
 

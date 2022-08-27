@@ -239,6 +239,9 @@
     <CustomBuild Include="..\Assets\Shaders\envmap\prefilter_env.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\bloom\bloom-final.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />
     <None Include="..\Assets\Shaders\mesh.glsl">
       <FileType>Document</FileType>

@@ -280,7 +280,7 @@ namespace gfx
 
 	struct BlendState
 	{
-		bool enable = true;
+		bool enable = false;
 		BlendFactor srcColor = BlendFactor::SrcColor;
 		BlendFactor dstColor = BlendFactor::OneMinusSrcColor;
 		BlendFactor srcAlpha = BlendFactor::SrcAlpha;

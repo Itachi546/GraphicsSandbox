@@ -194,6 +194,9 @@
     <CustomBuild Include="..\Assets\Shaders\bloom\upsample.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\bloom\bloom-final.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">

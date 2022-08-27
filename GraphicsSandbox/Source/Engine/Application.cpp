@@ -82,7 +82,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	this->mWindow = window;
 
 #if defined(USE_VULKAN)
-	gfx::ValidationMode validationMode = gfx::ValidationMode::Enabled;
+	gfx::ValidationMode validationMode = gfx::ValidationMode::Disabled;
 	mDevice = std::make_unique<gfx::VulkanGraphicsDevice>(window, validationMode);
 #else
 #error Unsupported Graphics API

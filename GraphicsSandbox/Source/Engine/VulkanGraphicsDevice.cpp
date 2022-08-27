@@ -1151,6 +1151,7 @@ namespace gfx {
 #endif
         }
 
+        vkGetPhysicalDeviceProperties2(devices[0], &properties2_);
         return devices[0];
     }
 
@@ -1177,7 +1178,7 @@ namespace gfx {
         VK_CHECK(vkCreatePipelineLayout(device_, &createInfo, nullptr, &pipelineLayout));
         return pipelineLayout;
     }
-
+/*
     VkPipeline VulkanGraphicsDevice::createGraphicsPipeline(VulkanShader& vertexShader, VulkanShader& fragmentShader, VkPipelineLayout pipelineLayout, VkPipelineCache pipelineCache, VkRenderPass renderPass)
     {
         VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
@@ -1241,7 +1242,7 @@ namespace gfx {
         VK_CHECK(vkCreateGraphicsPipelines(device_, 0, 1, &createInfo, 0, &pipeline));
         return pipeline;
     }
-
+    */
 
     bool VulkanGraphicsDevice::isSwapchainResized()
     {
@@ -1396,7 +1397,7 @@ namespace gfx {
         vulkanFunctions.vkDestroyImage = vkDestroyImage;
         vulkanFunctions.vkFreeMemory = vkFreeMemory;
         vulkanFunctions.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
-        vulkanFunctions.vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements;
+		//vulkanFunctions.vkGetDeviceImageMemoryRequirements = vkGetDeviceImageMemoryRequirements;
         vulkanFunctions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
         vulkanFunctions.vkMapMemory = vkMapMemory;
         vulkanFunctions.vkUnmapMemory = vkUnmapMemory;
@@ -1653,8 +1654,8 @@ namespace gfx {
                 colorAttachmentState[i].dstColorBlendFactor = _ConvertBlendFactor(bs->dstColor);
                 colorAttachmentState[i].srcAlphaBlendFactor = _ConvertBlendFactor(bs->srcAlpha);
                 colorAttachmentState[i].dstAlphaBlendFactor = _ConvertBlendFactor(bs->dstAlpha);
-                colorAttachmentState[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
             }
+            colorAttachmentState[i].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         }
 
         VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };

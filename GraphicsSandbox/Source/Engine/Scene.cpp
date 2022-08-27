@@ -22,7 +22,7 @@ void Scene::Initialize()
 	InitializeLights();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
-	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/daytime.hdr");
+	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/sunset.hdr");
 	mEnvMap->CalculateIrradiance();
 	mEnvMap->Prefilter();
 	mEnvMap->CalculateBRDFLUT();

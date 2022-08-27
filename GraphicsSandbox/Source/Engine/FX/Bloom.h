@@ -15,8 +15,8 @@ namespace fx
 			mHeight = height;
 		}
 
-		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* inputTexture);
-
+		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture);
+		void Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture);
 		gfx::GPUTexture* GetTexture() { return &mDownSampleTexture; }
 
 	private:
@@ -28,10 +28,14 @@ namespace fx
 
 		std::shared_ptr<gfx::Pipeline> mDownSamplePipeline;
 		std::shared_ptr<gfx::Pipeline> mUpSamplePipeline;
+		std::shared_ptr<gfx::Pipeline> mCompositePipeline;
 
 		uint32_t mWidth, mHeight;
 		const uint32_t kMaxMipLevel = 5;
 
 		void Initialize();
+
+		void GenerateDownSamples(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture);
+		void GenerateUpSamples(gfx::CommandList* commandList);
 	};
 };

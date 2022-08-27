@@ -14,10 +14,10 @@ layout(push_constant, std430) uniform PushConstant
 void main()
 {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = vec2(coord.x / width, coord.y / height);
-
 	float dx = 1.0f	/ width;
     float dy = 1.0f / height;
+
+    vec2 uv = vec2(coord.x * dx, coord.y * dy);
 
     // Center pixel
     vec4 a = texture(uInputTexture, uv);
@@ -44,6 +44,6 @@ void main()
     col += (f + h + k + m) * 0.03125f;
     col += (g + j + i + l) * 0.0625f; 
     col += (b + c + d + e) * 0.125f;
-
+    col = max(col, 0.0001f);
     imageStore(uOutputTexture, coord, vec4(col.rgb, 1.0f));
 }

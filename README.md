@@ -4,4 +4,7 @@
 ![Diffuse IBL](images/diffuse_ibl.png)
 
 ## Specular IBL
-![Diffuse IBL](images/specular_ibl.png)
+![Specular IBL](images/specular_ibl.png)
+
+## Bloom
+![Bloom](images/bloom.png)

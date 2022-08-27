@@ -41,10 +41,7 @@ void main()
 	float roughness = material.roughness;
 	float ao = material.ao;
 	float metallic = material.metallic;
-	/*
-	if(albedo.w < 0.5f)
-	    albedo.rgb *= checker;
-		*/
+
     vec3 n = normalize(fs_in.normal);
     vec3 v = normalize(fs_in.viewDir);
 	vec3 r = reflect(-v, n);
@@ -96,7 +93,7 @@ void main()
 	Lo += ambient + material.emissive.rgb;
 
     float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
-	if(length(material.emissive) > 0 || luminance > bloomThreshold)
+	if(length(material.emissive.rgb) > 0 || luminance > bloomThreshold)
      	brightColor = vec4(Lo, 1.0f);
 	else 
 	    brightColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);

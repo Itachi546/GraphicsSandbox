@@ -16,23 +16,24 @@ layout(push_constant, std430) uniform PushConstant
 void main()
 {
     ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
-    vec2 uv = vec2(coord.x / width, coord.y / height);
+    vec2 invRes = 1.0f / vec2(width, height);
+    vec2 uv = vec2(coord.x, coord.y) * invRes; 
 
     // Sample around the specified radius 
-    float dx = radius;
-    float dy = radius;
+    float dx = radius * invRes.x;
+    float dy = radius * invRes.y;
 
-    vec4 a = texture(uInputTexture, uv + vec2(-dx,   dy));
-    vec4 b = texture(uInputTexture, uv + vec2( 0.0f, dy));
-    vec4 c = texture(uInputTexture, uv + vec2( dx,   dy));
+    vec4 a = texture(uInputTexture, vec2(uv.x - dx, uv.y + dy));
+    vec4 b = texture(uInputTexture, vec2(uv.x,      uv.y + dy));
+    vec4 c = texture(uInputTexture, vec2(uv.x + dx, uv.y + dy));
 
-    vec4 d = texture(uInputTexture, uv + vec2(-dx,   0.0f));
-    vec4 e = texture(uInputTexture, uv + vec2( 0.0f, 0.0f));
-    vec4 f = texture(uInputTexture, uv + vec2( dx,   0.0f));
-    
-    vec4 g = texture(uInputTexture, uv + vec2(-dx,   -dy));
-    vec4 h = texture(uInputTexture, uv + vec2( 0.0f, -dy));
-    vec4 i = texture(uInputTexture, uv + vec2( dx,   -dy));
+    vec4 d = texture(uInputTexture, vec2(uv.x - dx, uv.y));
+    vec4 e = texture(uInputTexture, vec2(uv.x,      uv.y));
+    vec4 f = texture(uInputTexture, vec2(uv.x + dx, uv.y));
+
+    vec4 g = texture(uInputTexture, vec2(uv.x - dx, uv.y - dy));
+    vec4 h = texture(uInputTexture, vec2(uv.x,      uv.y - dy));
+    vec4 i = texture(uInputTexture, vec2(uv.x + dx, uv.y - dy));
 
     // 3x3 tent filter
     // 1    |1 2 1|

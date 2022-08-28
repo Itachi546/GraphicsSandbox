@@ -94,7 +94,6 @@
     <ClInclude Include="Source\Engine\ImageLoader.h">
       <Filter>SOURCE\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Sandbox.h" />
     <ClInclude Include="Source\Shared\MeshData.h" />
     <ClInclude Include="Source\Shared\MathUtils.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h">
@@ -106,6 +105,8 @@
     <ClInclude Include="Source\Engine\GraphicsUtils.h">
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Test\PBRTest.h" />
+    <ClInclude Include="Source\Test\BloomTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

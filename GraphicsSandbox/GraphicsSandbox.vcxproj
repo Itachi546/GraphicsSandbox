@@ -183,9 +183,10 @@
     <ClInclude Include="Source\Engine\Utils.h" />
     <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h" />
     <ClInclude Include="Source\Engine\spirv_reflect.h" />
-    <ClInclude Include="Source\Sandbox.h" />
     <ClInclude Include="Source\Shared\MathUtils.h" />
     <ClInclude Include="Source\Shared\MeshData.h" />
+    <ClInclude Include="Source\Test\BloomTest.h" />
+    <ClInclude Include="Source\Test\PBRTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Camera.cpp" />

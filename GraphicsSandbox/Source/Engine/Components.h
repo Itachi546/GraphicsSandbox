@@ -117,11 +117,10 @@ struct ObjectComponent
 
 struct MaterialComponent {
 	glm::vec4 albedo = glm::vec4(1.0f);
-	glm::vec4 emissive = glm::vec4(0.0f);
+	float emissive = 0.0f;
 	float roughness = 0.1f;
 	float metallic = 1.0f;
 	float ao = 1.0f;
-	float unused_;
 };
 
 enum class LightType

@@ -1,10 +1,11 @@
-#include "Sandbox.h"
+#include "Test/PBRTest.h"
+#include "Test/BloomTest.h"
 #include <GLFW/glfw3.h>
 
 int main(int argc, char** argv)
 {
 	Timer timer;
-	Application* application = new SandboxApplication;
+	Application* application = new BloomTestApplication();
 
 	if (!glfwInit())
 		glfwInit();

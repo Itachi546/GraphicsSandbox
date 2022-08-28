@@ -16,12 +16,10 @@ layout(location = 0) in VS_OUT
 struct Material
 {
    vec4 albedo;
-   vec4 emissive;
+   float emissive;
    float roughness;
    float metallic;
    float ao;
-   float unused_;
-
 };
 
 const float bloomThreshold = 1.0f;
@@ -38,6 +36,14 @@ void main()
 
 	Material material = aMaterialData[fs_in.matId];
 	vec4 albedo = material.albedo;
+/*
+	if(material.emissive > 0.0f)
+	{
+	    brightColor = material.emissive * albedo;
+		fragColor = material.emissive * albedo;
+    	return;
+	}
+	*/
 	float roughness = material.roughness;
 	float ao = material.ao;
 	float metallic = material.metallic;
@@ -90,10 +96,10 @@ void main()
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
 	vec3 ambient = (Kd * diffuse + specular) * ao;
-	Lo += ambient + material.emissive.rgb;
+	Lo += ambient + material.emissive * albedo.rgb;
 
     float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
-	if(length(material.emissive.rgb) > 0 || luminance > bloomThreshold)
+	if(luminance > bloomThreshold || material.emissive > 0.01f)
      	brightColor = vec4(Lo, 1.0f);
 	else 
 	    brightColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);

@@ -55,7 +55,8 @@ namespace gfx
 		void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)             override;
 		void Present(Semaphore* waitSemaphore)                                                   override;
 		void WaitForGPU()                                                                        override;
-
+		void PrepareSwapchainForPresent(CommandList* commandList)                                override;
+		
 		void BindPipeline(CommandList* commandList, Pipeline* pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)                      override;
 
@@ -67,7 +68,7 @@ namespace gfx
 		// except by destroying descriptor pool.
 		void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)    override;
 		void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) override;
-		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)         override;
+		void DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)         override;
 		void DrawTriangleIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 		void DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;

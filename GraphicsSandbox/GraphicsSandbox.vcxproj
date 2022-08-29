@@ -158,6 +158,7 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\EditorApplication.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
@@ -189,6 +190,7 @@
     <ClInclude Include="Source\Test\PBRTest.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Editor\EditorApplication.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
     <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
@@ -241,6 +243,12 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\bloom\bloom-final.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\copy.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />

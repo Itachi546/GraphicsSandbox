@@ -74,7 +74,35 @@ void Application::render_()
 	if (!mDevice->IsSwapchainReady(mSwapchainRP.get()))
 		return;
 
-	mRenderer->Render();
+	gfx::CommandList commandList = mDevice->BeginCommandList();
+	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
+	mRenderer->Render(&commandList);
+
+	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
+	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
+	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
+	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader};
+
+	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
+
+	mDevice->BeginRenderPass(&commandList, mSwapchainRP.get(), nullptr);
+	gfx::DescriptorInfo descriptorInfo = { outputTexture, 0, 0, gfx::DescriptorType::Image };
+	mDevice->UpdateDescriptor(mSwapchainPipeline.get(), &descriptorInfo, 1);
+	mDevice->BindPipeline(&commandList, mSwapchainPipeline.get());
+	mDevice->DrawTriangle(&commandList, 6, 0, 1);
+	mDevice->EndRenderPass(&commandList);
+	mDevice->EndDebugMarker(&commandList);
+	/*
+	// Copy the output to swapchain
+	mDevice->BeginDebugMarker(&commandList, "Copy To Swapchain", 1.0f, 1.0f, 1.0f, 1.0f);
+	mDevice->CopyToSwapchain(&commandList, outputTexture, 0, 0);
+	mDevice->EndDebugMarker(&commandList);
+    */
+	mDevice->PrepareSwapchainForPresent(&commandList);
+	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
+	mDevice->Present(&mReleaseSemaphore);
+	mDevice->WaitForGPU();
+
 }
 
 void Application::SetWindow(Platform::WindowType window, bool fullscreen)
@@ -118,6 +146,35 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.renderPass = mSwapchainRP.get();
 	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	mDevice->CreateSwapchain(&swapchainDesc, window);
+
+	mDevice->CreateSemaphore(&mAcquireSemaphore);
+	mDevice->CreateSemaphore(&mReleaseSemaphore);
+
+    // Create SwapchainPipeline
+	uint32_t vertexLen = 0, fragmentLen = 0;
+	char* vertexCode = Utils::ReadFile("Assets/SPIRV/copy.vert.spv", &vertexLen);
+	char* fragmentCode = Utils::ReadFile("Assets/SPIRV/copy.frag.spv", &fragmentLen);
+	assert(vertexCode != nullptr);
+	assert(fragmentCode != nullptr);
+
+	gfx::PipelineDesc pipelineDesc = {};
+	std::vector<gfx::ShaderDescription> shaders(2);
+	shaders[0] = { vertexCode, vertexLen };
+	shaders[1] = { fragmentCode, fragmentLen };
+	pipelineDesc.shaderCount = 2;
+	pipelineDesc.shaderDesc = shaders.data();
+
+	pipelineDesc.renderPass = mSwapchainRP.get();
+	pipelineDesc.rasterizationState.enableDepthTest = false;
+	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
+	gfx::BlendState blendState = {};
+	pipelineDesc.blendState = &blendState;
+	pipelineDesc.blendStateCount = 1;
+
+	mSwapchainPipeline = std::make_shared<gfx::Pipeline>();
+	mDevice->CreateGraphicsPipeline(&pipelineDesc, mSwapchainPipeline.get());
+	delete[] vertexCode;
+	delete[] fragmentCode;
 }
 
 Application::~Application()

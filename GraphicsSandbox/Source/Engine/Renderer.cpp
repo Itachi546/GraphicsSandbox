@@ -12,8 +12,6 @@
 Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
 	initializeBuffers();
-	mDevice->CreateSemaphore(&mAcquireSemaphore);
-	mDevice->CreateSemaphore(&mReleaseSemaphore);
 
 	gfx::RenderPassDesc desc;
 	desc.width = 1920;
@@ -80,10 +78,8 @@ void Renderer::Update(float dt)
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
 }
 
-void Renderer::Render()
+void Renderer::Render(gfx::CommandList* commandList)
 {
-	gfx::CommandList commandList = mDevice->BeginCommandList();
-
 	gfx::ImageBarrierInfo barriers[] = {
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
@@ -92,11 +88,10 @@ void Renderer::Render()
 
 	gfx::PipelineBarrierInfo colorAttachmentBarrier = { barriers, 2, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput};
 	gfx::PipelineBarrierInfo depthAttachmentBarrier = { &barriers[2], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
-	mDevice->PipelineBarrier(&commandList, &colorAttachmentBarrier);
-	mDevice->PipelineBarrier(&commandList, &depthAttachmentBarrier);
+	mDevice->PipelineBarrier(commandList, &colorAttachmentBarrier);
+	mDevice->PipelineBarrier(commandList, &depthAttachmentBarrier);
 
-	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
-	mDevice->BeginRenderPass(&commandList, mHdrRenderPass.get(), mHdrFramebuffer.get());
+	mDevice->BeginRenderPass(commandList, mHdrRenderPass.get(), mHdrFramebuffer.get());
 
 	/*
 	* TODO: Currently PerObjectData is extracted from the
@@ -111,7 +106,7 @@ void Renderer::Render()
 
 	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
 
-	mDevice->BeginDebugMarker(&commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
+	mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
 	if (drawDatas.size() > 0)
 	{
 		//DrawBatch(&commandList, drawDatas, allocator);
@@ -129,11 +124,11 @@ void Renderer::Render()
 			if (sortedDrawDatas[i].size() == 0)
 				continue;
 
-			DrawBatch(&commandList, sortedDrawDatas[i], bufferOffset, allocator);
+			DrawBatch(commandList, sortedDrawDatas[i], bufferOffset, allocator);
 			bufferOffset += (uint32_t)sortedDrawDatas[i].size();
 		}
 	}
-	mDevice->EndDebugMarker(&commandList);
+	mDevice->EndDebugMarker(commandList);
 
 
 	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
@@ -145,40 +140,33 @@ void Renderer::Render()
 	else if (Input::Press(Input::Key::KEY_5))
 		cubemapMode = 2;
 	
-	mDevice->BeginDebugMarker(&commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
-	if(cubemapMode == 0)
-		DrawCubemap(&commandList, envMap->GetCubemap().get());
-	else if(cubemapMode == 1)
-		DrawCubemap(&commandList, envMap->GetIrradianceMap().get());
-	else 
-		DrawCubemap(&commandList, envMap->GetPrefilterMap().get());
+	mDevice->BeginDebugMarker(commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
+	DrawCubemap(commandList, envMap->GetCubemap().get());
+	mDevice->EndDebugMarker(commandList);
 
-	mDevice->EndDebugMarker(&commandList);
-
-	mDevice->EndRenderPass(&commandList);
+	mDevice->EndRenderPass(commandList);
 
 	// Bloom Pass
-	mBloomFX->Generate(&commandList, &mHdrFramebuffer->attachments[1]);
-	mBloomFX->Composite(&commandList, &mHdrFramebuffer->attachments[0]);
-#if 0
-	gfx::GPUTexture* outputTexture = mBloomFX->GetTexture();
-	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
-	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
-#else 
-	gfx::GPUTexture* outputTexture = &mHdrFramebuffer->attachments[0];
-	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, outputTexture };
-	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
-#endif
-	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
+	mBloomFX->Generate(commandList, &mHdrFramebuffer->attachments[1]);
+	mBloomFX->Composite(commandList, &mHdrFramebuffer->attachments[0]);
+}
 
-	// Copy the output to swapchain
-	mDevice->BeginDebugMarker(&commandList, "Copy To Swapchain", 1.0f, 1.0f, 1.0f, 1.0f);
-	mDevice->CopyToSwapchain(&commandList, outputTexture, 0, 0);
-	mDevice->EndDebugMarker(&commandList);
-
-	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
-	mDevice->Present(&mReleaseSemaphore);
-	mDevice->WaitForGPU();
+gfx::GPUTexture* Renderer::GetOutputTexture(OutputTextureType colorTextureType)
+{
+	switch (colorTextureType)
+	{
+	case OutputTextureType::HDROutput:
+		return &mHdrFramebuffer->attachments[0];
+	case OutputTextureType::HDRBrightTexture:
+		return &mHdrFramebuffer->attachments[1];
+	case OutputTextureType::BloomUpSample:
+		return mBloomFX->GetTexture();
+	case OutputTextureType::HDRDepth:
+		return &mHdrFramebuffer->attachments[2];
+	default:
+		assert(!"Undefined output texture");
+		return nullptr;
+	}
 }
 
 std::shared_ptr<gfx::Pipeline> Renderer::loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode)

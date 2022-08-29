@@ -406,6 +406,8 @@ namespace gfx {
     {
         switch (layout)
         {
+        case ImageLayout::PresentSrc:
+            return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
         case ImageLayout::ShaderReadOptimal:
             return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         case ImageLayout::General:
@@ -1905,27 +1907,37 @@ namespace gfx {
         auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
         VkRenderPass rp = vkRenderpass->renderPass;
         auto vkCmdList = GetCommandList(commandList);
-        auto vkFramebuffer = std::static_pointer_cast<VulkanFramebuffer>(framebuffer->internalState);
 
         uint32_t imageIndex = swapchain_->currentImageIndex;
+        uint32_t fbDepthAttachmentIndex = ~0u;
+        VkFramebuffer vkFramebuffer = VK_NULL_HANDLE;
+
+        uint32_t width = swapchain_->desc.width;
+        uint32_t height = swapchain_->desc.height;
+        if (framebuffer)
+        {
+            vkFramebuffer = std::static_pointer_cast<VulkanFramebuffer>(framebuffer->internalState)->framebuffer;
+            fbDepthAttachmentIndex = framebuffer->depthAttachmentIndex;
+            width  = renderPass->desc.width;
+            height = renderPass->desc.height;
+        }
+        else
+            vkFramebuffer = swapchain_->framebuffers[imageIndex];
 
         uint32_t attachmentCount = renderPass->desc.attachmentCount;
         std::vector<VkClearValue> clearValues(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
         {
-            if (i == framebuffer->depthAttachmentIndex)
+            if (i == fbDepthAttachmentIndex)
                 clearValues[i].depthStencil = { 1.0f, 0 };
             else
                 clearValues[i].color = { 0.0f, 0.0f, 0.0f, 1 };
         }
 
-        uint32_t width = (uint32_t)renderPass->desc.width;
-        uint32_t height = (uint32_t)renderPass->desc.height;
-
         VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
         passBeginInfo.clearValueCount = attachmentCount;
         passBeginInfo.pClearValues = clearValues.data();
-        passBeginInfo.framebuffer = vkFramebuffer->framebuffer;
+        passBeginInfo.framebuffer = vkFramebuffer;
         passBeginInfo.renderPass = rp;
         passBeginInfo.renderArea.extent.width = width;
         passBeginInfo.renderArea.extent.height = height;
@@ -1949,7 +1961,7 @@ namespace gfx {
 		vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
     }
 
-    void VulkanGraphicsDevice::DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)
+    void VulkanGraphicsDevice::DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)
     {
         auto cmd = GetCommandList(commandList);
         vkCmdDraw(cmd->commandBuffer, vertexCount, instanceCount, firstVertex, 0);
@@ -2273,6 +2285,19 @@ namespace gfx {
     void VulkanGraphicsDevice::WaitForGPU()
     {
         VK_CHECK(vkDeviceWaitIdle(device_));
+    }
+
+    void VulkanGraphicsDevice::PrepareSwapchainForPresent(CommandList* commandList)
+    {
+        VkImageMemoryBarrier barrierInfo = CreateImageBarrier(swapchain_->images[swapchain_->currentImageIndex],
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            VK_ACCESS_NONE,
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+        auto cmd = GetCommandList(commandList);
+        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo);
     }
 
 

@@ -67,7 +67,8 @@ namespace gfx
 		DepthAttachmentOptimal,
 		TransferSrcOptimal,
 		TransferDstOptimal,
-		ShaderReadOptimal
+		ShaderReadOptimal,
+		PresentSrc
 	};
 
 	enum class ImageUsage

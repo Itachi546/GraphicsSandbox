@@ -60,8 +60,13 @@ protected:
 	std::shared_ptr<gfx::GraphicsDevice > mDevice = nullptr;
 
 	std::shared_ptr<gfx::RenderPass> mSwapchainRP;
+	std::shared_ptr<gfx::Pipeline> mSwapchainPipeline;
 	std::unique_ptr<Renderer> mRenderer;
+
 	gfx::Format mSwapchainColorFormat = gfx::Format::B8G8R8A8_UNORM;
+
+	gfx::Semaphore mAcquireSemaphore;
+	gfx::Semaphore mReleaseSemaphore;
 
 	std::stringstream mWindowTitle;
 

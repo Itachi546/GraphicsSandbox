@@ -54,6 +54,7 @@ namespace gfx
 		virtual void DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) = 0;
 		virtual void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ) = 0;
 
+		virtual void PrepareSwapchainForPresent(CommandList* commandList) = 0;
 		/*
 		* This function is used to determine whether the swapchain is 
 		* ready or not. When window is minimized the width and height is

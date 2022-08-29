@@ -10,6 +10,14 @@
 class gfx::GpuMemoryAllocator;
 class Scene;
 
+enum class OutputTextureType
+{
+	HDROutput,
+	HDRDepth,
+	HDRBrightTexture,
+	BloomUpSample,
+};
+
 namespace fx {
 	class Bloom;
 };
@@ -23,7 +31,9 @@ public:
 
 	void SetScene(Scene* scene) { mScene = scene; }
 
-	void Render();
+	void Render(gfx::CommandList* commandList);
+
+	gfx::GPUTexture* GetOutputTexture(OutputTextureType colorTextureType);
 
 	~Renderer() = default;
 
@@ -62,9 +72,6 @@ private:
 	std::shared_ptr<gfx::RenderPass> mHdrRenderPass;
 	std::shared_ptr<gfx::Framebuffer> mHdrFramebuffer;
 	
-	gfx::Semaphore mAcquireSemaphore;
-	gfx::Semaphore mReleaseSemaphore;
-
 	gfx::Format mHDRDepthFormat = gfx::Format::D32_SFLOAT;
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
 

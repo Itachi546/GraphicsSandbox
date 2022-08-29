@@ -1,11 +1,12 @@
 #include "Test/PBRTest.h"
 #include "Test/BloomTest.h"
+#include "Editor/EditorApplication.h"
 #include <GLFW/glfw3.h>
 
 int main(int argc, char** argv)
 {
 	Timer timer;
-	Application* application = new BloomTestApplication();
+	Application* application = new EditorApplication();
 
 	if (!glfwInit())
 		glfwInit();

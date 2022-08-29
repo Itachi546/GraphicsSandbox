@@ -107,6 +107,7 @@
     </ClInclude>
     <ClInclude Include="Source\Test\PBRTest.h" />
     <ClInclude Include="Source\Test\BloomTest.h" />
+    <ClInclude Include="Source\Editor\EditorApplication.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -163,6 +164,9 @@
     <ClCompile Include="Source\Engine\Camera.cpp">
       <Filter>SOURCE\ECS</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Editor\EditorApplication.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
@@ -196,6 +200,12 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\bloom\bloom-final.comp.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\copy.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

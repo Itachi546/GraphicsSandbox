@@ -12,8 +12,10 @@ public:
 	void PreUpdate(float dt) override;
 
 	void PostUpdate(float dt) override;
+
+	void RenderUI(gfx::CommandList* commandList) override;
+	~EditorApplication();
 private:
 	Camera* mCamera;
-
 	void InitializeScene();
 };

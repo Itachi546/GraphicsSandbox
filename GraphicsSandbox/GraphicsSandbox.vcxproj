@@ -159,6 +159,14 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorApplication.h" />
+    <ClInclude Include="Source\Editor\ImGui\imconfig.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h" />
+    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
@@ -191,6 +199,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Editor\EditorApplication.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
     <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />

@@ -12,10 +12,14 @@ layout(binding = 0) uniform readonly Globals
    mat4 P;
    mat4 V;
    mat4 VP;
+
    vec3 cameraPosition;
    float dt;
-   vec3 unused_;
+
+   float bloomThreshold;
    int nLight;
+   vec2 unused_;
+
    LightData lights[128];
 } globals;
 

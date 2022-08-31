@@ -75,6 +75,15 @@ namespace gfx
 
 		bool IsSwapchainReady(RenderPass* rp) override;
 
+		VkInstance GetInstance() { return instance_; }
+		VkDevice GetDevice() { return device_; }
+		VkPhysicalDevice GetPhysicalDevice() { return physicalDevice_; }
+		VkQueue GetQueue() { return queue_; }
+		uint32_t GetSwapchainImageCount() { return swapchain_->imageCount; }
+
+		VkRenderPass Get(RenderPass* rp);
+		VkCommandBuffer Get(CommandList* commandList);
+		VkDescriptorPool GetDescriptorPool() { return descriptorPools_[swapchain_->imageCount]; }
 
 		~VulkanGraphicsDevice();
 	private:

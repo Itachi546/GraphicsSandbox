@@ -13,14 +13,14 @@ namespace fx
 		Initialize();
 	}
 
-	void Bloom::Generate(gfx::CommandList* commandList, gfx::GPUTexture* inputTexture)
+	void Bloom::Generate(gfx::CommandList* commandList, gfx::GPUTexture* inputTexture, float blurRadius)
 	{
 		GenerateDownSamples(commandList, inputTexture);
 
-		GenerateUpSamples(commandList);
+		GenerateUpSamples(commandList, blurRadius);
 	}
 
-	void Bloom::Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture)
+	void Bloom::Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture, float bloomStrength)
 	{
 		// Composite Pass
 		mDevice->BeginDebugMarker(commandList, "Bloom Composite Pass");
@@ -44,8 +44,8 @@ namespace fx
 		uint32_t width = mWidth;
 		uint32_t height = mHeight;
 
-		//float shaderData[] = { (float)width, (float)height, blurRadius };
-		//mDevice->PushConstants(commandList, mUpSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 3), 0);
+		float shaderData[] = {bloomStrength, 0.0f, 0.0f, 0.0f};
+		mDevice->PushConstants(commandList, mUpSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
 
 		mDevice->UpdateDescriptor(mCompositePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, mCompositePipeline.get());
@@ -97,8 +97,8 @@ namespace fx
 
 			uint32_t width = mWidth >> (i + 1);
 			uint32_t height = mHeight >> (i + 1);
-			float shaderData[] = { (float)width, (float)height };
-			mDevice->PushConstants(commandList, mDownSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 2), 0);
+			float shaderData[] = { (float)width, (float)height, 0.0f, 0.0f};
+			mDevice->PushConstants(commandList, mDownSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
 			mDevice->UpdateDescriptor(mDownSamplePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 			mDevice->BindPipeline(commandList, mDownSamplePipeline.get());
 			mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
@@ -107,7 +107,7 @@ namespace fx
 		mDevice->EndDebugMarker(commandList);
 	}
 
-	void Bloom::GenerateUpSamples(gfx::CommandList* commandList)
+	void Bloom::GenerateUpSamples(gfx::CommandList* commandList, float blurRadius)
 	{
 		mDevice->BeginDebugMarker(commandList, "Bloom Upsample");
 		gfx::DescriptorInfo descriptorInfos[] = {
@@ -115,7 +115,6 @@ namespace fx
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
 		};
 
-		float blurRadius = 10;
 		for (uint32_t i = kMaxMipLevel - 1; i > 0; i--)
 		{
 			// Generate Upsamples

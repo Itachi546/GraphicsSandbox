@@ -76,6 +76,7 @@ void Application::render_()
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
+
 	mRenderer->Render(&commandList);
 
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
@@ -90,6 +91,9 @@ void Application::render_()
 	mDevice->UpdateDescriptor(mSwapchainPipeline.get(), &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mSwapchainPipeline.get());
 	mDevice->DrawTriangle(&commandList, 6, 0, 1);
+
+	RenderUI(&commandList);
+
 	mDevice->EndRenderPass(&commandList);
 	mDevice->EndDebugMarker(&commandList);
 	/*
@@ -139,7 +143,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	gfx::SwapchainDesc swapchainDesc = {};
 	swapchainDesc.width = mWidth;
 	swapchainDesc.height = mHeight;
-	swapchainDesc.vsync = true;
+	swapchainDesc.vsync = false;
 	swapchainDesc.colorFormat = mSwapchainColorFormat;
 	swapchainDesc.fullscreen = false;
 	swapchainDesc.enableDepth = false;

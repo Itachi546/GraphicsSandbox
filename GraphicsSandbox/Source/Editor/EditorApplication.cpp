@@ -1,14 +1,76 @@
 #include "EditorApplication.h"
+#include "../Engine/VulkanGraphicsDevice.h"
 
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
+#include "../Engine/FX/Bloom.h"
+
+#include "ImGui/imgui.h"
+#include "ImGui/imgui_impl_glfw.h"
+#include "ImGui/imgui_impl_vulkan.h"
 
 void EditorApplication::Initialize()
 {
 	initialize_();
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGui_ImplGlfw_InitForVulkan(mWindow, true);
+
+	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);
+	ImGui_ImplVulkan_InitInfo initInfo = {};
+	initInfo.Instance = vkDevice->GetInstance();
+	initInfo.PhysicalDevice = vkDevice->GetPhysicalDevice();
+	initInfo.Device = vkDevice->GetDevice();
+	initInfo.Queue = vkDevice->GetQueue();
+	initInfo.MinImageCount = vkDevice->GetSwapchainImageCount();
+	initInfo.ImageCount = vkDevice->GetSwapchainImageCount();
+	initInfo.DescriptorPool = vkDevice->GetDescriptorPool();
+	initInfo.Allocator = 0;
+
+	ImGui_ImplVulkan_Init(&initInfo, vkDevice->Get(mSwapchainRP.get()));
+
+	gfx::CommandList commandList = mDevice->BeginCommandList();
+	ImGui_ImplVulkan_CreateFontsTexture(vkDevice->Get(&commandList));
+	mDevice->SubmitCommandList(&commandList);
+	mDevice->WaitForGPU();
+	ImGui_ImplVulkan_DestroyFontUploadObjects();
+
 	mCamera = mScene.GetCamera();
 	InitializeScene();
+}
+
+void EditorApplication::RenderUI(gfx::CommandList* commandList)
+{
+	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);
+	ImGui_ImplVulkan_NewFrame();
+	ImGui_ImplGlfw_NewFrame();
+	ImGui::NewFrame();
+
+	ImGui::SetNextWindowPos(ImVec2(10, 10));
+	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove);
+	ImGui::Text("FrameTime: %.2f", mDeltaTime);
+
+	static bool enableBloom = false;
+	if (ImGui::CollapsingHeader("Bloom"))
+	{
+		if (ImGui::Checkbox("Enable", &enableBloom))
+			mRenderer->SetEnableBloom(enableBloom);
+
+		static float blurRadius = 10.0f;
+		if (ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f))
+			mRenderer->SetBlurRadius(blurRadius);
+
+		static float bloomThreshold = 1.0f;
+		if (ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f))
+			mRenderer->SetBloomThreshold(bloomThreshold);
+
+		static float bloomStrength = 0.4f;
+		if (ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f))
+			mRenderer->SetBloomStrength(bloomStrength);
+	}
+	ImGui::End();
+
+	ImGui::Render();
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
 }
 
 void EditorApplication::PreUpdate(float dt) {
@@ -34,7 +96,9 @@ void EditorApplication::PreUpdate(float dt) {
 	else if (Input::Down(Input::Key::KEY_2))
 		mCamera->Lift(-dt * walkSpeed);
 
-	if (Input::Down(Input::Key::MOUSE_BUTTON_LEFT))
+	if (Input::Down(Input::Key::MOUSE_BUTTON_LEFT) && 
+		!ImGui::IsAnyItemActive() && 
+		!ImGui::IsAnyItemHovered())
 	{
 		auto [x, y] = Input::GetMouseState().delta;
 		mCamera->Rotate(-y, x, dt);
@@ -70,9 +134,9 @@ void EditorApplication::InitializeScene()
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
 		transform->position.x += 2.5f;
 		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
-		material.roughness = 0.9f;
+		material.roughness = 0.2f;
 		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		material.metallic = 0.1f;
+		material.metallic = 0.9f;
 	}
 	{
 		ecs::Entity plane = mScene.CreatePlane("TestPlane");
@@ -139,3 +203,9 @@ void EditorApplication::InitializeScene()
 
 }
 
+EditorApplication::~EditorApplication()
+{
+	ImGui_ImplVulkan_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+}

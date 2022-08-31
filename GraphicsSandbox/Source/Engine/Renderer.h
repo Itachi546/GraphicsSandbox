@@ -35,9 +35,16 @@ public:
 
 	gfx::GPUTexture* GetOutputTexture(OutputTextureType colorTextureType);
 
-	~Renderer() = default;
+	// Bloom Setting
+	void SetEnableBloom(bool state) { mEnableBloom = state; }
+	void SetBlurRadius(float blurRadius) { mBloomBlurRadius = blurRadius; }
+	void SetBloomThreshold(float val) { mBloomThreshold = val; }
+	void SetBloomStrength(float val) { mBloomStrength = val; }
 
+	~Renderer() = default;
 private:
+	std::shared_ptr<fx::Bloom> mBloomFX;
+
 	struct LightData
 	{
 		glm::vec3 position;
@@ -52,8 +59,9 @@ private:
 		glm::mat4 VP;
 		glm::vec3 cameraPosition;
 		float dt;
-		glm::vec3 unused_;
+		float bloomThreshold;
 		int nLight;
+		glm::vec2 unused_;
 		LightData lights[128];
 	} mGlobalUniformData;
 
@@ -76,7 +84,6 @@ private:
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
 
 	// fx Variables
-	std::shared_ptr<fx::Bloom> mBloomFX;
 
 	std::vector<gfx::DescriptorInfo> mDescriptorInfos;
 	const int kMaxEntity = 10'000;
@@ -86,4 +93,9 @@ private:
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
 	void DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& drawData, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator);
 
+	// Bloom Settings
+	bool mEnableBloom = false;
+	float mBloomThreshold = 1.0f;
+	float mBloomBlurRadius = 10.0f;
+	float mBloomStrength = 0.5f;
 };

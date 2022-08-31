@@ -1859,8 +1859,8 @@ namespace gfx {
         // Initialize Descriptor Pools
         if (descriptorPools_.size() == 0)
         {
-            descriptorPools_.resize(swapchain_->imageCount);
-            for(uint32_t i = 0; i < swapchain_->imageCount; ++i)
+            descriptorPools_.resize(swapchain_->imageCount + 1);
+            for(uint32_t i = 0; i < swapchain_->imageCount + 1; ++i)
 				descriptorPools_[i] = CreateDescriptorPool(device_);
         }
 
@@ -2300,6 +2300,17 @@ namespace gfx {
         vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo);
     }
 
+
+    VkRenderPass VulkanGraphicsDevice::Get(RenderPass* rp)
+    {
+        return std::static_pointer_cast<VulkanRenderPass>(rp->internalState)->renderPass;
+    }
+
+    VkCommandBuffer VulkanGraphicsDevice::Get(CommandList* commandList)
+    {
+        auto cmdList = GetCommandList(commandList);
+        return cmdList->commandBuffer;
+    }
 
     VulkanGraphicsDevice::~VulkanGraphicsDevice()
     {

@@ -51,6 +51,7 @@ void Renderer::Update(float dt)
 	mGlobalUniformData.VP = mGlobalUniformData.P * V;
 	mGlobalUniformData.cameraPosition = camera->GetPosition();
 	mGlobalUniformData.dt += dt;
+	mGlobalUniformData.bloomThreshold = mBloomThreshold;
 
 	auto compMgr = mScene->GetComponentManager();
 	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
@@ -146,9 +147,12 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 	mDevice->EndRenderPass(commandList);
 
-	// Bloom Pass
-	mBloomFX->Generate(commandList, &mHdrFramebuffer->attachments[1]);
-	mBloomFX->Composite(commandList, &mHdrFramebuffer->attachments[0]);
+	if (mEnableBloom)
+	{
+		// Bloom Pass
+		mBloomFX->Generate(commandList, &mHdrFramebuffer->attachments[1], mBloomBlurRadius);
+		mBloomFX->Composite(commandList, &mHdrFramebuffer->attachments[0], mBloomStrength);
+	}
 }
 
 gfx::GPUTexture* Renderer::GetOutputTexture(OutputTextureType colorTextureType)

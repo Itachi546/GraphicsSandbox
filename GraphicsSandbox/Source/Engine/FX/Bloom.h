@@ -15,11 +15,12 @@ namespace fx
 			mHeight = height;
 		}
 
-		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture);
-		void Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture);
+		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture, float blurRadius);
+		void Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture, float bloomStrength);
 		gfx::GPUTexture* GetTexture() { return &mDownSampleTexture; }
 
 	private:
+
 		gfx::Format mFormat;
 
 		gfx::GraphicsDevice* mDevice;
@@ -36,6 +37,6 @@ namespace fx
 		void Initialize();
 
 		void GenerateDownSamples(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture);
-		void GenerateUpSamples(gfx::CommandList* commandList);
+		void GenerateUpSamples(gfx::CommandList* commandList, float blurRadius);
 	};
 };

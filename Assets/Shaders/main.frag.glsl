@@ -22,12 +22,9 @@ struct Material
    float ao;
 };
 
-const float bloomThreshold = 1.0f;
-
 #define FRAGMENT_SHADER
 #include "pbr.glsl"
 #include "bindings.glsl"
-
 
 void main()
 {
@@ -99,7 +96,7 @@ void main()
 	Lo += ambient + material.emissive * albedo.rgb;
 
     float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
-	if(luminance > bloomThreshold || material.emissive > 0.01f)
+	if(luminance > globals.bloomThreshold || material.emissive > 0.01f)
      	brightColor = vec4(Lo, 1.0f);
 	else 
 	    brightColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);

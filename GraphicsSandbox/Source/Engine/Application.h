@@ -24,6 +24,8 @@ public:
 	virtual void PreUpdate(float dt){}
 	virtual void PostUpdate(float dt) {}
 
+	virtual void RenderUI(gfx::CommandList* commandList){}
+
 	void Run();
 
 	void setTargetFrameRate(float value) { mTargetFrameRate = value; }

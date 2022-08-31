@@ -4,6 +4,7 @@
 #include "Utils.h"
 #include "VulkanGraphicsDevice.h"
 #include "Scene.h"
+#include "Profiler.h"
 
 #include <algorithm>
 #include <sstream>
@@ -35,8 +36,11 @@ void Application::initialize_()
 
 void Application::Run()
 {
-	Timer timer;
+	Profiler::BeginFrame();
 
+	RangeId totalTime = Profiler::StartRangeCPU("Total CPU Time");
+
+	Timer timer;
 	if (!mInitialized)
 	{
 		Initialize();
@@ -55,8 +59,10 @@ void Application::Run()
 	mWindowTitle << "CPU Time: " << timer.elapsedMilliseconds() << "ms ";
 	mWindowTitle << "FPS: " << 1.0f / dt << " FrameTime: " << dt * 1000.0f << "ms ";
 	Platform::SetWindowTitle(mWindow, mWindowTitle.str().c_str());
-
 	mWindowTitle.str(std::string());
+	
+	Profiler::EndRangeCPU(totalTime);
+	Profiler::EndFrame();
 }
 
 void Application::update_(float dt)
@@ -70,11 +76,14 @@ void Application::update_(float dt)
 
 void Application::render_()
 {
+	RangeId cpuRenderTime = Profiler::StartRangeCPU("RenderTime CPU");
 
 	if (!mDevice->IsSwapchainReady(mSwapchainRP.get()))
 		return;
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
+	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
+
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
 
 	mRenderer->Render(&commandList);
@@ -96,6 +105,7 @@ void Application::render_()
 
 	mDevice->EndRenderPass(&commandList);
 	mDevice->EndDebugMarker(&commandList);
+
 	/*
 	// Copy the output to swapchain
 	mDevice->BeginDebugMarker(&commandList, "Copy To Swapchain", 1.0f, 1.0f, 1.0f, 1.0f);
@@ -103,10 +113,13 @@ void Application::render_()
 	mDevice->EndDebugMarker(&commandList);
     */
 	mDevice->PrepareSwapchainForPresent(&commandList);
+	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
+
 	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
 	mDevice->Present(&mReleaseSemaphore);
 	mDevice->WaitForGPU();
 
+	Profiler::EndRangeCPU(cpuRenderTime);
 }
 
 void Application::SetWindow(Platform::WindowType window, bool fullscreen)

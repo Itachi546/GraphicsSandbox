@@ -8,3 +8,4 @@
 #include "Logger.h"
 #include "EventDispatcher.h"
 #include "ECS.h"
+#include "Profiler.h"

@@ -46,7 +46,7 @@ namespace gfx {
         std::vector<std::pair<VkDescriptorSet, VkDescriptorPool>> destroyedDescriptorSet_;
         std::vector<VkSampler> destroyedSamplers_;
         std::vector<VkSemaphore> destroyedSemaphore_;
- 
+		
        void destroyReleasedResource(VkDevice device, VmaAllocator vmaAllocator)
         {
             for (auto& setLayout : destroyedSetLayout_)
@@ -193,6 +193,9 @@ namespace gfx {
             gAllocationHandler.destroyedSemaphore_.push_back(semaphore);
         }
     };
+
+
+
 
     /***********************************************************************************************/
 
@@ -1356,6 +1359,7 @@ namespace gfx {
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
+        features12_.hostQueryReset = true;
         features12_.separateDepthStencilLayouts = true;
         features11_.pNext = &features12_;
         features2_.pNext = &features11_;
@@ -1580,6 +1584,44 @@ namespace gfx {
         vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), attachmentCount, width, height);
         out->internalState = vkFramebuffer;
 
+    }
+    void VulkanGraphicsDevice::CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)
+    {
+        auto vkQueryPool = std::make_shared<VulkanQueryPool>();
+        VkQueryPoolCreateInfo createInfo = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+        if (type == QueryType::TimeStamp)
+            createInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+        else
+            assert(!"Undefined QueryType");
+
+        createInfo.queryCount = count;
+        vkCreateQueryPool(device_, &createInfo, 0, &vkQueryPool->queryPool);
+       
+        queryPools_.push_back(vkQueryPool->queryPool);
+        out->internalState = vkQueryPool;
+    }
+
+    void VulkanGraphicsDevice::ResetQueryPool(QueryPool* pool, uint32_t first, uint32_t count)
+    {
+        auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
+        vkResetQueryPool(device_, queryPool, first, count);
+    }
+
+    void VulkanGraphicsDevice::Query(CommandList* commandList, QueryPool* pool, uint32_t index)
+    {
+        auto cmdList = GetCommandList(commandList);
+        auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
+        if (pool->queryType == QueryType::TimeStamp)
+            vkCmdWriteTimestamp(cmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, index);
+        else
+            assert(!"Undefined Query Type");
+    }
+
+    void VulkanGraphicsDevice::ResolveQuery(QueryPool* pool, uint32_t index, uint32_t count, uint64_t* result)
+    {
+        auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
+
+        vkGetQueryPoolResults(device_, queryPool, index, count, sizeof(uint64_t) * count, result, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
     }
 
     void VulkanGraphicsDevice::CreateGraphicsPipeline(const PipelineDesc* desc, Pipeline* out)
@@ -2333,8 +2375,11 @@ namespace gfx {
 
         vmaDestroyAllocator(vmaAllocator_);
 
-        for(int i = 0; i < descriptorPools_.size(); ++i)
-			vkDestroyDescriptorPool(device_, descriptorPools_[i], nullptr);
+        for(auto& descriptorPool:  descriptorPools_)
+			vkDestroyDescriptorPool(device_, descriptorPool, nullptr);
+
+        for (auto& queryPool : queryPools_)
+            vkDestroyQueryPool(device_, queryPool, nullptr);
 
         vkFreeCommandBuffers(device_, commandPool_, 1, &commandBuffer_);
         vkFreeCommandBuffers(device_, stagingCmdPool_, 1, &stagingCmdBuffer_);

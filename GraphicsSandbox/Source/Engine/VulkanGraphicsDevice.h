@@ -41,8 +41,15 @@ namespace gfx
 		void CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)                        override;
 		void CreateSemaphore(Semaphore* out)                                                   override;
 		void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out)                       override;          
-		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
+		void ResetQueryPool(QueryPool* pool, uint32_t first, uint32_t count)                   override;
 
+		void Query(CommandList* commandList, QueryPool* pool, uint32_t index)                  override;
+		void ResolveQuery(QueryPool* pool, uint32_t index, uint32_t count, uint64_t* result) override;
+
+		double GetTimestampFrequency() override { return properties2_.properties.limits.timestampPeriod; }
+
+		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
 		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                override;
 		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0);
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
@@ -100,6 +107,12 @@ namespace gfx
 		VkCommandBuffer stagingCmdBuffer_   = VK_NULL_HANDLE;
 		
 		std::vector<VkDescriptorPool> descriptorPools_;
+
+		struct VulkanQueryPool
+		{
+			VkQueryPool queryPool;
+		};
+		std::vector<VkQueryPool> queryPools_;
 
 		VmaAllocator vmaAllocator_ = nullptr;
 

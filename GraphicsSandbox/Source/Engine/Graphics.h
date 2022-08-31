@@ -405,6 +405,16 @@ namespace gfx
 		uint32_t    firstInstance;
 	};
 
+	enum class QueryType
+	{
+		TimeStamp,
+	};
+
+	struct QueryPool : public GraphicsDeviceResource
+	{
+		uint32_t queryPoolCount = 0;
+		QueryType queryType;
+	};
 
 	template<>
 	struct enable_bitwise_operation<BindFlag>

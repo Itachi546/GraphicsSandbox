@@ -185,6 +185,7 @@
     <ClInclude Include="Source\Engine\Input.h" />
     <ClInclude Include="Source\Engine\Logger.h" />
     <ClInclude Include="Source\Engine\Platform.h" />
+    <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Engine\Renderer.h" />
     <ClInclude Include="Source\Engine\Scene.h" />
     <ClInclude Include="Source\Engine\Timer.h" />
@@ -218,6 +219,7 @@
     <ClCompile Include="Source\Engine\GpuMemoryAllocator.cpp" />
     <ClCompile Include="Source\Engine\Input.cpp" />
     <ClCompile Include="Source\Engine\Logger.cpp" />
+    <ClCompile Include="Source\Engine\Profiler.cpp" />
     <ClCompile Include="Source\Engine\Renderer.cpp" />
     <ClCompile Include="Source\Engine\Scene.cpp" />
     <ClCompile Include="Source\Engine\Utils.cpp" />

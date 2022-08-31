@@ -3,7 +3,7 @@
 #include "Scene.h"
 #include "Input.h"
 #include "Logger.h"
-
+#include "Profiler.h"
 #include "FX/Bloom.h"
 
 #include <vector>
@@ -92,6 +92,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 	mDevice->PipelineBarrier(commandList, &colorAttachmentBarrier);
 	mDevice->PipelineBarrier(commandList, &depthAttachmentBarrier);
 
+	auto hdrPass = Profiler::StartRangeGPU(commandList, "HDR Pass");
 	mDevice->BeginRenderPass(commandList, mHdrRenderPass.get(), mHdrFramebuffer.get());
 
 	/*
@@ -146,12 +147,15 @@ void Renderer::Render(gfx::CommandList* commandList)
 	mDevice->EndDebugMarker(commandList);
 
 	mDevice->EndRenderPass(commandList);
+	Profiler::EndRangeGPU(commandList, hdrPass);
 
 	if (mEnableBloom)
 	{
+		auto bloomPass = Profiler::StartRangeGPU(commandList, "Bloom Pass");
 		// Bloom Pass
 		mBloomFX->Generate(commandList, &mHdrFramebuffer->attachments[1], mBloomBlurRadius);
 		mBloomFX->Composite(commandList, &mHdrFramebuffer->attachments[0], mBloomStrength);
+		Profiler::EndRangeGPU(commandList, bloomPass);
 	}
 }
 

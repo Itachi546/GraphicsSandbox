@@ -1,11 +1,12 @@
 #include "EditorApplication.h"
 #include "../Engine/VulkanGraphicsDevice.h"
-
 #include "../Engine/FX/Bloom.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_vulkan.h"
+
+#include <iomanip>
 
 void EditorApplication::Initialize()
 {
@@ -47,14 +48,26 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove);
-	ImGui::Text("FrameTime: %.2f", mDeltaTime);
 
-	static bool enableBloom = false;
+	// Profilter Data
+	std::vector<Profiler::RangeData> profilerData;
+	Profiler::GetEntries(profilerData);
+	if (profilerData.size() > 0)
+	{
+		std::stringstream ss;
+		for (auto& data : profilerData)
+		{
+			if(data.inUse)
+				ss << data.name << " " << std::setprecision(3) << data.time << "ms\n";
+		}
+		ImGui::Text("%s", ss.str().c_str());
+	}
+
+	static bool enableBloom = true;
+	mRenderer->SetEnableBloom(enableBloom);
 	if (ImGui::CollapsingHeader("Bloom"))
 	{
-		if (ImGui::Checkbox("Enable", &enableBloom))
-			mRenderer->SetEnableBloom(enableBloom);
-
+		ImGui::Checkbox("Enable", &enableBloom);
 		static float blurRadius = 10.0f;
 		if (ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f))
 			mRenderer->SetBlurRadius(blurRadius);

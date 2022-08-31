@@ -135,6 +135,7 @@
     <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h">
       <Filter>ImGui</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Engine\Profiler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -214,6 +215,9 @@
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp">
       <Filter>ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Profiler.cpp">
+      <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -26,6 +26,12 @@ namespace gfx
 		virtual void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CreateSemaphore(Semaphore* out) = 0;
 		virtual void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out) = 0;
+		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
+
+		virtual void ResetQueryPool(QueryPool* pool, uint32_t first, uint32_t count) = 0;
+		virtual void Query(CommandList* commandList, QueryPool* pool, uint32_t index) = 0;
+		virtual void ResolveQuery(QueryPool* pool, uint32_t index, uint32_t count, uint64_t* result) = 0;
+		virtual double GetTimestampFrequency() = 0;
 
 		virtual void UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount) = 0;
 		virtual void PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) = 0;

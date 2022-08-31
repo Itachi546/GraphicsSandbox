@@ -1,6 +1,6 @@
 #include "Bloom.h"
 #include "../GraphicsUtils.h"
-
+#include "../Profiler.h"
 namespace fx
 {
 	
@@ -15,13 +15,18 @@ namespace fx
 
 	void Bloom::Generate(gfx::CommandList* commandList, gfx::GPUTexture* inputTexture, float blurRadius)
 	{
+		RangeId bloomDownsample = Profiler::StartRangeGPU(commandList, "Bloom Downsample");
 		GenerateDownSamples(commandList, inputTexture);
+		Profiler::EndRangeGPU(commandList, bloomDownsample);
 
+		RangeId bloomUpsample = Profiler::StartRangeGPU(commandList, "Bloom Upsample");
 		GenerateUpSamples(commandList, blurRadius);
+		Profiler::EndRangeGPU(commandList, bloomUpsample);
 	}
 
 	void Bloom::Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture, float bloomStrength)
 	{
+		RangeId compositeId = Profiler::StartRangeGPU(commandList, "Bloom Composite Pass");
 		// Composite Pass
 		mDevice->BeginDebugMarker(commandList, "Bloom Composite Pass");
 		gfx::ImageBarrierInfo imageBarrierInfo[] = {
@@ -33,7 +38,7 @@ namespace fx
 			imageBarrierInfo, static_cast<uint32_t>(std::size(imageBarrierInfo)),
 			gfx::PipelineStage::ComputeShader,
 			gfx::PipelineStage::ComputeShader,
-			};
+		};
 
 		mDevice->PipelineBarrier(commandList, &barrier);
 		gfx::DescriptorInfo descriptorInfos[] = {
@@ -49,8 +54,9 @@ namespace fx
 
 		mDevice->UpdateDescriptor(mCompositePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, mCompositePipeline.get());
-		mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
+		mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 32), gfx::GetWorkSize(height, 32), 1);
 		mDevice->EndDebugMarker(commandList);
+		Profiler::EndRangeGPU(commandList, compositeId);
 	}
 
 	void Bloom::GenerateDownSamples(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture)

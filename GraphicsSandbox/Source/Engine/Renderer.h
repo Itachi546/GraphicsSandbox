@@ -97,5 +97,5 @@ private:
 	bool mEnableBloom = false;
 	float mBloomThreshold = 1.0f;
 	float mBloomBlurRadius = 10.0f;
-	float mBloomStrength = 0.5f;
+	float mBloomStrength = 0.04f;
 };

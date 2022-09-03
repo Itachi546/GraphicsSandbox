@@ -39,11 +39,10 @@ void main()
     // 1    |1 2 1|
     // -- * |2 4 2|
     // 16   |1 2 1|
-    vec4 col = imageLoad(uOutputTexture, coord);
-    col += e * 4.0f;
+    vec4 col = e * 4.0f;
     col += (b + d + f + h) * 2.0f;
     col += (a + c + g + i);
     col *= (1.0f / 16.0f);
-
+    col += imageLoad(uOutputTexture, coord);
     imageStore(uOutputTexture, coord, vec4(col.rgb, 1.0f));
 }

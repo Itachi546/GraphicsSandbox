@@ -36,8 +36,6 @@ void Application::initialize_()
 
 void Application::Run()
 {
-	Profiler::BeginFrame();
-
 	RangeId totalTime = Profiler::StartRangeCPU("Total CPU Time");
 
 	Timer timer;
@@ -82,6 +80,9 @@ void Application::render_()
 		return;
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
+	Profiler::BeginFrameGPU(&commandList);
+
+
 	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);

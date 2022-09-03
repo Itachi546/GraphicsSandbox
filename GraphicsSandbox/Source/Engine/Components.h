@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "GpuMemoryAllocator.h"
+#include "ECS.h"
 
 struct Vertex
 {
@@ -135,4 +136,9 @@ struct LightComponent
 	float intensity = 1.0f;
 	float radius = 1;
 	LightType type = LightType::Directional;
+};
+
+struct HierarchyComponent
+{
+	ecs::Entity parent;
 };

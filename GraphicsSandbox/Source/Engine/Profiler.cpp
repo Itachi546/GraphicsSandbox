@@ -10,12 +10,14 @@ namespace Profiler
 	std::unordered_map<std::size_t, RangeData> gRangeData;
 	gfx::QueryPool gQueryPool;
 	uint32_t queryIdx;
+
+	// Used for sorting of the data when displaying later
 	uint32_t id = 0;
 
 	uint64_t queryResult[128];
 	double gpuTimestampFrequency = 0.0;
 
-	void BeginFrame()
+	void BeginFrameGPU(gfx::CommandList* commandList)
 	{
 		queryIdx = 0;
 		id = 0;
@@ -26,8 +28,7 @@ namespace Profiler
 			device->CreateQueryPool(&gQueryPool, 128, gfx::QueryType::TimeStamp);
 			initialized = true;
 		}
-
-		device->ResetQueryPool(&gQueryPool, 0, 128);
+		device->ResetQueryPool(commandList, &gQueryPool, 0, 128);
 	}
 
 	RangeId StartRangeCPU(const char* name)

@@ -1061,7 +1061,7 @@ namespace gfx {
         if (mValidationMode == ValidationMode::Enabled)
         {
             requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-            requiredExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+			//requiredExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 			requiredExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         }
 
@@ -1127,6 +1127,9 @@ namespace gfx {
                 {
                     if (std::strcmp(extension, available.extensionName) == 0)
                     {
+                        if (std::strcmp(extension, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+                            debugMarkerEnabled_ = true;
+
                         found = true;
                         break;
                     }
@@ -1145,18 +1148,29 @@ namespace gfx {
             vkGetPhysicalDeviceProperties2(physicalDevice, &properties2_);
 #if USE_INTEGRATED_GPU
             if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-            {
                 return physicalDevice;
-            }
 #else 
             if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-            {
                 return physicalDevice;
-            }
 #endif
         }
 
-        vkGetPhysicalDeviceProperties2(devices[0], &properties2_);
+        for (uint32_t i = 0; i < deviceCount; ++i)
+        {
+            vkGetPhysicalDeviceProperties2(devices[i], &properties2_);
+#if USE_INTEGRATED_GPU
+            if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+                return devices[i];
+#else 
+            if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+            {
+                // Although the debug VK_EXT_DEBUG_MARKER_EXTENSION_NAME is not present
+                // in available extension it works in Nvidia GPU
+                debugMarkerEnabled_ = true;
+                return devices[i];
+            }
+#endif
+        }
         return devices[0];
     }
 
@@ -1329,8 +1343,8 @@ namespace gfx {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         };
 
-        if (validationMode == ValidationMode::Enabled)
-            requiredDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+		if (validationMode == ValidationMode::Enabled)
+			requiredDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 
         // Create physical device
         physicalDevice_ = findSuitablePhysicalDevice(requiredDeviceExtensions);
@@ -1595,16 +1609,18 @@ namespace gfx {
             assert(!"Undefined QueryType");
 
         createInfo.queryCount = count;
-        vkCreateQueryPool(device_, &createInfo, 0, &vkQueryPool->queryPool);
+		VK_CHECK(vkCreateQueryPool(device_, &createInfo, 0, &vkQueryPool->queryPool));
        
         queryPools_.push_back(vkQueryPool->queryPool);
         out->internalState = vkQueryPool;
     }
 
-    void VulkanGraphicsDevice::ResetQueryPool(QueryPool* pool, uint32_t first, uint32_t count)
+    void VulkanGraphicsDevice::ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)
     {
         auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
-        vkResetQueryPool(device_, queryPool, first, count);
+        auto cmd = GetCommandList(commandList);
+        vkCmdResetQueryPool(cmd->commandBuffer, queryPool, first, count);
+		//vkResetQueryPool(device_, queryPool, first, count);
     }
 
     void VulkanGraphicsDevice::Query(CommandList* commandList, QueryPool* pool, uint32_t index)
@@ -2399,7 +2415,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::BeginDebugMarker(CommandList* commandList, const char* name, float r, float g, float b, float a)
     {
-        if (mValidationMode == ValidationMode::Disabled)
+        if (mValidationMode == ValidationMode::Disabled || !debugMarkerEnabled_)
             return;
         VkDebugMarkerMarkerInfoEXT markerInfo = { VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT };
         float color[4] = { r, g, b, a };
@@ -2412,7 +2428,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::EndDebugMarker(CommandList* commandList)
     {
-        if (mValidationMode == ValidationMode::Disabled)
+        if (mValidationMode == ValidationMode::Disabled || !debugMarkerEnabled_)
             return;
         auto cmd = GetCommandList(commandList);
         vkCmdDebugMarkerEndEXT(cmd->commandBuffer);

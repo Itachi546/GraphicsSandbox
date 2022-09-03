@@ -126,65 +126,34 @@ void EditorApplication::InitializeScene()
 {
 	auto compMgr = mScene.GetComponentManager();
 	{
-		ecs::Entity cube = mScene.CreateCube("TestCube");
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
-		material.roughness = 0.01f;
-		material.albedo = glm::vec4(0.0f, 0.0f, 1.0f, 1.0f);
-		material.metallic = 1.0f;
-	}
-	{
-		ecs::Entity cube = mScene.CreateCube("TestCube");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
-		transform->position = glm::vec3(-2.5f, 1.0f, 0.0f);
-		transform->scale = glm::vec3(1.0f, 2.0f, 1.0f);
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
-		material.roughness = 1.0f;
-		material.albedo = glm::vec4(1.0f);
-		material.metallic = 0.2f;
-	}
-	{
-		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
-		transform->position.x += 2.5f;
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
-		material.roughness = 0.2f;
-		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		material.metallic = 0.9f;
-	}
-	{
-		ecs::Entity plane = mScene.CreatePlane("TestPlane");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(plane);
-		transform->scale = glm::vec3(40.0f);
-		transform->position.y -= 1.0f;
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(plane);
-		material.roughness = 1.0f;
-		material.albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-		material.metallic = 0.0f;
-	}
-
-	{
 		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/suzanne.sbox");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
-		transform->scale = glm::vec3(1.0f);
-		transform->position.x += 5.0f;
-		transform->position.y -= 1.0f;
+		if (mesh != ecs::INVALID_ENTITY)
+		{
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
+			transform->scale = glm::vec3(1.0f);
+			transform->position.x += 5.0f;
+			transform->position.y -= 1.0f;
 
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
-		material.roughness = 0.1f;
-		material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
-		material.metallic = 0.9f;
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
+			material.roughness = 0.1f;
+			material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
+			material.metallic = 0.9f;
+		}
 	}
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
-		transform->scale = glm::vec3(1.0f);
-		transform->position = glm::vec3(-6.0f, -0.5f, 0.0f);
+		if (bloom != ecs::INVALID_ENTITY)
+		{
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
+			transform->scale = glm::vec3(1.0f);
+			transform->position = glm::vec3(-6.0f, -0.5f, 0.0f);
 
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(bloom);
-		material.roughness = 0.9f;
-		material.albedo = glm::vec4(0.37f, .26f, .95f, 1.0f);
-		material.metallic = 0.1f;
-		material.emissive = 20.0f;
+			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(bloom);
+			material.roughness = 0.9f;
+			material.albedo = glm::vec4(0.37f, .26f, .95f, 1.0f);
+			material.metallic = 0.1f;
+			material.emissive = 20.0f;
+		}
 	}
 
 

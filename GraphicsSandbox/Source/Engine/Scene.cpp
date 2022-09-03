@@ -17,6 +17,7 @@ void Scene::Initialize()
 	mComponentManager->RegisterComponent<NameComponent>();
 	mComponentManager->RegisterComponent<MaterialComponent>();
 	mComponentManager->RegisterComponent<LightComponent>();
+	mComponentManager->RegisterComponent<HierarchyComponent>();
 
 	InitializePrimitiveMesh();
 	InitializeLights();

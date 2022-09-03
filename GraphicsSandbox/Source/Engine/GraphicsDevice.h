@@ -28,7 +28,7 @@ namespace gfx
 		virtual void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out) = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
-		virtual void ResetQueryPool(QueryPool* pool, uint32_t first, uint32_t count) = 0;
+		virtual void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count) = 0;
 		virtual void Query(CommandList* commandList, QueryPool* pool, uint32_t index) = 0;
 		virtual void ResolveQuery(QueryPool* pool, uint32_t index, uint32_t count, uint64_t* result) = 0;
 		virtual double GetTimestampFrequency() = 0;

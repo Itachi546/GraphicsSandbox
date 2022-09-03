@@ -21,6 +21,8 @@ namespace Profiler
 		uint32_t gpuBegin = ~0u;
 		uint32_t gpuEnd = ~0u;
 		uint32_t id = 0;
+		// Use as flag if the renderPass is disabled
+		// Used by UI to remove the profiling info from UI
 		bool inUse = true;
 
 		bool IsCpuRange() {
@@ -28,7 +30,7 @@ namespace Profiler
 		}
 	};
 
-	void BeginFrame();
+	void BeginFrameGPU(gfx::CommandList* commandList);
 
 	RangeId StartRangeCPU(const char* name);
 	void EndRangeCPU(RangeId id);

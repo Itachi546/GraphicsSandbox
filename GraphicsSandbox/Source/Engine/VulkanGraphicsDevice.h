@@ -42,7 +42,8 @@ namespace gfx
 		void CreateSemaphore(Semaphore* out)                                                   override;
 		void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out)                       override;          
 		void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
-		void ResetQueryPool(QueryPool* pool, uint32_t first, uint32_t count)                   override;
+
+		void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)                   override;
 
 		void Query(CommandList* commandList, QueryPool* pool, uint32_t index)                  override;
 		void ResolveQuery(QueryPool* pool, uint32_t index, uint32_t count, uint64_t* result) override;
@@ -100,6 +101,7 @@ namespace gfx
 		VkDevice device_                    = VK_NULL_HANDLE;
 		VkQueue queue_                      = VK_NULL_HANDLE;
 		VkSurfaceKHR surface_               = VK_NULL_HANDLE;
+		bool debugMarkerEnabled_ = false;
 
 		VkCommandPool   commandPool_        = VK_NULL_HANDLE;
 		VkCommandBuffer commandBuffer_      = VK_NULL_HANDLE;

@@ -44,25 +44,33 @@ public:
 
 	inline std::unique_ptr<EnvironmentMap>& GetEnvironmentMap() { return mEnvMap; }
 
+	std::vector<ecs::Entity> FindChildren(ecs::Entity entity);
+
 	~Scene(); 
 
 
 private:
-	ecs::Entity mCubeEntity;
-	ecs::Entity mPlaneEntity;
-	ecs::Entity mSphereEntity;
+	uint32_t mCubeMeshId = 0;
+	uint32_t mSphereMeshId = 0;
+	uint32_t mPlaneMeshId = 0;
+
+	ecs::Entity mPrimitives;
 	ecs::Entity mSun;
 
 	Camera mCamera;
 
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;
-	void UpdateTransformData();
+
+	void UpdateTransform();
+	void UpdateHierarchy();
+
+	void updateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
 
 	void InitializePrimitiveMesh();
-	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
-	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount, uint32_t vertexCount = 2);
-	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& accumVertexCount, unsigned int& accumIndexCount);
+	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);
+	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount, uint32_t subdivide = 2);
+	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);
 
 	void InitializeLights();
 

@@ -42,8 +42,10 @@ void MeshDataComponent::CreateRenderData()
 }
 */
 
-void MeshDataComponent::CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::BufferIndex vB, gfx::BufferIndex iB)
+void MeshDataComponent::CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::GPUBuffer* vB, gfx::GPUBuffer* iB, uint32_t vbOffset, uint32_t ibOffset)
 {
-	allocator->CopyToBuffer(&vertexBuffer, vB, vertices.data(), (uint32_t)vertices.size() * sizeof(Vertex));
-	allocator->CopyToBuffer(&indexBuffer, iB, indices.data(),  (uint32_t)indices.size() * sizeof(uint32_t));
+	this->vertexBuffer = vB;
+	this->indexBuffer = iB;
+	allocator->CopyToBuffer(vB, vertices.data(), vbOffset, (uint32_t)vertices.size() * sizeof(Vertex));
+	allocator->CopyToBuffer(iB, indices.data(),  ibOffset, (uint32_t)indices.size() * sizeof(uint32_t));
 }

@@ -1,5 +1,6 @@
 #include "GpuMemoryAllocator.h"
 #include "GraphicsDevice.h"
+#include "Logger.h"
 
 #include <assert.h>
 
@@ -11,20 +12,51 @@ namespace gfx
 		mStagingBufferDesc.usage = gfx::Usage::Upload;
 	}
 
-	BufferIndex GpuMemoryAllocator::AllocateBuffer(GPUBufferDesc* desc)
+	GPUBuffer* GpuMemoryAllocator::AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex)
 	{
 		auto device = GetDevice();
 		std::shared_ptr<GPUBuffer> buffer = std::make_shared<GPUBuffer>();
 		device->CreateBuffer(desc, buffer.get());
 
-		BufferIndex bufferIndex = static_cast<uint32_t>(mBuffers.size());
-		BufferInfo bufferInfo;
-		bufferInfo.buffer = buffer;
-		bufferInfo.offset = 0;
-		mBuffers.push_back(std::move(bufferInfo));
-		return bufferIndex;
+		*bufferIndex = (uint32_t)mBuffers.size();
+		mBuffers.push_back(buffer);
+		return mBuffers.back().get();
 	}
 
+	void GpuMemoryAllocator::CopyToBuffer(GPUBuffer* buffer, void* data, uint32_t offset, uint32_t size)
+	{
+		if (data == nullptr)
+		{
+			Logger::Error("Null data to copy to buffer");
+			return;
+		}
+
+		if (offset > size)
+		{
+			Logger::Error("Invalid offset and size (offset > size)");
+			return;
+		}
+
+		if (size > buffer->desc.size)
+		{
+			Logger::Error("Copysize exceed the size of buffer");
+			return;
+		}
+
+		auto device = GetDevice();
+		char* ptr = reinterpret_cast<char*>(buffer->mappedDataPtr);
+		if (ptr)
+			std::memcpy(ptr + offset, data, size);
+		else
+		{
+			mStagingBufferDesc.size = size;
+			GPUBuffer stagingBuffer;
+			device->CreateBuffer(&mStagingBufferDesc, &stagingBuffer);
+			std::memcpy(stagingBuffer.mappedDataPtr, data, size);
+			device->CopyBuffer(buffer, &stagingBuffer, offset);
+		}
+	}
+	/*
 	void GpuMemoryAllocator::CopyToBuffer(BufferView* bufferView, BufferIndex bufferIndex, void* data, uint32_t size)
 	{
 		assert(data != nullptr);
@@ -58,5 +90,5 @@ namespace gfx
 		bufferInfo.offset += size;
 
 	}
-
+	*/
 };

@@ -25,7 +25,7 @@ float GeometrySchlickGGX(float NdotV, float roughness)
     float nom   = NdotV;
     float denom = NdotV * (1.0 - k) + k;
 
-    return nom / denom;
+    return nom / max(denom, 0.00001f);
 }
 
 float V_SmithGGX(float NoV, float NoL, float roughness) {

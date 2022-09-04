@@ -11,7 +11,8 @@ namespace gfx
 
 	struct BufferView
 	{
-		BufferIndex index;
+		GPUBuffer* buffer;
+		uint32_t bufferIndex;
 		uint32_t offset;
 		uint32_t size;
 	};
@@ -28,13 +29,14 @@ namespace gfx
 		GpuMemoryAllocator(const GpuMemoryAllocator&) = delete;
 		void operator=(const GpuMemoryAllocator&) = delete;
 
-		BufferIndex AllocateBuffer(GPUBufferDesc* desc);
+		GPUBuffer* AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex);
 
-		void CopyToBuffer(BufferView* bufferView, BufferIndex buffer, void* data, uint32_t size);
+		//void CopyToBuffer(BufferView* bufferView, BufferIndex buffer, void* data, uint32_t size);
+		void CopyToBuffer(GPUBuffer* buffer, void* data, uint32_t offset, uint32_t size);
 
 		GPUBuffer* GetBuffer(uint32_t index) const
 		{
-			return mBuffers[index].buffer.get();
+			return mBuffers[index].get();
 		}
 
 		void FreeMemory()
@@ -43,14 +45,7 @@ namespace gfx
 		}
 	private:
 		GpuMemoryAllocator();
-
-		struct BufferInfo
-		{
-			std::shared_ptr<GPUBuffer> buffer;
-			uint32_t offset;
-		};
-
-		std::vector<BufferInfo> mBuffers;
+		std::vector<std::shared_ptr<GPUBuffer>> mBuffers;
 		GPUBufferDesc mStagingBufferDesc;
 	};
 

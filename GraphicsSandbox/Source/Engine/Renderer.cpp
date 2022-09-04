@@ -6,6 +6,7 @@
 #include "Profiler.h"
 #include "FX/Bloom.h"
 
+#include "../Shared/MeshData.h"
 #include <vector>
 #include <algorithm>
 
@@ -66,7 +67,7 @@ void Renderer::Update(float dt)
 		if (lights[i].type == LightType::Directional)
 			position = normalize(glm::toMat4(transform->rotation) * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
 		else if (lights[i].type == LightType::Point)
-			position = transform->position;
+			position = transform->worldMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		else {
 			assert(!"Undefined Light Type");
 		}
@@ -104,8 +105,6 @@ void Renderer::Render(gfx::CommandList* commandList)
 	std::vector<DrawData> drawDatas;
 	mScene->GenerateDrawData(drawDatas);
 
-	auto& envMap = mScene->GetEnvironmentMap();
-
 	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
 
 	mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
@@ -114,9 +113,10 @@ void Renderer::Render(gfx::CommandList* commandList)
 		//DrawBatch(&commandList, drawDatas, allocator);
 
 		std::array<std::vector<DrawData>, 64> sortedDrawDatas;
+
 		for (auto& drawData : drawDatas)
 		{
-			uint32_t vbIndex = drawData.vertexBuffer.index;
+			uint32_t vbIndex = drawData.vertexBuffer.bufferIndex;
 			sortedDrawDatas[vbIndex].push_back(drawData);
 		}
 
@@ -133,14 +133,8 @@ void Renderer::Render(gfx::CommandList* commandList)
 	mDevice->EndDebugMarker(commandList);
 
 
+	auto& envMap = mScene->GetEnvironmentMap();
 	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
-	static int cubemapMode = 0;
-	if (Input::Press(Input::Key::KEY_3))
-		cubemapMode = 0;
-	else if (Input::Press(Input::Key::KEY_4))
-		cubemapMode = 1;
-	else if (Input::Press(Input::Key::KEY_5))
-		cubemapMode = 2;
 	
 	mDevice->BeginDebugMarker(commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
 	DrawCubemap(commandList, envMap->GetCubemap().get());
@@ -249,7 +243,8 @@ void Renderer::initializeBuffers()
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap)
 {
-	MeshDataComponent* meshData = mScene->mComponentManager->GetComponent<MeshDataComponent>(mScene->mCubeEntity);
+	MeshDataComponent* meshData = mScene->mComponentManager->GetComponent<MeshDataComponent>(mScene->mPrimitives);
+	const Mesh* mesh = meshData->GetMesh(mScene->mCubeMeshId);
 
 	// TODO: Define static Descriptor beforehand
 	gfx::DescriptorInfo descriptorInfos[3] = {};
@@ -259,12 +254,12 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
 
 	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
-	auto vbView = meshData->vertexBuffer;
-	auto ibView = meshData->indexBuffer;
+	auto vb = meshData->vertexBuffer;
+	auto ib = meshData->indexBuffer;
 
-	descriptorInfos[1].resource = allocator->GetBuffer(vbView.index);
-	descriptorInfos[1].offset = vbView.offset;
-	descriptorInfos[1].size = vbView.size;
+	descriptorInfos[1].resource = vb;
+	descriptorInfos[1].offset = mesh->vertexOffset;
+	descriptorInfos[1].size = mesh->vertexCount * sizeof(Vertex);
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
 	descriptorInfos[2].resource = cubemap;
@@ -273,8 +268,8 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 
 	mDevice->UpdateDescriptor(mCubemapPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mCubemapPipeline.get());
-	mDevice->BindIndexBuffer(commandList, allocator->GetBuffer(ibView.index));
-	mDevice->DrawTriangleIndexed(commandList, 36, 1, 0);
+	mDevice->BindIndexBuffer(commandList, ib);
+	mDevice->DrawTriangleIndexed(commandList, mesh->indexCount, 1, mesh->indexOffset / sizeof(uint32_t));
 }
 
 void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& drawDatas, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator)
@@ -303,8 +298,8 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& d
 	gfx::BufferView& vbView = drawDatas[0].vertexBuffer;
 	gfx::BufferView& ibView = drawDatas[0].indexBuffer;
 
-	auto vb = allocator->GetBuffer(vbView.index);
-	auto ib = allocator->GetBuffer(ibView.index);
+	auto vb = vbView.buffer;
+	auto ib = ibView.buffer;
 
 	auto& envMap = mScene->GetEnvironmentMap();
 

@@ -1,12 +1,14 @@
 #include "EditorApplication.h"
 #include "../Engine/VulkanGraphicsDevice.h"
 #include "../Engine/FX/Bloom.h"
+#include "../Shared/MathUtils.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_vulkan.h"
 
 #include <iomanip>
+#include <algorithm>
 
 void EditorApplication::Initialize()
 {
@@ -116,6 +118,14 @@ void EditorApplication::PreUpdate(float dt) {
 		auto [x, y] = Input::GetMouseState().delta;
 		mCamera->Rotate(-y, x, dt);
 	}
+
+	auto compMgr = mScene.GetComponentManager();
+	for (auto light : lights)
+	{
+		auto transform = compMgr->GetComponent<TransformComponent>(light);
+		glm::mat4 rotate = glm::yawPitchRoll(mDeltaTime * 0.001f, 0.0f, 0.0f) * transform->localMatrix;
+		transform->localMatrix = rotate;
+	}
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -123,30 +133,44 @@ void EditorApplication::PostUpdate(float dt) {
 }
 
 void EditorApplication::InitializeScene()
+
 {
 	auto compMgr = mScene.GetComponentManager();
+
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/suzanne.sbox");
+		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/scene.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
 			transform->scale = glm::vec3(1.0f);
-			transform->position.x += 5.0f;
 			transform->position.y -= 1.0f;
 
-			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
-			material.roughness = 0.1f;
-			material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
-			material.metallic = 0.9f;
+			std::vector<ecs::Entity> children = mScene.FindChildren(mesh);
+			if (children.size() > 0)
+			{
+				std::for_each(children.begin(), children.end(), [&compMgr](ecs::Entity child) {
+					MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(child);
+					material.roughness = MathUtils::Rand01();
+					material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
+					material.metallic = MathUtils::Rand01();
+				 });
+			}
+			else {
+				MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
+				material.roughness = 0.1f;
+				material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
+				material.metallic = 0.9f;
+			}
 		}
 	}
+
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
 		if (bloom != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
-			transform->scale = glm::vec3(1.0f);
-			transform->position = glm::vec3(-6.0f, -0.5f, 0.0f);
+			transform->scale = glm::vec3(2.0f);
+			transform->position = glm::vec3(0.0f, -1.0f, -3.0f);
 
 			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(bloom);
 			material.roughness = 0.9f;
@@ -159,30 +183,80 @@ void EditorApplication::InitializeScene()
 
 	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
 	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
+	
+	glm::vec3 positions[] = {
+		glm::vec3(-5.0f, 3.0f, 5.0f),
+		glm::vec3(5.0f, 3.0f, 5.0f),
+		glm::vec3(-5.0f, 3.0f, -5.0f),
+		glm::vec3(5.0f, 3.0f, -5.0f)
+	};
 
-	glm::vec3 lightPosition = glm::vec3(0.0f, 2.0f, 5.0f);
-	glm::vec3 lightColor = glm::vec3(0.944f, .776f, .373f);
+	glm::vec3 colors[] = {
+		glm::vec3(1.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 1.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f),
+		glm::vec3(1.0f, 1.0f, 1.0f)
+	};
+
+	for (int i = 0; i < 4; ++i)
 	{
-		ecs::Entity light = mScene.CreateLight("light1");
-		TransformComponent* lightTransform = compMgr->GetComponent<TransformComponent>(light);
-		lightTransform->position = lightPosition;
-		LightComponent* lightComponent = compMgr->GetComponent<LightComponent>(light);
-		lightComponent->color = lightColor;
-		lightComponent->intensity = 5.0f;
-		lightComponent->type = LightType::Point;
+		ecs::Entity lightEntity = ecs::CreateEntity();
+		TransformComponent& transform = compMgr->AddComponent<TransformComponent>(lightEntity);
+		transform.position = positions[i];
+		LightComponent& light = compMgr->AddComponent<LightComponent>(lightEntity);
+		light.color = colors[i];
+		light.intensity = 30.0f;
+		light.type = LightType::Point;
+		lights.push_back(lightEntity);
 	}
+
+	for(int i = 0; i < 4; ++i)
 	{
-		ecs::Entity lightCube = mScene.CreateCube("lightCube");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(lightCube);
-		transform->position = lightPosition;
+		ecs::Entity cube = mScene.CreateCube("LightCube");
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
 		transform->scale = glm::vec3(0.1f);
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(lightCube);
+		transform->position = positions[i];
+		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
 		material.roughness = 1.0f;
-		material.albedo = glm::vec4(lightColor, 1.0f);
-		material.metallic = 0.0f;
-		material.emissive = 10.0f;
+		material.albedo = glm::vec4(colors[i], 1.0f);
+		material.metallic = 0.2f;
+		material.emissive = 30.0f;
+
+		compMgr->AddComponent<HierarchyComponent>(cube).parent = lights[i];
+		compMgr->AddComponent<HierarchyComponent>(lights[i]).childrens.push_back(cube);
 	}
 
+	/*
+	{
+		ecs::Entity cube = mScene.CreateCube("TestCube");
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
+		transform->scale = glm::vec3(1.0f, 2.0f, 1.0f);
+		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
+		material.roughness = 1.0f;
+		material.albedo = glm::vec4(1.0f);
+		material.metallic = 0.2f;
+	}
+
+	{
+		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
+		transform->position.x += 2.5f;
+		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
+		material.roughness = 0.9f;
+		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+		material.metallic = 0.1f;
+	}
+	{
+		ecs::Entity plane = mScene.CreatePlane("TestPlane");
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(plane);
+		transform->scale = glm::vec3(40.0f);
+		transform->position.y -= 1.0f;
+		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(plane);
+		material.roughness = 1.0f;
+		material.albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+		material.metallic = 0.0f;
+	}
+	*/
 }
 
 EditorApplication::~EditorApplication()

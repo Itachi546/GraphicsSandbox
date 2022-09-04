@@ -60,6 +60,11 @@ struct BoundingBox
 		min = vmin;
 		max = vmax;
 	}
-
-
 };
+namespace MathUtils
+{
+	inline float Rand01()
+	{
+		return rand() / float(RAND_MAX);
+	}
+}

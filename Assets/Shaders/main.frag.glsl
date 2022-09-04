@@ -49,7 +49,7 @@ void main()
     vec3 v = normalize(fs_in.viewDir);
 	vec3 r = reflect(-v, n);
 
-	float NoV =	max(dot(n, v), 0.0);
+	float NoV =	max(dot(n, v), 0.0001);
 	vec3 Lo = vec3(0.0f);
 
 	vec3 f0	= mix(vec3(0.04), albedo.rgb, metallic);
@@ -59,9 +59,17 @@ void main()
 	{
 	    LightData light = globals.lights[i];
 		//Light light = light[i];
-    	vec3 l = light.position - fs_in.worldPos;
-		float dist = length(l);
-		l /= dist;
+    	vec3 l = light.position;
+		float attenuation = 1.0f;
+		if(light.type > 0.2f)
+		{
+            light.position - fs_in.worldPos;
+		    float dist = length(l);
+			attenuation	= 1.0f / (dist * dist);
+     		l /= dist;
+        }
+		else 
+    		l= normalize(l);
     	vec3 h = normalize(v + l);
 
 		float NoL =	clamp(dot(n, l), 0.0, 1.0);
@@ -74,11 +82,8 @@ void main()
 
 		vec3  Ks = F;
 		vec3  Kd = (1.0f - Ks) * (1.0f - metallic);
-		vec3 specular =	D *	F *	V / (4.0f * NoV * NoL + 0.0001f);
+		vec3 specular =	(V * F * D) / (4.0f * NoV * NoL + 0.0001f);
 
-		float attenuation = 1.0f;
-		if(light.type > 0.2f) // Other than directional light
-		     attenuation = 1.0f / (dist * dist);
 		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation;
 	}
 
@@ -97,11 +102,15 @@ void main()
 
     float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
 	if(luminance > globals.bloomThreshold || material.emissive > 0.01f)
-     	brightColor = vec4(Lo, 1.0f);
+	{
+	    // Nasty inf pixel that become visible in bloom
+		if(isinf(Lo.x))
+		  brightColor = vec4(0.0f);
+	    else
+		   brightColor	= vec4(Lo, 1.0f);
+	}
 	else 
 	    brightColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	//Lo /=(1.0f + Lo);
-    //Lo = pow(Lo, vec3(0.4545));
 	fragColor =	vec4(Lo, 1.0f);
 }

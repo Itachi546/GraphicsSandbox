@@ -6,6 +6,7 @@
 #include <memory>
 #include <vector>
 
+#include "../Shared/MeshData.h"
 #include "GpuMemoryAllocator.h"
 #include "ECS.h"
 
@@ -27,9 +28,10 @@ struct DrawData
 {
 	glm::mat4 worldTransform;
 	MaterialComponent* material;
+	uint32_t indexCount;
+
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
-	uint32_t indexCount;
 };
 
 struct TransformComponent
@@ -38,18 +40,18 @@ struct TransformComponent
 	glm::fquat rotation{ 1.0f, 0.0f, 0.0f, 0.0f };
 	glm::vec3 scale{ 1.0f, 1.0f, 1.0f };
 
-	glm::mat4 world{ 1.0f };
+	glm::mat4 localMatrix{ 1.0f };
+	glm::mat4 worldMatrix{ 1.0f };
+
 	bool dirty = true;
-
-	void SetDirty(bool state)
-	{
-		this->dirty = state;
-	}
-
 	void CalculateWorldMatrix()
 	{
-		world = glm::translate(glm::mat4(1.0f), position) * glm::toMat4(rotation) * glm::scale(glm::mat4(1.0f), scale);
-		this->dirty = false;
+		if (dirty)
+		{
+			localMatrix = glm::translate(glm::mat4(1.0f), position) * glm::toMat4(rotation) * glm::scale(glm::mat4(1.0f), scale);
+			worldMatrix = localMatrix;
+			dirty = false;
+		}
 	}
 };
 
@@ -90,10 +92,13 @@ struct MeshDataComponent
 	std::vector<Vertex> vertices;
 	std::vector<uint32_t> indices;
 
-	gfx::BufferView vertexBuffer;
-	gfx::BufferView indexBuffer;
+	uint32_t ibIndex = 0;
+	gfx::GPUBuffer* vertexBuffer;
 
-	uint32_t GetNumIndices() const { return static_cast<uint32_t>(indices.size()); }
+	uint32_t vbIndex = 0;
+	gfx::GPUBuffer* indexBuffer;
+
+	std::vector<Mesh> meshes;
 
 	void SetRenderable(bool value) {
 		if (value) flags |= Renderable; else flags &= ~Renderable;
@@ -106,14 +111,20 @@ struct MeshDataComponent
 	bool IsRenderable() const { return flags & Renderable; }
 	bool IsDoubleSided() const { return flags & DoubleSided; }
 
-	void CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::BufferIndex vb, gfx::BufferIndex ib);
+	void CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::GPUBuffer* vB, gfx::GPUBuffer* iB, uint32_t vbIndex = 0, uint32_t ibIndex = 0);
+
+	const Mesh* GetMesh(uint32_t meshId) const
+	{
+		return &meshes[meshId];
+	}
 
 	~MeshDataComponent() = default;
 };
 
 struct ObjectComponent
 {
-	std::size_t meshId;
+	std::size_t meshComponentIndex;
+	uint32_t meshId;
 };
 
 struct MaterialComponent {
@@ -140,5 +151,6 @@ struct LightComponent
 
 struct HierarchyComponent
 {
-	ecs::Entity parent;
+	ecs::Entity parent = ecs::INVALID_ENTITY;
+	std::vector<ecs::Entity> childrens;
 };

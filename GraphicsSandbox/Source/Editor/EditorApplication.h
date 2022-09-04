@@ -18,4 +18,6 @@ public:
 private:
 	Camera* mCamera;
 	void InitializeScene();
+
+	std::vector<ecs::Entity> lights;
 };

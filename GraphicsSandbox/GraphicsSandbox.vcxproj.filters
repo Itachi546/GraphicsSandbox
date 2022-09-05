@@ -136,6 +136,7 @@
       <Filter>ImGui</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiler.h" />
+    <ClInclude Include="Source\Editor\SceneHierarchy.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -217,6 +218,9 @@
       <Filter>ImGui</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\Profiler.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\SceneHierarchy.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>

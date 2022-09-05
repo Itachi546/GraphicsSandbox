@@ -177,8 +177,8 @@ namespace ecs
 		template<typename T>
 		bool HasComponent(const Entity& entity) {
 			uint32_t compId = GetComponentTypeId<T>();
-			uint64_t sigHash = (1Ui64 << compId);
-			return (entity.signature & sigHash) == sigHash;
+			auto comp = GetComponentArray<T>(compId);
+			return comp->GetIndex(entity) != ~0ull;
 		}
 
 		/*

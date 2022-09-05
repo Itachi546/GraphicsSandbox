@@ -39,6 +39,8 @@ void EditorApplication::Initialize()
 
 	mCamera = mScene.GetCamera();
 	InitializeScene();
+
+	mHierarchy = std::make_shared<SceneHierarchy>(&mScene);
 }
 
 void EditorApplication::RenderUI(gfx::CommandList* commandList)
@@ -83,6 +85,8 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 			mRenderer->SetBloomStrength(bloomStrength);
 	}
 	ImGui::End();
+
+	mHierarchy->Draw();
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
@@ -133,12 +137,14 @@ void EditorApplication::PostUpdate(float dt) {
 }
 
 void EditorApplication::InitializeScene()
-
 {
-	auto compMgr = mScene.GetComponentManager();
+	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
+	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
 
+	auto compMgr = mScene.GetComponentManager();
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/scene.sbox");
+		//ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast-room.sbox");
+		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast-room.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
@@ -151,7 +157,7 @@ void EditorApplication::InitializeScene()
 				std::for_each(children.begin(), children.end(), [&compMgr](ecs::Entity child) {
 					MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(child);
 					material.roughness = MathUtils::Rand01();
-					material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
+					material.albedo = glm::vec4(1.0f);
 					material.metallic = MathUtils::Rand01();
 				 });
 			}
@@ -163,6 +169,7 @@ void EditorApplication::InitializeScene()
 			}
 		}
 	}
+#if 1
 
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
@@ -179,11 +186,6 @@ void EditorApplication::InitializeScene()
 			material.emissive = 20.0f;
 		}
 	}
-
-
-	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
-	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
-	
 	glm::vec3 positions[] = {
 		glm::vec3(-5.0f, 3.0f, 5.0f),
 		glm::vec3(5.0f, 3.0f, 5.0f),
@@ -201,6 +203,7 @@ void EditorApplication::InitializeScene()
 	for (int i = 0; i < 4; ++i)
 	{
 		ecs::Entity lightEntity = ecs::CreateEntity();
+		//compMgr->AddComponent<NameComponent>(lightEntity).name = "light" + std::to_string(i);
 		TransformComponent& transform = compMgr->AddComponent<TransformComponent>(lightEntity);
 		transform.position = positions[i];
 		LightComponent& light = compMgr->AddComponent<LightComponent>(lightEntity);
@@ -212,7 +215,7 @@ void EditorApplication::InitializeScene()
 
 	for(int i = 0; i < 4; ++i)
 	{
-		ecs::Entity cube = mScene.CreateCube("LightCube");
+		ecs::Entity cube = mScene.CreateCube("cube" + std::to_string(i));
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
 		transform->scale = glm::vec3(0.1f);
 		transform->position = positions[i];
@@ -225,7 +228,7 @@ void EditorApplication::InitializeScene()
 		compMgr->AddComponent<HierarchyComponent>(cube).parent = lights[i];
 		compMgr->AddComponent<HierarchyComponent>(lights[i]).childrens.push_back(cube);
 	}
-
+#endif
 	/*
 	{
 		ecs::Entity cube = mScene.CreateCube("TestCube");

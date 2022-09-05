@@ -123,9 +123,11 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	inFile.read(reinterpret_cast<char*>(&header), sizeof(MeshFileHeader));
 	assert(header.magicNumber == 0x12345678u);
 
-
+	std::string name = file;
+	name = name.substr(name.find_last_of('/') + 1, name.size() - 1);
+	name = name.substr(0, name.find_first_of('.'));
 	ecs::Entity parent = ecs::CreateEntity();
-	mComponentManager->AddComponent<NameComponent>(parent).name = std::string("scene");
+	mComponentManager->AddComponent<NameComponent>(parent).name = name;
 	mComponentManager->AddComponent<TransformComponent>(parent);
 
 	MeshDataComponent& meshData = mComponentManager->AddComponent<MeshDataComponent>(parent);
@@ -474,6 +476,7 @@ void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vert
 void Scene::InitializeLights()
 {
 	mSun = ecs::CreateEntity();
+	mComponentManager->AddComponent<NameComponent>(mSun).name = "Sun";
 	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(mSun);
 	transform.position = glm::vec3(40.0f, 40.0f, 5.0f);
 	LightComponent& light = mComponentManager->AddComponent<LightComponent>(mSun);

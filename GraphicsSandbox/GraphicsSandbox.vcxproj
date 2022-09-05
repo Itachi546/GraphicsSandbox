@@ -167,6 +167,7 @@
     <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h" />
     <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h" />
     <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h" />
+    <ClInclude Include="Source\Editor\SceneHierarchy.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
@@ -207,6 +208,7 @@
     <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp" />
     <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp" />
     <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="Source\Editor\SceneHierarchy.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
     <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />

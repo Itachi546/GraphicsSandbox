@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../Engine/GraphicsSandbox.h"
+#include "SceneHierarchy.h"
 
 class EditorApplication : public Application
 {
@@ -19,5 +20,6 @@ private:
 	Camera* mCamera;
 	void InitializeScene();
 
+	std::shared_ptr<SceneHierarchy> mHierarchy;
 	std::vector<ecs::Entity> lights;
 };

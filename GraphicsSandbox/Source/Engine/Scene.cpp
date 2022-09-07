@@ -133,11 +133,17 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	MeshDataComponent& meshData = mComponentManager->AddComponent<MeshDataComponent>(parent);
 	uint32_t nMeshes = header.meshCount;
 
-	// Read mesh data
+	// Read Meshes
 	std::vector<Mesh>& meshes = meshData.meshes;
 	meshes.resize(nMeshes);
 	inFile.read(reinterpret_cast<char*>(meshes.data()), sizeof(Mesh) * nMeshes);
 
+	// Read Materials
+	uint32_t nMaterial = header.materialCount;
+	std::vector<MaterialComponent> materials(nMaterial);
+	inFile.read(reinterpret_cast<char*>(materials.data()), sizeof(MaterialComponent) * nMaterial);
+
+	//Read VertexData
 	uint32_t nVertices = header.vertexDataSize / (sizeof(float) * 8);
 	uint32_t nIndices = header.indexDataSize / sizeof(uint32_t);
 
@@ -148,6 +154,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	inFile.read(reinterpret_cast<char*>(meshData.indices.data()), header.indexDataSize);
 	inFile.close();
 
+	// Allocate GPU Memory
 	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
 
 	gfx::GPUBufferDesc bufferDesc;
@@ -167,6 +174,13 @@ ecs::Entity Scene::CreateMesh(const char* file)
 		ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(parent);
 		objectComp.meshComponentIndex = meshComponentIndex;
 		objectComp.meshId = 0;
+
+		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(parent);
+		if (materials.size() > 0)
+		{
+			MaterialComponent meshMat = materials[meshes[0].materialIndex];
+			material = { meshMat };
+		}
 	}
 	else
 	{
@@ -185,6 +199,13 @@ ecs::Entity Scene::CreateMesh(const char* file)
 			ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(child);
 			objectComp.meshComponentIndex = meshComponentIndex;
 			objectComp.meshId = i;
+
+			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
+			if (materials.size() > 0)
+			{
+				MaterialComponent meshMat = materials[meshes[i].materialIndex];
+				material = { meshMat };
+			}
 		}
 	}
 	return parent;
@@ -286,6 +307,7 @@ void Scene::InitializePrimitiveMesh()
 			indexOffset,
 			vertexCount,
 			indexCount,
+			0,
 			"Cube"});
 
 		vertexOffset += vertexCount * sizeof(Vertex);
@@ -300,6 +322,7 @@ void Scene::InitializePrimitiveMesh()
 			indexOffset,
 			vertexCount,
 			indexCount,
+			0,
 			"Plane"});
 		vertexOffset += vertexCount * sizeof(Vertex);
 		indexOffset += indexCount * sizeof(uint32_t);
@@ -313,6 +336,7 @@ void Scene::InitializePrimitiveMesh()
 			indexOffset,
 			vertexCount,
 			indexCount,
+			0,
 			"Sphere" });
 		mSphereMeshId = 2;
 		vertexOffset += vertexCount * sizeof(Vertex);

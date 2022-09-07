@@ -1,5 +1,6 @@
 Build/
 .vs/
 packages/
-MeshConverter/
+MeshConverter/Model
+MeshConverter/x64
 x64/

@@ -143,34 +143,16 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 	{
-		//ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast-room.sbox");
 		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast-room.sbox");
+		//ecs::Entity mesh = mScene.CreateMesh("Assets/Models/mitsuba-knob.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
 			transform->scale = glm::vec3(1.0f);
 			transform->position.y -= 1.0f;
-
-			std::vector<ecs::Entity> children = mScene.FindChildren(mesh);
-			if (children.size() > 0)
-			{
-				std::for_each(children.begin(), children.end(), [&compMgr](ecs::Entity child) {
-					MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(child);
-					material.roughness = MathUtils::Rand01();
-					material.albedo = glm::vec4(1.0f);
-					material.metallic = MathUtils::Rand01();
-				 });
-			}
-			else {
-				MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
-				material.roughness = 0.1f;
-				material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
-				material.metallic = 0.9f;
-			}
 		}
 	}
-#if 1
-
+#if 0
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
 		if (bloom != ecs::INVALID_ENTITY)
@@ -178,12 +160,6 @@ void EditorApplication::InitializeScene()
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
 			transform->scale = glm::vec3(2.0f);
 			transform->position = glm::vec3(0.0f, -1.0f, -3.0f);
-
-			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(bloom);
-			material.roughness = 0.9f;
-			material.albedo = glm::vec4(0.37f, .26f, .95f, 1.0f);
-			material.metallic = 0.1f;
-			material.emissive = 20.0f;
 		}
 	}
 	glm::vec3 positions[] = {

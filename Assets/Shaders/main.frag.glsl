@@ -13,13 +13,24 @@ layout(location = 0) in VS_OUT
    flat uint matId;
 } fs_in;
 
+const uint INVALID_TEXTURE = 0xFFFFFFFF;
+
 struct Material
 {
-   vec4 albedo;
-   float emissive;
-   float roughness;
-   float metallic;
-   float ao;
+	vec4 albedo;
+	float emissive;
+	float roughness;
+	float metallic;
+	float ao;
+	float transparency;
+
+	uint albedoMap;
+	uint normalTexture;
+	uint emissiveMap;
+	uint metallicMap;
+	uint roughnessMap;
+	uint ambientOcclusionMap;
+	uint opacityMap;
 };
 
 #define FRAGMENT_SHADER

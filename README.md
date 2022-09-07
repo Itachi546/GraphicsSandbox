@@ -1,10 +1,10 @@
 # GraphicsSandbox
 
 ## Diffuse IBL
-![Diffuse IBL](images/diffuse_ibl.png)
-
-## Specular IBL
-![Specular IBL](images/specular_ibl.png)
+![Diffuse IBL](Images/diffuse_ibl.png)
 
 ## Bloom
-![Bloom](images/bloom.png)
+![Bloom](Images/bloom.png)
+
+## Material
+![Material](Images/material.png)

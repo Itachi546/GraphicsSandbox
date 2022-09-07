@@ -6,7 +6,7 @@
 int main(int argc, char** argv)
 {
 	Timer timer;
-	Application* application = new EditorApplication();
+	Application* application = new BloomTestApplication();
 
 	if (!glfwInit())
 		glfwInit();

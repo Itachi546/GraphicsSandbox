@@ -8,6 +8,7 @@ SceneHierarchy::SceneHierarchy(Scene* scene) : mScene(scene), mSelected(ecs::INV
 
 void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::ComponentManager> compMgr)
 {
+	ImGui::PushID(entity);
 	std::string name = "node";
 	if (compMgr->HasComponent<NameComponent>(entity))
 		name = compMgr->GetComponent<NameComponent>(entity)->name;
@@ -31,6 +32,7 @@ void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::Com
 			mSelected = entity;
 		ImGui::Unindent();
 	}
+	ImGui::PopID();
 }
 
 void SceneHierarchy::CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> componentManager)
@@ -43,8 +45,6 @@ void SceneHierarchy::CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> c
 		for (uint32_t i = 0; i < entities.size(); ++i)
 		{
 			HierarchyComponent* component = componentManager->GetComponent<HierarchyComponent>(entities[i]);
-			ImGui::PushID(i);
-
 			if (component == nullptr)
 				CreateTreeNode(entities[i], componentManager);
 			else
@@ -52,7 +52,6 @@ void SceneHierarchy::CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> c
 				if(component->parent == ecs::INVALID_ENTITY)
 					CreateTreeNode(entities[i], componentManager);
 			}
-			ImGui::PopID();
 		}
 		ImGui::EndTabItem();
 	}

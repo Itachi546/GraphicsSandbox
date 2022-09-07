@@ -3,6 +3,9 @@
 #include "../Engine/GlmIncludes.h"
 #include "MathUtils.h"
 
+#include <vector>
+#include <string>
+
 constexpr const uint32_t kMaxLODs    = 8;
 constexpr const uint32_t kMaxStreams = 8;
 
@@ -28,6 +31,8 @@ struct MeshFileHeader
 	uint32_t meshCount;
 
 	uint32_t materialCount;
+
+	uint32_t textureCount;
 
 	uint32_t dataBlockStartOffset;
 
@@ -65,6 +70,7 @@ struct MeshData
 	std::vector<uint32_t> indexData_;
 	std::vector<Mesh> meshes;
 	std::vector<MaterialComponent> materials;
+	std::vector<std::string> textures;
 	std::vector<BoundingBox> boxes_;
 };
 

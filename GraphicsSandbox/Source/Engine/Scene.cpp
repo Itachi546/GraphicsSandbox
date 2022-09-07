@@ -142,6 +142,18 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	uint32_t nMaterial = header.materialCount;
 	std::vector<MaterialComponent> materials(nMaterial);
 	inFile.read(reinterpret_cast<char*>(materials.data()), sizeof(MaterialComponent) * nMaterial);
+	
+	// Read Textures
+	std::vector<std::string> textureFiles(header.textureCount);
+	for (uint32_t i = 0; i < header.textureCount; ++i)
+	{
+		uint32_t size = 0;
+		inFile.read(reinterpret_cast<char*>(&size), 4);
+
+		std::string& path = textureFiles[i];
+		path.resize(size);
+		inFile.read(path.data(), size);
+	}
 
 	//Read VertexData
 	uint32_t nVertices = header.vertexDataSize / (sizeof(float) * 8);

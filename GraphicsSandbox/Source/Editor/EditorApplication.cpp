@@ -143,7 +143,7 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast-room.sbox");
+		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast_room.sbox");
 		//ecs::Entity mesh = mScene.CreateMesh("Assets/Models/mitsuba-knob.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{

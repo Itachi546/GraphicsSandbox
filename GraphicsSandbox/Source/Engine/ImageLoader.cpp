@@ -16,6 +16,11 @@ float* Utils::ImageLoader::LoadHDRI(const char* filename, int& width, int& heigh
 	return data;
 }
 
+uint8_t* Utils::ImageLoader::Load(const char* filename, int& width, int& height, int& nComponent)
+{
+	return stbi_load(filename, &width, &height, &nComponent, STBI_rgb_alpha);
+}
+
 void Utils::ImageLoader::Free(void* data)
 {
 	if(data)

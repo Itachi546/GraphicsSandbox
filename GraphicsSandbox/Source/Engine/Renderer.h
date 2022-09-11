@@ -84,8 +84,6 @@ private:
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
 
 	// fx Variables
-
-	std::vector<gfx::DescriptorInfo> mDescriptorInfos;
 	const int kMaxEntity = 10'000;
 
 	std::shared_ptr<gfx::Pipeline> loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);

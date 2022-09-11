@@ -94,10 +94,10 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 
 void EditorApplication::PreUpdate(float dt) {
 
-	float walkSpeed = 1.0f;
+	float walkSpeed = 2.0f;
 
 	if (Input::Down(Input::Key::KEY_LEFT_SHIFT))
-		walkSpeed *= 6.0f;
+		walkSpeed *= 20.0f;
 
 	if (Input::Down(Input::Key::KEY_ESCAPE))
 		bRunning = false;
@@ -143,13 +143,14 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast_room.sbox");
+		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/DamagedHelmet.sbox");
 		//ecs::Entity mesh = mScene.CreateMesh("Assets/Models/mitsuba-knob.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
 			transform->scale = glm::vec3(1.0f);
 			transform->position.y -= 1.0f;
+			//transform->rotation = glm::vec3(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
 		}
 	}
 #if 0

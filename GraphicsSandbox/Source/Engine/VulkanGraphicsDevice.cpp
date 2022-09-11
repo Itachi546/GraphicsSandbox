@@ -767,7 +767,7 @@ namespace gfx {
         {
 			entries[i].dstBinding = shaderRefl.descriptorSetLayoutBinding[i].binding;
 			entries[i].dstArrayElement = 0;
-			entries[i].descriptorCount = 1;
+			entries[i].descriptorCount = shaderRefl.descriptorSetLayoutBinding[i].descriptorCount;
 			entries[i].descriptorType = shaderRefl.descriptorSetLayoutBinding[i].descriptorType;
 			entries[i].offset = sizeof(VulkanDescriptorInfo) * i;
 			entries[i].stride = sizeof(VulkanDescriptorInfo);
@@ -859,7 +859,7 @@ namespace gfx {
                 VkDescriptorSetLayoutBinding layoutBinding = {};
                 layoutBinding.binding = binding;
                 layoutBinding.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type);
-                layoutBinding.descriptorCount = 1;
+                layoutBinding.descriptorCount = reflBinding->count;
                 layoutBinding.stageFlags = shaderStage;
                 out->descriptorSetLayoutBinding[binding] = layoutBinding;
                 out->descriptorSetLayoutCount++;
@@ -2279,32 +2279,79 @@ namespace gfx {
 
     void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
     {
-
         auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
 
         // lazy initialization of descriptor set
-        std::vector<VulkanDescriptorInfo> descriptorInfos(descriptorInfoCount);
+        std::vector<VulkanDescriptorInfo> descriptorInfos;
         for (uint32_t i = 0; i < descriptorInfoCount; ++i)
         {
             DescriptorInfo info = *(descriptorInfo + i);
-            if (info.resource->IsBuffer())
+            gfx::GPUResource* resource = info.resource;
+            if (resource == nullptr)
+                continue;
+            if (resource->IsBuffer())
             {
-                auto vkBuffer = std::static_pointer_cast<VulkanBuffer>(info.resource->internalState);
-                descriptorInfos[i].bufferInfo.buffer = vkBuffer->buffer;
-                descriptorInfos[i].bufferInfo.offset = info.offset;
-                descriptorInfos[i].bufferInfo.range = info.size;
+                auto vkBuffer = std::static_pointer_cast<VulkanBuffer>(resource->internalState);
+                VulkanDescriptorInfo descriptorInfo = {};
+                descriptorInfo.bufferInfo.buffer = vkBuffer->buffer;
+                descriptorInfo.bufferInfo.offset = info.offset;
+                descriptorInfo.bufferInfo.range = info.size;
+                descriptorInfos.push_back(descriptorInfo);
             }
-            else if (info.resource->IsTexture())
+            else if (resource->IsTexture())
             {
-                auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
-                descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
-                assert(vkTexture->imageViews.size() > info.mipLevel);
-                descriptorInfos[i].imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
-                assert(vkTexture->sampler != VK_NULL_HANDLE);
-                descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
+                uint32_t size = 1;
+                uint32_t totalSize = 1;
+                uint32_t mipLevel = 0;
+                if (info.type == DescriptorType::Image)
+                    mipLevel = info.mipLevel;
+                else if (info.type == DescriptorType::ImageArray)
+                {
+                    size = info.size;
+                    totalSize = 64;
+                }
+
+                gfx::GPUTexture* textures = (gfx::GPUTexture*)(resource);
+                for (uint32_t imageIndex = 0; imageIndex < totalSize; ++imageIndex)
+                {
+                    gfx::GPUTexture* texture =  textures + imageIndex;
+                    VulkanDescriptorInfo descriptorInfo = {};
+					auto vkTexture = std::static_pointer_cast<VulkanTexture>(texture->internalState);
+					descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
+					
+					assert(vkTexture->imageViews.size() > mipLevel);
+					descriptorInfo.imageInfo.imageView = vkTexture->imageViews[mipLevel];
+
+					assert(vkTexture->sampler != VK_NULL_HANDLE);
+					descriptorInfo.imageInfo.sampler = vkTexture->sampler;
+                    descriptorInfos.push_back(descriptorInfo);
+                }
+                /*
+                if (info.type == DescriptorType::Image)
+                {
+                    VulkanDescriptorInfo descriptorInfo = {};
+                    auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
+                    descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
+                    assert(vkTexture->imageViews.size() > info.mipLevel);
+                    descriptorInfo.imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
+                    assert(vkTexture->sampler != VK_NULL_HANDLE);
+                    descriptorInfo.imageInfo.sampler = vkTexture->sampler;
+                    descriptorInfos.push_back(descriptorInfo);
+                }
+                else if(info.type == DescriptorType::ImageArray) {
+
+                    for (int imageCount = 0; i < info.size; ++i)
+                    {
+                        auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
+                        descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
+                        assert(vkTexture->imageViews.size() > info.mipLevel);
+                        descriptorInfos[i].imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
+                        assert(vkTexture->sampler != VK_NULL_HANDLE);
+                        descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
+                    }
+                }
+                */
             }
-            else 
-                assert(!"Unsupported Descriptor Type");
         }
 
         VkDescriptorPool descriptorPool = descriptorPools_[swapchain_->currentImageIndex];

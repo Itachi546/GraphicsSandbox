@@ -5,6 +5,7 @@
 #include "VulkanGraphicsDevice.h"
 #include "Scene.h"
 #include "Profiler.h"
+#include "TextureCache.h"
 
 #include <algorithm>
 #include <sstream>
@@ -23,6 +24,7 @@ void Application::initialize_()
 
 	Logger::Initialize();
 	Input::Initialize(mWindow);
+	TextureCache::Initialize();
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);
 

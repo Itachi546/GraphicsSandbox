@@ -148,7 +148,8 @@ namespace gfx
 	enum DescriptorType {
 		StorageBuffer,
 		UniformBuffer,
-		Image
+		Image,
+		ImageArray
 	};
 
 	struct Viewport
@@ -414,6 +415,12 @@ namespace gfx
 	{
 		uint32_t queryPoolCount = 0;
 		QueryType queryType;
+	};
+
+	struct CommandList
+	{
+		void* internalState = nullptr;
+		constexpr bool IsValid() const { return internalState != nullptr; }
 	};
 
 	template<>

@@ -43,7 +43,6 @@ struct MeshFileHeader
 };
 
 constexpr const uint32_t INVALID_TEXTURE = 0xFFFFFFFF;
-
 struct MaterialComponent {
 	glm::vec4 albedo = glm::vec4(1.0f);
 	

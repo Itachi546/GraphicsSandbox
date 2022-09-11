@@ -10,6 +10,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "TextureCache.h"
+
 Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
 	initializeBuffers();
@@ -82,6 +84,8 @@ void Renderer::Update(float dt)
 
 void Renderer::Render(gfx::CommandList* commandList)
 {
+	TextureCache::PrepareTexture(commandList);
+
 	gfx::ImageBarrierInfo barriers[] = {
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
@@ -304,7 +308,7 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& d
 	auto& envMap = mScene->GetEnvironmentMap();
 
 	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[8] = {};
+	gfx::DescriptorInfo descriptorInfos[9] = {};
 
 	descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 
@@ -321,6 +325,9 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& d
 	descriptorInfos[6] = { envMap->GetPrefilterMap().get(), 0, 0, gfx::DescriptorType::Image };
 
 	descriptorInfos[7] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
+
+	descriptorInfos[8] = TextureCache::GetDescriptorInfo();
+
 	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mTrianglePipeline.get());
 

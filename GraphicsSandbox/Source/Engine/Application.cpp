@@ -5,6 +5,7 @@
 #include "VulkanGraphicsDevice.h"
 #include "Scene.h"
 #include "Profiler.h"
+#include "TextureCache.h"
 
 #include <algorithm>
 #include <sstream>
@@ -23,6 +24,7 @@ void Application::initialize_()
 
 	Logger::Initialize();
 	Input::Initialize(mWindow);
+	TextureCache::Initialize();
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);
 
@@ -129,6 +131,9 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 #if defined(USE_VULKAN)
 	gfx::ValidationMode validationMode = gfx::ValidationMode::Enabled;
+#ifdef NDEBUG
+	validationMode = gfx::ValidationMode::Disabled;
+#endif
 	mDevice = std::make_unique<gfx::VulkanGraphicsDevice>(window, validationMode);
 #else
 #error Unsupported Graphics API

@@ -10,6 +10,7 @@ layout(location = 0) in VS_OUT
    vec3 normal;
    vec3 worldPos;
    vec3 viewDir;
+   vec2 uv;
    flat uint matId;
 } fs_in;
 
@@ -37,24 +38,46 @@ struct Material
 #include "pbr.glsl"
 #include "bindings.glsl"
 
+void GetMetallicRoughness(uint metallicMapIndex, uint roughnessMapIndex, inout float metallic, inout float roughness)
+{
+	if(metallicMapIndex != INVALID_TEXTURE)
+	{
+	    vec4 metallicRoughness = texture(uTextures[metallicMapIndex], fs_in.uv);
+    	if(roughnessMapIndex == INVALID_TEXTURE)
+		{
+			   roughness = metallicRoughness.g;
+			   metallic = metallicRoughness.b;
+		}
+	    else 
+		{
+           metallic = metallicRoughness.r;
+		   vec4 roughnessVal = texture(uTextures[roughnessMapIndex], fs_in.uv);
+		   roughness = roughnessVal.r;
+		}
+	}
+}
+
 void main()
 {
 	vec2 uv = fs_in.worldPos.xz;
-	float checker = mod(floor(uv.x) + floor(uv.y), 2.0f);
-
 	Material material = aMaterialData[fs_in.matId];
 	vec4 albedo = material.albedo;
-/*
-	if(material.emissive > 0.0f)
-	{
-	    brightColor = material.emissive * albedo;
-		fragColor = material.emissive * albedo;
-    	return;
-	}
-	*/
+
+	if(material.albedoMap != INVALID_TEXTURE)
+       albedo = texture(uTextures[material.albedoMap], fs_in.uv);
+
+	if(albedo.a < 0.5f)
+	  discard;
+
+	//albedo.rgb = pow(albedo.rgb, vec3(2.2f));
+
 	float roughness = material.roughness;
 	float ao = material.ao;
 	float metallic = material.metallic;
+	GetMetallicRoughness(material.metallicMap, material.roughnessMap, metallic, roughness);
+
+	if(material.ambientOcclusionMap != INVALID_TEXTURE)
+       ao = texture(uTextures[material.ambientOcclusionMap], fs_in.uv).r;
 
     vec3 n = normalize(fs_in.normal);
     vec3 v = normalize(fs_in.viewDir);
@@ -109,7 +132,12 @@ void main()
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
 	vec3 ambient = (Kd * diffuse + specular) * ao;
-	Lo += ambient + material.emissive * albedo.rgb;
+	vec3 emissive = material.emissive * albedo.rgb;
+
+	if(material.emissiveMap != INVALID_TEXTURE)
+	   emissive = texture(uTextures[material.emissiveMap], fs_in.uv).rgb * material.emissive;
+
+	Lo += ambient + emissive;
 
     float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
 	if(luminance > globals.bloomThreshold || material.emissive > 0.01f)

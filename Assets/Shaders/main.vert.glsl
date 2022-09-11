@@ -13,6 +13,7 @@ layout(location = 0) out VS_OUT
    vec3 normal;
    vec3 worldPos;
    vec3 viewDir;
+   vec2 uv;
    flat uint matId;
 }vs_out;
 
@@ -22,10 +23,10 @@ void main()
    /*
      gl_DrawIDARB is used only when multiDrawIndirect is used
    */
-   PerObjectData perObjectData = aPerObjectData[gl_DrawIDARB];
+   //PerObjectData perObjectData = aPerObjectData[gl_DrawIDARB];
 
    vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
-   mat4 worldMatrix = aTransformData[perObjectData.transformIndex];
+   mat4 worldMatrix = aTransformData[gl_DrawIDARB];
 
    vec4 wP = worldMatrix * vec4(position, 1.0);
    gl_Position = globals.VP * wP;
@@ -33,7 +34,8 @@ void main()
    // Calculate normal matrix
    // http://www.lighthouse3d.com/tutorials/glsl-12-tutorial/the-normal-matrix/
    vs_out.worldPos	= wP.xyz;
+   vs_out.uv = vec2(vertex.tu, vertex.tv);
    vs_out.normal    = mat3(transpose(inverse(worldMatrix))) * vec3(vertex.nx, vertex.ny, vertex.nz);
    vs_out.viewDir   = globals.cameraPosition - wP.xyz;
-   vs_out.matId     = perObjectData.materialIndex;
+   vs_out.matId     = gl_DrawIDARB;
 }

@@ -148,7 +148,8 @@ namespace gfx
 	enum DescriptorType {
 		StorageBuffer,
 		UniformBuffer,
-		Image
+		Image,
+		ImageArray
 	};
 
 	struct Viewport
@@ -318,17 +319,6 @@ namespace gfx
 		std::size_t mappedDataSize;
 	};
 
-	struct DescriptorInfo
-	{
-		GPUResource* resource = nullptr;
-		uint32_t offset = 0;
-		union {
-			uint32_t size = 0;
-			uint32_t mipLevel;
-		};
-		DescriptorType type = DescriptorType::StorageBuffer;
-	};
-
 	enum class Usage
 	{
 		Default, //CPU No access, GPU read/write
@@ -390,6 +380,17 @@ namespace gfx
 		GPUTextureDesc desc;
 	};
 
+	struct DescriptorInfo
+	{
+		GPUResource* resource;
+		uint32_t offset = 0;
+		union {
+			uint32_t size = 0;
+			uint32_t mipLevel;
+		};
+		DescriptorType type = DescriptorType::StorageBuffer;
+	};
+
 	struct Framebuffer : public GraphicsDeviceResource
 	{
 		std::vector<GPUTexture> attachments;
@@ -414,6 +415,12 @@ namespace gfx
 	{
 		uint32_t queryPoolCount = 0;
 		QueryType queryType;
+	};
+
+	struct CommandList
+	{
+		void* internalState = nullptr;
+		constexpr bool IsValid() const { return internalState != nullptr; }
 	};
 
 	template<>

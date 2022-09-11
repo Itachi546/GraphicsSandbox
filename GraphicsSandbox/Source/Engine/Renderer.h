@@ -33,6 +33,11 @@ public:
 
 	void Render(gfx::CommandList* commandList);
 
+	void SetUpdateBatches(bool state)
+	{
+		mUpdateBatches = state;
+	}
+
 	gfx::GPUTexture* GetOutputTexture(OutputTextureType colorTextureType);
 
 	// Bloom Setting
@@ -65,6 +70,18 @@ private:
 		LightData lights[128];
 	} mGlobalUniformData;
 
+	struct RenderBatch
+	{
+		std::vector<gfx::DrawIndirectCommand> drawCommands;
+		std::vector<glm::mat4> transforms;
+		std::vector<MaterialComponent> materials;
+		std::array<gfx::GPUTexture*, 64> textures;
+		uint32_t textureCount = 0;
+		gfx::BufferView vertexBuffer;
+		gfx::BufferView indexBuffer;
+	};
+	std::vector<RenderBatch> mRenderBatches;
+
 	gfx::GraphicsDevice* mDevice;
 	Scene* mScene;
 
@@ -73,7 +90,6 @@ private:
 
 	std::shared_ptr<gfx::GPUBuffer> mGlobalUniformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mPerObjectDataBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mMaterialBuffer;
 
@@ -84,15 +100,15 @@ private:
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
 
 	// fx Variables
-
-	std::vector<gfx::DescriptorInfo> mDescriptorInfos;
 	const int kMaxEntity = 10'000;
 
 	std::shared_ptr<gfx::Pipeline> loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
-	void DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& drawData, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator);
+	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator);
+	void CreateBatch();
 
+	bool mUpdateBatches = true;
 	// Bloom Settings
 	bool mEnableBloom = false;
 	float mBloomThreshold = 1.0f;

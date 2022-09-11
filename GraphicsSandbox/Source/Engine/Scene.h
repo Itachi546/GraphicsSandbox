@@ -24,6 +24,8 @@ public:
 		return mComponentManager;
 	}
 
+	ecs::Entity GetSun() { return mSun; }
+
 	ecs::Entity CreateCube(std::string_view name);
 	ecs::Entity CreatePlane(std::string_view name);
 	ecs::Entity CreateSphere(std::string_view name);

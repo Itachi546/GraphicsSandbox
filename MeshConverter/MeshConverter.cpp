@@ -6,6 +6,8 @@
 #include <assimp/postprocess.h>
 #include <assimp/pbrmaterial.h>
 #include <assimp/material.h>
+#include <chrono>
+#include <execution>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -21,7 +23,7 @@
 #include <numeric>
 #include <filesystem>
 
-constexpr int EXPORT_TEXTURE_SIZE = 512;
+constexpr int EXPORT_TEXTURE_SIZE = 1024;
 
 std::string TrimPathAndExtension(const std::string& path)
 {
@@ -83,7 +85,7 @@ std::string ResizeAndExportTexture(const unsigned char* src, int srcWidth, int s
 
 std::string ConvertTexture(const std::string& filename, const std::string& exportPath)
 {
-	std::string outputImagePath = exportPath + TrimPathAndExtension(filename) + "_converted.png";
+	std::string outputImagePath = exportPath + "Textures/" + TrimPathAndExtension(filename) + "_converted.png";
 
 	int width, height, nChannel;
 	stbi_uc* pixels = stbi_load(filename.c_str(), &width, &height, &nChannel, STBI_rgb_alpha);
@@ -103,8 +105,7 @@ std::string ConvertTexture(const std::string& filename, const std::string& expor
 
 	std::string newFilePath = ResizeAndExportTexture(pixels, width, height, EXPORT_TEXTURE_SIZE, EXPORT_TEXTURE_SIZE, nChannel, outputImagePath);
 
-	if (pixels)
-		stbi_image_free(pixels);
+	stbi_image_free(pixels);
 
 	return newFilePath;
 }
@@ -116,7 +117,7 @@ void ProcessTexture(const aiScene* scene, std::vector<std::string>& textureFiles
 		return ConvertTexture(basePath + filename, exportPath);
 	};
 
-	std::transform(textureFiles.begin(), textureFiles.end(), textureFiles.begin(), converter);
+	std::transform(std::execution::par, textureFiles.begin(), textureFiles.end(), textureFiles.begin(), converter);
 }
 
 void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vector<std::string>& textureFiles)
@@ -166,6 +167,8 @@ void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vect
 	if (aiGetMaterialTexture(assimpMat, aiTextureType_METALNESS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 		material.metallicMap = AddUnique(textureFiles, Path.C_Str());
 
+	if (assimpMat->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &Path) == aiReturn_SUCCESS)
+		material.metallicMap = AddUnique(textureFiles, Path.C_Str());
 	/*
 	if (aiGetMaterialTexture(assimpMat, aiTextureType_OPACITY, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 		material.opacityMap = AddUnique(textureFiles, Path.C_Str());
@@ -257,14 +260,14 @@ void LoadFile(const std::string& filename, const std::string& exportPath, MeshDa
 	const uint32_t flags = 0 |
 		aiProcess_JoinIdenticalVertices |
 		aiProcess_Triangulate |
+		aiProcess_PreTransformVertices |
 		aiProcess_GenSmoothNormals |
 		aiProcess_LimitBoneWeights |
 		aiProcess_SplitLargeMeshes |
 		aiProcess_ImproveCacheLocality |
 		aiProcess_RemoveRedundantMaterials |
 		aiProcess_FindDegenerates |
-		aiProcess_FindInvalidData |
-		aiProcess_GenUVCoords;
+		aiProcess_FindInvalidData;
 
 	const aiScene* scene = aiImportFile(filename.c_str(), flags);
 
@@ -327,17 +330,27 @@ void SaveMeshData(const std::string& filename, MeshData* meshData)
 int main(int argc, char** argv)
 {
 
-	if (argc <= 1)
-		printf("Convert any 3D Mesh Format to .sbox format\n");
+	std::chrono::time_point begin = std::chrono::steady_clock::now();
 
-	std::string filename = "C:\\Users\\lenovo\\Documents\\3D-Assets\\Models\\breakfast_room\\breakfast_room.gltf";
+	if (argc <= 2)
+	{
+		printf("Convert any 3D Mesh Format to .sbox format\n");
+		printf("Insufficient arguments, no file specified!!\n");
+		exit(EXIT_FAILURE);
+	}
+
+	const char* filename = argv[1];
 	//std::string filename = "Model/bloom.obj";
-	std::string exportBasePath = "../Assets/models/";
+	std::string exportBasePath = std::string(argv[2]);
 	std::string newFilename = exportBasePath + TrimPathAndExtension(filename) + ".sbox";
 	{
 		MeshData meshData;
 		LoadFile(filename, exportBasePath, &meshData);
 		SaveMeshData(newFilename, &meshData);
 	}
+	std::chrono::time_point end = std::chrono::steady_clock::now();
+
+	uint64_t elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+	std::cout << "Total time taken: " << elapsedTime * 1e-3f << std::endl;
 	return 0;
 }

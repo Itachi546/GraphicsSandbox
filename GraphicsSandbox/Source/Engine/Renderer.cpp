@@ -10,6 +10,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "TextureCache.h"
+
 Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
 	initializeBuffers();
@@ -42,6 +44,11 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 // TODO: temp width and height variable
 void Renderer::Update(float dt)
 {
+	if (mUpdateBatches)
+	{
+		CreateBatch();
+		mUpdateBatches = false;
+	}
 	Camera* camera = mScene->GetCamera();
 
 	glm::mat4 P = camera->GetProjectionMatrix();
@@ -82,6 +89,8 @@ void Renderer::Update(float dt)
 
 void Renderer::Render(gfx::CommandList* commandList)
 {
+	TextureCache::PrepareTexture(commandList);
+
 	gfx::ImageBarrierInfo barriers[] = {
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
@@ -102,36 +111,25 @@ void Renderer::Render(gfx::CommandList* commandList)
 	* we can do culling in the compute shader and set
 	* PerObjectBuffer from compute shader.
 	*/
-	std::vector<DrawData> drawDatas;
-	mScene->GenerateDrawData(drawDatas);
-
 	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
 
 	mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
-	if (drawDatas.size() > 0)
+
+	// offset is used to keep track of the buffer offset of transform data
+	// so as we don't have to use absolute index but relative
+	// We have all transform and material data in same buffer loaded at one
+	// and the buffer is binded relatively according to the batch
+
+	uint32_t offset = 0;
+	for (auto& batch : mRenderBatches)
 	{
-		//DrawBatch(&commandList, drawDatas, allocator);
-
-		std::array<std::vector<DrawData>, 64> sortedDrawDatas;
-
-		for (auto& drawData : drawDatas)
-		{
-			uint32_t vbIndex = drawData.vertexBuffer.bufferIndex;
-			sortedDrawDatas[vbIndex].push_back(drawData);
-		}
-
-		uint32_t bufferOffset = 0;
-		for (uint32_t i = 0; i < sortedDrawDatas.size(); ++i)
-		{
-			if (sortedDrawDatas[i].size() == 0)
-				continue;
-
-			DrawBatch(commandList, sortedDrawDatas[i], bufferOffset, allocator);
-			bufferOffset += (uint32_t)sortedDrawDatas[i].size();
-		}
+		DrawBatch(commandList, batch, offset, allocator);
+		// NOTE: for now the size of DrawCommand, Transform and Material is same
+		// We need to create offset within the batch later if we decide to share
+		// materials
+		offset += (uint32_t)batch.drawCommands.size();
 	}
 	mDevice->EndDebugMarker(commandList);
-
 
 	auto& envMap = mScene->GetEnvironmentMap();
 	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
@@ -216,13 +214,7 @@ void Renderer::initializeBuffers()
 
 	// Per Object Data Buffer
 	gfx::GPUBufferDesc bufferDesc = {};
-	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	bufferDesc.usage = gfx::Usage::Upload;
-	bufferDesc.size = sizeof(PerObjectData) * kMaxEntity;
-	mPerObjectDataBuffer = std::make_shared<gfx::GPUBuffer>();
-	mDevice->CreateBuffer(&bufferDesc, mPerObjectDataBuffer.get());
-
-	// Transform Buffer
 	bufferDesc.size = kMaxEntity * sizeof(glm::mat4);
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	mTransformBuffer = std::make_shared<gfx::GPUBuffer>();
@@ -272,31 +264,25 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	mDevice->DrawTriangleIndexed(commandList, mesh->indexCount, 1, mesh->indexOffset / sizeof(uint32_t));
 }
 
-void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& drawDatas, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator)
+void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator)
 {
 	// Copy PerObjectDrawData to the buffer
-	PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
+	//PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
 	glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr) + lastOffset;
 	MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr) + lastOffset;
 	gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr) + lastOffset;
 
-	for (uint32_t i = 0; i < drawDatas.size(); ++i)
-	{
-		transformPtr[i] = drawDatas[i].worldTransform;
-		objectDataPtr[i].transformIndex = i;
-		objectDataPtr[i].materialIndex = i;
+	uint32_t transformCount = (uint32_t)batch.transforms.size();
+	std::memcpy(transformPtr, batch.transforms.data(), transformCount * sizeof(glm::mat4));
 
-		MaterialComponent* mat = drawDatas[i].material;
-		std::memcpy(materialCompPtr + i, mat, sizeof(MaterialComponent));
+	uint32_t materialCount = (uint32_t)batch.materials.size();
+	std::memcpy(materialCompPtr, batch.materials.data(), materialCount * sizeof(MaterialComponent));
 
-		drawCommandPtr[i].firstIndex = drawDatas[i].indexBuffer.offset / sizeof(uint32_t);
-		drawCommandPtr[i].indexCount = drawDatas[i].indexCount;
-		drawCommandPtr[i].instanceCount = 1;
-		drawCommandPtr[i].vertexOffset = drawDatas[i].vertexBuffer.offset / sizeof(Vertex);
-	}
+	uint32_t drawCommandCount = (uint32_t)batch.drawCommands.size();
+	std::memcpy(drawCommandPtr, batch.drawCommands.data(), drawCommandCount * sizeof(gfx::DrawIndirectCommand));
 
-	gfx::BufferView& vbView = drawDatas[0].vertexBuffer;
-	gfx::BufferView& ibView = drawDatas[0].indexBuffer;
+	gfx::BufferView& vbView = batch.vertexBuffer;
+	gfx::BufferView& ibView = batch.indexBuffer;
 
 	auto vb = vbView.buffer;
 	auto ib = ibView.buffer;
@@ -310,20 +296,110 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, std::vector<DrawData>& d
 
 	descriptorInfos[1] = { vb, 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
 
-	descriptorInfos[2] = { mPerObjectDataBuffer.get(), (uint32_t)(lastOffset * sizeof(PerObjectData)), (uint32_t)(drawDatas.size() * sizeof(PerObjectData)), gfx::DescriptorType::StorageBuffer};
+	descriptorInfos[2] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), transformCount * (uint32_t)sizeof(glm::mat4), gfx::DescriptorType::StorageBuffer};
 
-	descriptorInfos[3] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(drawDatas.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer};
+	descriptorInfos[3] = { mMaterialBuffer.get(), (uint32_t)(lastOffset * sizeof(MaterialComponent)), materialCount * (uint32_t)sizeof(MaterialComponent), gfx::DescriptorType::StorageBuffer};
 
-	descriptorInfos[4] = { mMaterialBuffer.get(), (uint32_t)(lastOffset * sizeof(MaterialComponent)), (uint32_t)(drawDatas.size() * sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer};
+	descriptorInfos[4] = { envMap->GetIrradianceMap().get(), 0, 0, gfx::DescriptorType::Image };
 
-	descriptorInfos[5] = { envMap->GetIrradianceMap().get(), 0, 0, gfx::DescriptorType::Image };
+	descriptorInfos[5] = { envMap->GetPrefilterMap().get(), 0, 0, gfx::DescriptorType::Image };
 
-	descriptorInfos[6] = { envMap->GetPrefilterMap().get(), 0, 0, gfx::DescriptorType::Image };
+	descriptorInfos[6] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
 
-	descriptorInfos[7] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
+
+	std::array<gfx::GPUTexture, 64> textures;
+
+	//@TODO: Temp
+	std::transform(batch.textures.begin(), batch.textures.end(), textures.begin(), [](gfx::GPUTexture* texture) {
+		return *texture;
+		});
+
+	gfx::DescriptorInfo imageArrInfo = {};
+	imageArrInfo.resource = textures.data();
+	imageArrInfo.offset = 0;
+	imageArrInfo.size = 64;
+	imageArrInfo.type = gfx::DescriptorType::ImageArray;
+	descriptorInfos[7] = imageArrInfo;
+
 	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mTrianglePipeline.get());
 
 	mDevice->BindIndexBuffer(commandList, ib);
-	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)drawDatas.size(), sizeof(gfx::DrawIndirectCommand));
+	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), drawCommandCount, sizeof(gfx::DrawIndirectCommand));
+}
+
+void Renderer::CreateBatch()
+{
+	// Clear previous batch
+	mRenderBatches.clear();
+
+	std::vector<DrawData> drawDatas;
+	mScene->GenerateDrawData(drawDatas);
+
+    // Sort the DrawData according to bufferIndex
+	std::sort(drawDatas.begin(), drawDatas.end(), [](const DrawData& lhs, const DrawData& rhs) {
+		return lhs.vertexBuffer.bufferIndex < rhs.vertexBuffer.bufferIndex;
+	});
+
+	uint32_t lastBufferIndex = ~0u;
+	RenderBatch* activeBatch = nullptr;
+	if (drawDatas.size() > 0)
+	{
+		auto addUnique = [](RenderBatch* activeBatch, gfx::GPUTexture* texture) -> uint32_t {
+			std::array<gfx::GPUTexture*, 64>& textureList = activeBatch->textures;
+			uint32_t& textureCount = activeBatch->textureCount;
+			auto found = std::find(textureList.begin(), textureList.end(), texture);
+			if (found != textureList.end())
+				return (uint32_t)(std::distance(textureList.begin(), found));
+
+			textureList[textureCount++] = texture;
+			return textureCount - 1;
+		};
+
+		for (auto& drawData : drawDatas)
+		{
+			/* The maximum texture limit for each DrawIndirect Invocation is 64.
+			* We created batch according to that and mesh buffer. If the
+			* textureCount that needs to be added to the batch is greater than
+			* we can accomodate then we create new batch
+			*/
+			uint32_t texInBatch = activeBatch == nullptr ? 0 : activeBatch->textureCount;
+			uint32_t texInMat = drawData.material->GetTextureCount();
+
+			uint32_t vbIndex = drawData.vertexBuffer.bufferIndex;
+			if (vbIndex != lastBufferIndex || activeBatch == nullptr || (texInBatch + texInMat) > 64)
+			{
+				mRenderBatches.push_back(RenderBatch{});
+				activeBatch = &mRenderBatches.back();
+				// Initialize by default texture
+				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), TextureCache::GetDefaultTexture());
+				activeBatch->vertexBuffer = drawData.vertexBuffer;
+				activeBatch->indexBuffer = drawData.indexBuffer;
+				lastBufferIndex = vbIndex;
+			}
+
+			// Find texture and assign new index
+			MaterialComponent material = *drawData.material;
+			for (int i = 0; i < std::size(material.textures); ++i)
+			{
+				if (IsTextureValid(material.textures[i]))
+					material.textures[i] = addUnique(activeBatch, TextureCache::GetByIndex(material.textures[i]));
+			}
+			activeBatch->materials.push_back(std::move(material));
+
+			// Update transform Data
+			activeBatch->transforms.push_back(std::move(drawData.worldTransform));
+
+			// Create DrawCommands
+			gfx::DrawIndirectCommand drawCommand = {};
+			drawCommand.firstIndex = drawData.indexBuffer.offset / sizeof(uint32_t);
+			drawCommand.indexCount = drawData.indexCount;
+			drawCommand.instanceCount = 1;
+			drawCommand.vertexOffset = drawData.vertexBuffer.offset / sizeof(Vertex);
+			activeBatch->drawCommands.push_back(std::move(drawCommand));
+
+			assert(activeBatch->transforms.size() == activeBatch->drawCommands.size());
+			assert(activeBatch->transforms.size() == activeBatch->materials.size());
+		}
+	}
 }

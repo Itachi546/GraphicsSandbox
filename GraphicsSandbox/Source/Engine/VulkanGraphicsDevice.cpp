@@ -767,7 +767,7 @@ namespace gfx {
         {
 			entries[i].dstBinding = shaderRefl.descriptorSetLayoutBinding[i].binding;
 			entries[i].dstArrayElement = 0;
-			entries[i].descriptorCount = 1;
+			entries[i].descriptorCount = shaderRefl.descriptorSetLayoutBinding[i].descriptorCount;
 			entries[i].descriptorType = shaderRefl.descriptorSetLayoutBinding[i].descriptorType;
 			entries[i].offset = sizeof(VulkanDescriptorInfo) * i;
 			entries[i].stride = sizeof(VulkanDescriptorInfo);
@@ -859,7 +859,7 @@ namespace gfx {
                 VkDescriptorSetLayoutBinding layoutBinding = {};
                 layoutBinding.binding = binding;
                 layoutBinding.descriptorType = static_cast<VkDescriptorType>(reflBinding->descriptor_type);
-                layoutBinding.descriptorCount = 1;
+                layoutBinding.descriptorCount = reflBinding->count;
                 layoutBinding.stageFlags = shaderStage;
                 out->descriptorSetLayoutBinding[binding] = layoutBinding;
                 out->descriptorSetLayoutCount++;
@@ -1197,72 +1197,6 @@ namespace gfx {
         VK_CHECK(vkCreatePipelineLayout(device_, &createInfo, nullptr, &pipelineLayout));
         return pipelineLayout;
     }
-/*
-    VkPipeline VulkanGraphicsDevice::createGraphicsPipeline(VulkanShader& vertexShader, VulkanShader& fragmentShader, VkPipelineLayout pipelineLayout, VkPipelineCache pipelineCache, VkRenderPass renderPass)
-    {
-        VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-
-        VkPipelineShaderStageCreateInfo stages[2] = {};
-        stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stages[0].stage = vertexShader.stage;
-        stages[0].module = vertexShader.module;
-        stages[0].pName = "main";
-        stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stages[1].stage = fragmentShader.stage;
-        stages[1].module = fragmentShader.module;
-        stages[1].pName = "main";
-
-        createInfo.stageCount = static_cast<uint32_t>(std::size(stages));
-        createInfo.pStages = stages;
-
-        VkPipelineVertexInputStateCreateInfo vertexInput = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-        createInfo.pVertexInputState = &vertexInput;
-
-        VkPipelineInputAssemblyStateCreateInfo inputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-        inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-        createInfo.pInputAssemblyState = &inputAssembly;
-
-        VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
-        viewportState.viewportCount = 1;
-        viewportState.scissorCount = 1;
-        createInfo.pViewportState = &viewportState;
-
-        VkPipelineRasterizationStateCreateInfo rasterizationState = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
-        rasterizationState.lineWidth = 1.f;
-        createInfo.pRasterizationState = &rasterizationState;
-
-        VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
-        multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-        createInfo.pMultisampleState = &multisampleState;
-
-        VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-        createInfo.pDepthStencilState = &depthStencilState;
-
-        VkPipelineColorBlendAttachmentState colorAttachmentState = {};
-        colorAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-        VkPipelineColorBlendStateCreateInfo colorBlendState = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
-        colorBlendState.attachmentCount = 1;
-        colorBlendState.pAttachments = &colorAttachmentState;
-        createInfo.pColorBlendState = &colorBlendState;
-
-        VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-
-        VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
-        dynamicState.dynamicStateCount = sizeof(dynamicStates) / sizeof(dynamicStates[0]);
-        dynamicState.pDynamicStates = dynamicStates;
-        createInfo.pDynamicState = &dynamicState;
-
-        createInfo.layout = pipelineLayout;
-        createInfo.renderPass = renderPass;
-
-        // TODO pipeline cache 
-        VkPipeline pipeline = 0;
-        VK_CHECK(vkCreateGraphicsPipelines(device_, 0, 1, &createInfo, 0, &pipeline));
-        return pipeline;
-    }
-    */
-
     bool VulkanGraphicsDevice::isSwapchainResized()
     {
         VkSurfaceCapabilitiesKHR surfaceCaps = {};
@@ -1393,15 +1327,10 @@ namespace gfx {
         // Get device Queue
         vkGetDeviceQueue(device_, queueFamilyIndices_, 0, &queue_);
 
-        commandPool_ = CreateCommandPool(device_, queueFamilyIndices_);
-        commandBuffer_ = CreateCommandBuffer(device_, commandPool_);
-
         stagingCmdPool_   = CreateCommandPool(device_, queueFamilyIndices_);
         stagingCmdBuffer_ = CreateCommandBuffer(device_, stagingCmdPool_);
 
         commandList_ = std::make_shared<VulkanCommandList>();
-        commandList_->commandBuffer = commandBuffer_;
-        commandList_->commandPool = commandPool_;
 
         VmaVulkanFunctions vulkanFunctions = {};
         vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
@@ -1448,42 +1377,23 @@ namespace gfx {
         assert(vkRenderPass != nullptr);
 		createSwapchainInternal(vkRenderPass->renderPass);
 
+        if (commandPool_ == nullptr)
+        {
+            commandPool_ = new VkCommandPool[swapchain_->imageCount];
+            commandBuffer_ = new VkCommandBuffer[swapchain_->imageCount];
+            for (uint32_t i = 0; i < swapchain_->imageCount; ++i)
+            {
+                commandPool_[i] = CreateCommandPool(device_, queueFamilyIndices_);
+                commandBuffer_[i] = CreateCommandBuffer(device_, commandPool_[i]);
+            }
+        }
+        else {
+            commandList_->commandPool = commandPool_[swapchain_->currentImageIndex];
+            commandList_->commandBuffer = commandBuffer_[swapchain_->currentImageIndex];
+        }
+
         return true;
     }
-
-/*
-    VkRenderPass VulkanGraphicsDevice::createDefaultRenderPass(VkFormat colorFormat)
-    {
-        VkAttachmentDescription attachment = {};
-        attachment.format = colorFormat;
-		attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference attachmentRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
-
-        VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-        createInfo.attachmentCount = 1;
-        createInfo.pAttachments = &attachment;
-
-        VkSubpassDescription subpassDescription = {};
-        subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpassDescription.colorAttachmentCount = 1;
-        subpassDescription.pColorAttachments = &attachmentRef;
-
-        createInfo.subpassCount = 1;
-        createInfo.pSubpasses = &subpassDescription;
-
-        VkRenderPass renderPass = 0;
-        VK_CHECK(vkCreateRenderPass(device_, &createInfo, nullptr, &renderPass));
-        return renderPass;
-
-    }
-    */
 
     VkRenderPass VulkanGraphicsDevice::createRenderPass(const RenderPassDesc* desc)
     {
@@ -1927,8 +1837,11 @@ namespace gfx {
         uint32_t currentIndex = swapchain_->currentImageIndex;
         vkResetDescriptorPool(device_, descriptorPools_[(currentIndex + 1) % imageCount], 0);
 
+        commandList_->commandBuffer = commandBuffer_[currentIndex];
+        commandList_->commandPool = commandPool_[currentIndex];
         CommandList commandList = {};
         commandList.internalState = commandList_.get();
+
 
         VulkanCommandList* cmdList = GetCommandList(&commandList);
 		VK_CHECK(vkResetCommandPool(device_, cmdList->commandPool, 0));
@@ -1936,7 +1849,7 @@ namespace gfx {
         VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-        VK_CHECK(vkBeginCommandBuffer(commandBuffer_, &beginInfo));
+        VK_CHECK(vkBeginCommandBuffer(commandList_->commandBuffer, &beginInfo));
         return commandList;
     }
 
@@ -2064,7 +1977,8 @@ namespace gfx {
 
     void VulkanGraphicsDevice::EndRenderPass(CommandList* commandList)
     {
-        vkCmdEndRenderPass(commandBuffer_);
+        auto cmdList = GetCommandList(commandList);
+        vkCmdEndRenderPass(cmdList->commandBuffer);
     }
 
     void VulkanGraphicsDevice::CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel, uint32_t mipLevel)
@@ -2078,7 +1992,7 @@ namespace gfx {
             VK_IMAGE_ASPECT_COLOR_BIT,
             0, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        vkCmdPipelineBarrier(commandBuffer_, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &transferBarrier);
+        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &transferBarrier);
 
         int levelWidth  = std::max(1u, texture->desc.width >> mipLevel);
         int levelHeight = std::max(1u, texture->desc.height >> mipLevel);
@@ -2103,7 +2017,7 @@ namespace gfx {
             0,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        vkCmdPipelineBarrier(commandBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
+        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
     }
 
 
@@ -2279,32 +2193,79 @@ namespace gfx {
 
     void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
     {
-
         auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
 
         // lazy initialization of descriptor set
-        std::vector<VulkanDescriptorInfo> descriptorInfos(descriptorInfoCount);
+        std::vector<VulkanDescriptorInfo> descriptorInfos;
         for (uint32_t i = 0; i < descriptorInfoCount; ++i)
         {
             DescriptorInfo info = *(descriptorInfo + i);
-            if (info.resource->IsBuffer())
+            gfx::GPUResource* resource = info.resource;
+            if (resource == nullptr)
+                continue;
+            if (resource->IsBuffer())
             {
-                auto vkBuffer = std::static_pointer_cast<VulkanBuffer>(info.resource->internalState);
-                descriptorInfos[i].bufferInfo.buffer = vkBuffer->buffer;
-                descriptorInfos[i].bufferInfo.offset = info.offset;
-                descriptorInfos[i].bufferInfo.range = info.size;
+                auto vkBuffer = std::static_pointer_cast<VulkanBuffer>(resource->internalState);
+                VulkanDescriptorInfo descriptorInfo = {};
+                descriptorInfo.bufferInfo.buffer = vkBuffer->buffer;
+                descriptorInfo.bufferInfo.offset = info.offset;
+                descriptorInfo.bufferInfo.range = info.size;
+                descriptorInfos.push_back(descriptorInfo);
             }
-            else if (info.resource->IsTexture())
+            else if (resource->IsTexture())
             {
-                auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
-                descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
-                assert(vkTexture->imageViews.size() > info.mipLevel);
-                descriptorInfos[i].imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
-                assert(vkTexture->sampler != VK_NULL_HANDLE);
-                descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
+                uint32_t size = 1;
+                uint32_t totalSize = 1;
+                uint32_t mipLevel = 0;
+                if (info.type == DescriptorType::Image)
+                    mipLevel = info.mipLevel;
+                else if (info.type == DescriptorType::ImageArray)
+                {
+                    size = info.size;
+                    totalSize = 64;
+                }
+
+                gfx::GPUTexture* textures = (gfx::GPUTexture*)(resource);
+                for (uint32_t imageIndex = 0; imageIndex < totalSize; ++imageIndex)
+                {
+                    gfx::GPUTexture* texture = textures + imageIndex;
+                    VulkanDescriptorInfo descriptorInfo = {};
+					auto vkTexture = std::static_pointer_cast<VulkanTexture>(texture->internalState);
+					descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
+					
+					assert(vkTexture->imageViews.size() > mipLevel);
+					descriptorInfo.imageInfo.imageView = vkTexture->imageViews[mipLevel];
+
+					assert(vkTexture->sampler != VK_NULL_HANDLE);
+					descriptorInfo.imageInfo.sampler = vkTexture->sampler;
+                    descriptorInfos.push_back(descriptorInfo);
+                }
+                /*
+                if (info.type == DescriptorType::Image)
+                {
+                    VulkanDescriptorInfo descriptorInfo = {};
+                    auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
+                    descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
+                    assert(vkTexture->imageViews.size() > info.mipLevel);
+                    descriptorInfo.imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
+                    assert(vkTexture->sampler != VK_NULL_HANDLE);
+                    descriptorInfo.imageInfo.sampler = vkTexture->sampler;
+                    descriptorInfos.push_back(descriptorInfo);
+                }
+                else if(info.type == DescriptorType::ImageArray) {
+
+                    for (int imageCount = 0; i < info.size; ++i)
+                    {
+                        auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
+                        descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
+                        assert(vkTexture->imageViews.size() > info.mipLevel);
+                        descriptorInfos[i].imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
+                        assert(vkTexture->sampler != VK_NULL_HANDLE);
+                        descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
+                    }
+                }
+                */
             }
-            else 
-                assert(!"Unsupported Descriptor Type");
         }
 
         VkDescriptorPool descriptorPool = descriptorPools_[swapchain_->currentImageIndex];
@@ -2397,9 +2358,15 @@ namespace gfx {
         for (auto& queryPool : queryPools_)
             vkDestroyQueryPool(device_, queryPool, nullptr);
 
-        vkFreeCommandBuffers(device_, commandPool_, 1, &commandBuffer_);
+        for (uint32_t i = 0; i < swapchain_->imageCount; ++i)
+        {
+            vkFreeCommandBuffers(device_, commandPool_[i], 1, &commandBuffer_[i]);
+            vkDestroyCommandPool(device_, commandPool_[i], nullptr);
+        }
+        delete[] commandPool_;
+        delete[] commandBuffer_;
+
         vkFreeCommandBuffers(device_, stagingCmdPool_, 1, &stagingCmdBuffer_);
-        vkDestroyCommandPool(device_, commandPool_, nullptr);
         vkDestroyCommandPool(device_, stagingCmdPool_, nullptr);
         vkDestroySwapchainKHR(device_, swapchain_->swapchain, nullptr);
         vkDestroySurfaceKHR(instance_, swapchain_->surface, nullptr);

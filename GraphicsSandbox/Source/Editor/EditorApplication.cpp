@@ -97,7 +97,7 @@ void EditorApplication::PreUpdate(float dt) {
 	float walkSpeed = 1.0f;
 
 	if (Input::Down(Input::Key::KEY_LEFT_SHIFT))
-		walkSpeed *= 6.0f;
+		walkSpeed *= 5.0f;
 
 	if (Input::Down(Input::Key::KEY_ESCAPE))
 		bRunning = false;
@@ -124,12 +124,7 @@ void EditorApplication::PreUpdate(float dt) {
 	}
 
 	auto compMgr = mScene.GetComponentManager();
-	for (auto light : lights)
-	{
-		auto transform = compMgr->GetComponent<TransformComponent>(light);
-		glm::mat4 rotate = glm::yawPitchRoll(mDeltaTime * 0.001f, 0.0f, 0.0f) * transform->localMatrix;
-		transform->localMatrix = rotate;
-	}
+	mRenderer->SetUpdateBatches(true);
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -140,76 +135,35 @@ void EditorApplication::InitializeScene()
 {
 	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
 	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
-
 	auto compMgr = mScene.GetComponentManager();
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/breakfast_room.sbox");
-		//ecs::Entity mesh = mScene.CreateMesh("Assets/Models/mitsuba-knob.sbox");
+		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/sponza.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
 			transform->scale = glm::vec3(1.0f);
-			transform->position.y -= 1.0f;
+			transform->position.y -= 5.0f;
+			//transform->rotation = glm::vec3(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
 		}
 	}
-#if 0
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
 		if (bloom != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
-			transform->scale = glm::vec3(2.0f);
-			transform->position = glm::vec3(0.0f, -1.0f, -3.0f);
+			transform->scale = glm::vec3(1.0f);
+			transform->position = glm::vec3(2.0f, -5.0f, 0.0f);
+			transform->rotation = glm::vec3(0.0f, -1.57f, 0.0f);
+			MaterialComponent* material = compMgr->GetComponent<MaterialComponent>(bloom);
+			material->emissive = 40.0f;
+			material->albedo = glm::vec4(0.18f, 0.55f, 0.84f, 1.0f);
 		}
 	}
-	glm::vec3 positions[] = {
-		glm::vec3(-5.0f, 3.0f, 5.0f),
-		glm::vec3(5.0f, 3.0f, 5.0f),
-		glm::vec3(-5.0f, 3.0f, -5.0f),
-		glm::vec3(5.0f, 3.0f, -5.0f)
-	};
-
-	glm::vec3 colors[] = {
-		glm::vec3(1.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 1.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 1.0f),
-		glm::vec3(1.0f, 1.0f, 1.0f)
-	};
-
-	for (int i = 0; i < 4; ++i)
-	{
-		ecs::Entity lightEntity = ecs::CreateEntity();
-		//compMgr->AddComponent<NameComponent>(lightEntity).name = "light" + std::to_string(i);
-		TransformComponent& transform = compMgr->AddComponent<TransformComponent>(lightEntity);
-		transform.position = positions[i];
-		LightComponent& light = compMgr->AddComponent<LightComponent>(lightEntity);
-		light.color = colors[i];
-		light.intensity = 30.0f;
-		light.type = LightType::Point;
-		lights.push_back(lightEntity);
-	}
-
-	for(int i = 0; i < 4; ++i)
-	{
-		ecs::Entity cube = mScene.CreateCube("cube" + std::to_string(i));
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
-		transform->scale = glm::vec3(0.1f);
-		transform->position = positions[i];
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
-		material.roughness = 1.0f;
-		material.albedo = glm::vec4(colors[i], 1.0f);
-		material.metallic = 0.2f;
-		material.emissive = 30.0f;
-
-		compMgr->AddComponent<HierarchyComponent>(cube).parent = lights[i];
-		compMgr->AddComponent<HierarchyComponent>(lights[i]).childrens.push_back(cube);
-	}
-#endif
-	/*
 	{
 		ecs::Entity cube = mScene.CreateCube("TestCube");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
-		transform->scale = glm::vec3(1.0f, 2.0f, 1.0f);
+		transform->scale = glm::vec3(0.2f, 0.6f, 0.2f);
+		transform->position = glm::vec3(0.0f, -4.7f, 0.5f);
 		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
 		material.roughness = 1.0f;
 		material.albedo = glm::vec4(1.0f);
@@ -219,23 +173,13 @@ void EditorApplication::InitializeScene()
 	{
 		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
-		transform->position.x += 2.5f;
+		transform->scale = glm::vec3(0.2f);
+		transform->position.y = -4.8f;
 		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
 		material.roughness = 0.9f;
 		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 		material.metallic = 0.1f;
 	}
-	{
-		ecs::Entity plane = mScene.CreatePlane("TestPlane");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(plane);
-		transform->scale = glm::vec3(40.0f);
-		transform->position.y -= 1.0f;
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(plane);
-		material.roughness = 1.0f;
-		material.albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-		material.metallic = 0.0f;
-	}
-	*/
 }
 
 EditorApplication::~EditorApplication()

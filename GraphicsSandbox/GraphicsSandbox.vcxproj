@@ -189,6 +189,7 @@
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Engine\Renderer.h" />
     <ClInclude Include="Source\Engine\Scene.h" />
+    <ClInclude Include="Source\Engine\TextureCache.h" />
     <ClInclude Include="Source\Engine\Timer.h" />
     <ClInclude Include="Source\Engine\Components.h" />
     <ClInclude Include="Source\Engine\Utils.h" />
@@ -224,6 +225,7 @@
     <ClCompile Include="Source\Engine\Profiler.cpp" />
     <ClCompile Include="Source\Engine\Renderer.cpp" />
     <ClCompile Include="Source\Engine\Scene.cpp" />
+    <ClCompile Include="Source\Engine\TextureCache.cpp" />
     <ClCompile Include="Source\Engine\Utils.cpp" />
     <ClCompile Include="Source\Engine\VulkanGraphicsDevice.cpp" />
     <ClCompile Include="Source\Engine\spriv_reflect.c" />

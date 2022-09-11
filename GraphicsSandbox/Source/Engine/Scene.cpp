@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "GpuMemoryAllocator.h"
 #include "../Shared/MeshData.h"
+#include "TextureCache.h"
 
 #include <execution>
 #include <algorithm>
@@ -143,7 +144,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	std::vector<MaterialComponent> materials(nMaterial);
 	inFile.read(reinterpret_cast<char*>(materials.data()), sizeof(MaterialComponent) * nMaterial);
 	
-	// Read Textures
+	// Read Texture Path
 	std::vector<std::string> textureFiles(header.textureCount);
 	for (uint32_t i = 0; i < header.textureCount; ++i)
 	{
@@ -180,20 +181,37 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	gfx::GPUBuffer* ib = gpuAllocator->AllocateBuffer(&bufferDesc, &meshData.ibIndex);
 	meshData.CopyDataToBuffer(gpuAllocator, vb, ib);
 
-	std::size_t meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(parent);
-	if (nMeshes == 1)
-	{
-		ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(parent);
+	auto createObjectAndMaterial = [this, &materials, &meshes, &textureFiles](ecs::Entity entity, std::size_t meshComponentIndex, uint32_t meshId) {
+		ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
 		objectComp.meshComponentIndex = meshComponentIndex;
-		objectComp.meshId = 0;
+		objectComp.meshId = meshId;
 
-		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(parent);
+		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
 		if (materials.size() > 0)
 		{
-			MaterialComponent meshMat = materials[meshes[0].materialIndex];
+			MaterialComponent meshMat = materials[meshes[meshId].materialIndex];
+
+			if (meshMat.albedoMap != INVALID_TEXTURE)
+				meshMat.albedoMap = TextureCache::LoadTexture(textureFiles[meshMat.albedoMap]);
+			if (meshMat.normalMap != INVALID_TEXTURE)
+				meshMat.normalMap = TextureCache::LoadTexture(textureFiles[meshMat.normalMap]);
+			if (meshMat.emissiveMap != INVALID_TEXTURE)
+				meshMat.emissiveMap = TextureCache::LoadTexture(textureFiles[meshMat.emissiveMap]);
+			if (meshMat.metallicMap != INVALID_TEXTURE)
+				meshMat.metallicMap = TextureCache::LoadTexture(textureFiles[meshMat.metallicMap]);
+			if (meshMat.roughnessMap != INVALID_TEXTURE)
+				meshMat.roughnessMap = TextureCache::LoadTexture(textureFiles[meshMat.roughnessMap]);
+			if (meshMat.ambientOcclusionMap != INVALID_TEXTURE)
+				meshMat.ambientOcclusionMap = TextureCache::LoadTexture(textureFiles[meshMat.ambientOcclusionMap]);
+			if (meshMat.opacityMap != INVALID_TEXTURE)
+				meshMat.opacityMap = TextureCache::LoadTexture(textureFiles[meshMat.opacityMap]);
 			material = { meshMat };
 		}
-	}
+	};
+
+	std::size_t meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(parent);
+	if (nMeshes == 1)
+		createObjectAndMaterial(parent, meshComponentIndex, 0);
 	else
 	{
 		mComponentManager->AddComponent<HierarchyComponent>(parent);
@@ -207,17 +225,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 			mComponentManager->AddComponent<TransformComponent>(child);
 			mComponentManager->AddComponent<HierarchyComponent>(child).parent = parent;
 			hierarchyCompArr->components[parentIndex].childrens.push_back(child);
-		
-			ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(child);
-			objectComp.meshComponentIndex = meshComponentIndex;
-			objectComp.meshId = i;
-
-			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
-			if (materials.size() > 0)
-			{
-				MaterialComponent meshMat = materials[meshes[i].materialIndex];
-				material = { meshMat };
-			}
+			createObjectAndMaterial(child, meshComponentIndex, i);
 		}
 	}
 	return parent;
@@ -266,6 +274,7 @@ std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 
 Scene::~Scene()
 {
+	TextureCache::Free();
 	ecs::DestroyEntity(mComponentManager.get(), mPrimitives);
 	gfx::GpuMemoryAllocator::GetInstance()->FreeMemory();
 }
@@ -514,9 +523,10 @@ void Scene::InitializeLights()
 	mSun = ecs::CreateEntity();
 	mComponentManager->AddComponent<NameComponent>(mSun).name = "Sun";
 	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(mSun);
-	transform.position = glm::vec3(40.0f, 40.0f, 5.0f);
+	transform.position = glm::vec3(0.0f, 1.0f, 0.0f);
+	transform.rotation = glm::vec3(-0.967f, 0.021f, 0.675f);
 	LightComponent& light = mComponentManager->AddComponent<LightComponent>(mSun);
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
-	light.intensity = 300.0f;
-	light.type = LightType::Point;
+	light.intensity = 1.0f;
+	light.type = LightType::Directional;
 }

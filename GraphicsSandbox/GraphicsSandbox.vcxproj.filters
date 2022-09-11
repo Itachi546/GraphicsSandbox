@@ -137,6 +137,7 @@
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Editor\SceneHierarchy.h" />
+    <ClInclude Include="Source\Engine\TextureCache.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -221,6 +222,9 @@
       <Filter>SOURCE</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\SceneHierarchy.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\TextureCache.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>

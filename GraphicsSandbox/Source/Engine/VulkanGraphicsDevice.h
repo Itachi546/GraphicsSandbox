@@ -103,8 +103,8 @@ namespace gfx
 		VkSurfaceKHR surface_               = VK_NULL_HANDLE;
 		bool debugMarkerEnabled_ = false;
 
-		VkCommandPool   commandPool_        = VK_NULL_HANDLE;
-		VkCommandBuffer commandBuffer_      = VK_NULL_HANDLE;
+		VkCommandPool* commandPool_         = nullptr;
+		VkCommandBuffer* commandBuffer_     = nullptr;
 		VkCommandPool   stagingCmdPool_     = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_   = VK_NULL_HANDLE;
 		

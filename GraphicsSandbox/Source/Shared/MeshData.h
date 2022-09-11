@@ -44,6 +44,10 @@ struct MeshFileHeader
 
 constexpr const uint32_t INVALID_TEXTURE = 0xFFFFFFFF;
 
+inline bool IsTextureValid(uint32_t texture)
+{
+	return texture != INVALID_TEXTURE;
+}
 struct MaterialComponent {
 	glm::vec4 albedo = glm::vec4(1.0f);
 	
@@ -54,14 +58,46 @@ struct MaterialComponent {
 
 	float transparency = 1.0f;
 
-	uint32_t albedoMap = INVALID_TEXTURE;
-	uint32_t normalMap = INVALID_TEXTURE;
-	uint32_t emissiveMap = INVALID_TEXTURE;
-	uint32_t metallicMap = INVALID_TEXTURE;
+	union {
+		uint32_t textures[7] = {
+			INVALID_TEXTURE,
+			INVALID_TEXTURE,
+			INVALID_TEXTURE,
+			INVALID_TEXTURE,
+			INVALID_TEXTURE,
+			INVALID_TEXTURE,
+			INVALID_TEXTURE
+		};
+		struct {
+			uint32_t albedoMap;
+			uint32_t normalMap;
+			uint32_t emissiveMap;
+			uint32_t metallicMap;
+			uint32_t roughnessMap;
+			uint32_t ambientOcclusionMap;
+			uint32_t opacityMap;;
+		};
+	};
 
-	uint32_t roughnessMap = INVALID_TEXTURE;
-	uint32_t ambientOcclusionMap = INVALID_TEXTURE;
-	uint32_t opacityMap = INVALID_TEXTURE;
+	uint32_t GetTextureCount()
+	{
+		uint32_t count = 0;
+		if (albedoMap != INVALID_TEXTURE)
+			count += 1;
+		if (normalMap != INVALID_TEXTURE)
+			count += 1;
+		if (emissiveMap != INVALID_TEXTURE)
+			count += 1;
+		if (metallicMap != INVALID_TEXTURE)
+			count += 1;
+		if (roughnessMap != INVALID_TEXTURE)
+			count += 1;
+		if (ambientOcclusionMap != INVALID_TEXTURE)
+			count += 1;
+		if (opacityMap != INVALID_TEXTURE)
+			count += 1;
+		return count;
+	}
 };
 
 struct MeshData

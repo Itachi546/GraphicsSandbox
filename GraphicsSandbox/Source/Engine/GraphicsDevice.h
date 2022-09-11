@@ -5,12 +5,6 @@
 
 namespace gfx
 {
-	struct CommandList
-	{
-		void* internalState = nullptr;
-		constexpr bool IsValid() const { return internalState != nullptr; }
-	};
-
 	class GraphicsDevice
 	{
 	public:

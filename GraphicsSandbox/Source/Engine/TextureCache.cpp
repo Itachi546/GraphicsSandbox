@@ -14,6 +14,7 @@ namespace TextureCache
 {
 	std::vector<gfx::GPUTexture> gAllTextures;
 	std::unordered_map<std::string, uint32_t> gAllTextureIndex;
+	uint32_t nTexture = 0;
 	// Used to transition layout for newly added texture
 	std::vector<gfx::GPUTexture> gNewTextures;
 	gfx::GPUTexture* gSolidTexture;

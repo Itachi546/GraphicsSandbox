@@ -94,7 +94,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 
 void EditorApplication::PreUpdate(float dt) {
 
-	float walkSpeed = 1.0f;
+	float walkSpeed = 2.0f;
 
 	if (Input::Down(Input::Key::KEY_LEFT_SHIFT))
 		walkSpeed *= 5.0f;

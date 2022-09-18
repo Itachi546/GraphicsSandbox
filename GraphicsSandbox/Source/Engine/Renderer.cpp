@@ -290,7 +290,7 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	auto& envMap = mScene->GetEnvironmentMap();
 
 	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[8] = {};
+	gfx::DescriptorInfo descriptorInfos[9] = {};
 
 	descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 

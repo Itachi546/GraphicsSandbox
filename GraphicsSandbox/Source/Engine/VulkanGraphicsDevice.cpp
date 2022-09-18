@@ -2141,7 +2141,6 @@ namespace gfx {
         }
 
         vkCmdCopyBufferToImage(stagingCmdBuffer_, from->buffer, to->image, to->layout, 1, &region);
-
         VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount = 1;
@@ -2149,6 +2148,93 @@ namespace gfx {
         VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
         vkDeviceWaitIdle(device_);
     }
+
+    void VulkanGraphicsDevice::GenerateMipmap(GPUTexture* src, uint32_t mipCount)
+    {
+        VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
+        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+        VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
+
+        auto vkImage = std::static_pointer_cast<VulkanTexture>(src->internalState);
+        if (mipCount > 1)
+        {
+            int width = src->desc.width;
+            int height = src->desc.height;
+            for (uint32_t i = 0; i < mipCount - 1; ++i)
+            {
+                VkImageMemoryBarrier barrierInfo = CreateImageBarrier(vkImage->image,
+                    vkImage->imageAspect,
+                    VK_ACCESS_NONE,
+                    VK_ACCESS_TRANSFER_READ_BIT,
+                    vkImage->layout,
+                    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, i, 0, 1);
+
+                vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                    VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo);
+
+                VkImageBlit blitRegion = {};
+                blitRegion.srcSubresource.aspectMask = vkImage->imageAspect;
+                blitRegion.srcSubresource.mipLevel = i;
+                blitRegion.srcSubresource.layerCount = 1;
+
+                blitRegion.dstSubresource.aspectMask = vkImage->imageAspect;
+                blitRegion.dstSubresource.mipLevel = i + 1;
+                blitRegion.dstSubresource.layerCount = 1;
+                blitRegion.srcOffsets[0] = { 0, 0, 0 };
+                blitRegion.srcOffsets[1] = { width, height, 1 };
+                blitRegion.dstOffsets[0] = { 0, 0, 0 };
+                blitRegion.dstOffsets[1] = { width >> 1, height >> 1, 1 };
+                vkCmdBlitImage(stagingCmdBuffer_, vkImage->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vkImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+                width = width >> 1;
+                height = height >> 1;
+            }
+
+            VkImageMemoryBarrier barrierInfo[2] = {
+                CreateImageBarrier(vkImage->image,
+                vkImage->imageAspect,
+                VK_ACCESS_NONE,
+                VK_ACCESS_TRANSFER_READ_BIT,
+                vkImage->layout,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 5, 0, 1),
+
+                CreateImageBarrier(vkImage->image,
+                vkImage->imageAspect,
+                VK_ACCESS_TRANSFER_READ_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+			};
+
+            vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo[0]);
+
+            vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo[1]);
+
+        }
+        else
+        {
+            VkImageMemoryBarrier barrierInfo = CreateImageBarrier(vkImage->image,
+                vkImage->imageAspect,
+                VK_ACCESS_TRANSFER_READ_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                vkImage->layout,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+            vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo);
+        }
+
+        vkImage->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &stagingCmdBuffer_;
+        VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
+        vkDeviceWaitIdle(device_);
+    }
+
 
     void VulkanGraphicsDevice::PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)
     {

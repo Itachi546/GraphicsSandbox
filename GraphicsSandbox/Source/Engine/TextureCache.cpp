@@ -15,28 +15,27 @@ namespace TextureCache
 	std::vector<gfx::GPUTexture> gAllTextures;
 	std::unordered_map<std::string, uint32_t> gAllTextureIndex;
 	uint32_t nTexture = 0;
-	// Used to transition layout for newly added texture
-	std::vector<gfx::GPUTexture> gNewTextures;
 	gfx::GPUTexture* gSolidTexture;
+	const uint32_t kMaxMipLevel = 6;
 
 	gfx::GPUTexture* GetDefaultTexture()
 	{
 		return gSolidTexture;
 	}
 
-	void CreateTexture(gfx::GPUTexture* texture, unsigned char* pixels, int width, int height, int nChannel)
+	void CreateTexture(gfx::GPUTexture* texture, unsigned char* pixels, int width, int height, int nChannel, bool generateMipmap)
 	{
 		gfx::GPUTextureDesc desc;
 		desc.width = width;
 		desc.height = height;
 		desc.depth = 1;
-		desc.mipLevels = 1;
+		desc.mipLevels = generateMipmap ? kMaxMipLevel : 1;
 		desc.arrayLayers = 1;
 		desc.bCreateSampler = true;
 		desc.bindFlag = gfx::BindFlag::ShaderResource;
 		desc.format = gfx::Format::R8G8B8A8_UNORM;
 		desc.samplerInfo.wrapMode = gfx::TextureWrapMode::Repeat;
-
+		
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 
 		device->CreateTexture(&desc, texture);
@@ -59,6 +58,9 @@ namespace TextureCache
 				gfx::PipelineStage::TransferBit
 			};
 			device->CopyTexture(texture, &stagingBuffer, &transferBarrierInfo, 0, 0);
+			// If miplevels is greater than  1 the mip are generated
+			// else the imagelayout is transitioned to shader attachment optimal
+			device->GenerateMipmap(texture, desc.mipLevels);
 		}
 	}
 
@@ -66,7 +68,7 @@ namespace TextureCache
 	{
 		std::vector<uint8_t> pixels(width * height * 4);
 		std::fill(pixels.begin(), pixels.end(), 255);
-		CreateTexture(out, pixels.data(), width, height, 4);
+		CreateTexture(out, pixels.data(), width, height, 4, false);
 
 	}
 	
@@ -74,10 +76,9 @@ namespace TextureCache
 	{
 		gSolidTexture = new gfx::GPUTexture;
 		CreateSolidRGBATexture(gSolidTexture, 512, 512);
-		gNewTextures.push_back(*gSolidTexture);
 	}
 
-	uint32_t LoadTexture(const std::string& filename)
+	uint32_t LoadTexture(const std::string& filename, bool generateMipmap)
 	{
 		auto found = gAllTextureIndex.find(filename);
 		if (found != gAllTextureIndex.end())
@@ -92,12 +93,11 @@ namespace TextureCache
 			return INVALID_TEXTURE;
 
 		gfx::GPUTexture texture;
-		CreateTexture(&texture, pixels, width, height, nChannel);
+		CreateTexture(&texture, pixels, width, height, nChannel, generateMipmap);
 
 		uint32_t nTexture = static_cast<uint32_t>(gAllTextures.size());
 		gAllTextures.push_back(texture);
 		gAllTextureIndex[filename] = nTexture;
-		gNewTextures.push_back(texture);
 		Utils::ImageLoader::Free(pixels);
 		return nTexture++;
 	}
@@ -111,29 +111,6 @@ namespace TextureCache
 	gfx::DescriptorInfo GetDescriptorInfo()
 	{
 		return gfx::DescriptorInfo{gAllTextures.data(), 0,  (uint32_t)gAllTextures.size(), gfx::DescriptorType::ImageArray};
-	}
-
-	void PrepareTexture(gfx::CommandList* commandList)
-	{
-		if (gNewTextures.size() > 0)
-		{
-			std::vector<gfx::ImageBarrierInfo> imageBarriers(gNewTextures.size());
-			// Layout transition for shader read/write
-			for (uint32_t i = 0; i < imageBarriers.size(); ++i)
-			{
-				imageBarriers[i] = {
-				gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, &gNewTextures[i]},
-				};
-			}
-
-			gfx::PipelineBarrierInfo barrier = {
-				imageBarriers.data(), static_cast<uint32_t>(imageBarriers.size()),
-				gfx::PipelineStage::BottomOfPipe,
-				gfx::PipelineStage::FragmentShader,
-			};
-			gfx::GetDevice()->PipelineBarrier(commandList, &barrier);
-			gNewTextures.clear();
-		}
 	}
 
 	void Free()

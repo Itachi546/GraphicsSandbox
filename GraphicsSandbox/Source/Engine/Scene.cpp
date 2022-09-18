@@ -192,7 +192,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 			MaterialComponent meshMat = materials[meshes[meshId].materialIndex];
 
 			if (meshMat.albedoMap != INVALID_TEXTURE)
-				meshMat.albedoMap = TextureCache::LoadTexture(textureFiles[meshMat.albedoMap]);
+				meshMat.albedoMap = TextureCache::LoadTexture(textureFiles[meshMat.albedoMap], true);
 			if (meshMat.normalMap != INVALID_TEXTURE)
 				meshMat.normalMap = TextureCache::LoadTexture(textureFiles[meshMat.normalMap]);
 			if (meshMat.emissiveMap != INVALID_TEXTURE)

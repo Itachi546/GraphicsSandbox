@@ -89,8 +89,6 @@ void Renderer::Update(float dt)
 
 void Renderer::Render(gfx::CommandList* commandList)
 {
-	TextureCache::PrepareTexture(commandList);
-
 	gfx::ImageBarrierInfo barriers[] = {
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
 		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},

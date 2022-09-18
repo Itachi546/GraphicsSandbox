@@ -55,6 +55,8 @@ namespace gfx
 		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0);
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 
+		void GenerateMipmap(GPUTexture* src, uint32_t mipCount)                                override;
+
 		CommandList BeginCommandList()                                                         override;
 
 		void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)             override;

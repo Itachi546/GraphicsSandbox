@@ -3,6 +3,7 @@
 #include "GpuMemoryAllocator.h"
 #include "../Shared/MeshData.h"
 #include "TextureCache.h"
+#include "DebugDraw.h"
 
 #include <execution>
 #include <algorithm>
@@ -62,6 +63,27 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 			MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
 			out.push_back(std::move(drawData));
+		}
+	}
+}
+
+void Scene::DrawBoundingBox()
+{
+	auto objectComponentArray = mComponentManager->GetComponentArray<ObjectComponent>();
+	auto meshDataComponentArray = mComponentManager->GetComponentArray<MeshDataComponent>();
+	for (int i = 0; i < objectComponentArray->GetCount(); ++i)
+	{
+
+		const ecs::Entity& entity = objectComponentArray->entities[i];
+		auto& object = objectComponentArray->components[i];
+		auto& meshData = meshDataComponentArray->components[object.meshComponentIndex];
+
+		if (meshData.IsRenderable())
+		{
+			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
+			BoundingBox aabb =  meshData.boundingBoxes[object.meshId];
+			aabb.Transform(transform->worldMatrix);
+			DebugDraw::AddAABB(aabb.min, aabb.max);
 		}
 	}
 }
@@ -249,6 +271,9 @@ void Scene::Update(float dt)
 	mCamera.Update(dt);
 	UpdateTransform();
 	UpdateHierarchy();
+
+	if(mShowBoundingBox)
+		DrawBoundingBox();
 }
 
 void Scene::SetSize(int width, int height)
@@ -428,6 +453,7 @@ void Scene::InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& vertex
 
 	vertexCount = 24;
 	indexCount = 36;
+	meshComp->boundingBoxes.emplace_back(glm::vec3(-1.0f), glm::vec3(1.0f));
 }
 
 void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount, uint32_t subdivide)
@@ -467,6 +493,9 @@ void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& verte
 			indexCount += 6;
 		}
 	}
+
+	int size = subdivide;
+	meshComp->boundingBoxes.emplace_back(glm::vec3(-size, -0.1f, -size), glm::vec3(size, 0.1f, size));
 }
 
 void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount)
@@ -520,6 +549,7 @@ void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vert
 			indexCount+=6;
 		}
 	}
+	meshComp->boundingBoxes.emplace_back(glm::vec3(-1.0f), glm::vec3(1.0f));
 }
 
 void Scene::InitializeLights()

@@ -72,6 +72,9 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	if (mShowUI)
 	{
 		ImGui::Begin("Render Settings");
+		static bool showBoundingBox = mScene.GetShowBoundingBox();
+		if (ImGui::Checkbox("Show BoundingBox", &showBoundingBox))
+			mScene.SetShowBoundingBox(showBoundingBox);
 		if (ImGui::CollapsingHeader("Bloom"))
 		{
 			ImGui::Checkbox("Enable", &enableBloom);
@@ -141,9 +144,9 @@ void EditorApplication::InitializeScene()
 	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
 	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
 	auto compMgr = mScene.GetComponentManager();
-	/*
+#if 1
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/sponza.sbox");
+		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/NewSponza_Main_glTF_002.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
@@ -152,7 +155,7 @@ void EditorApplication::InitializeScene()
 			//transform->rotation = glm::vec3(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
 		}
 	}
-	*/
+#endif
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/teapot.sbox");
 		if (bloom != ecs::INVALID_ENTITY)

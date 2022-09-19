@@ -93,7 +93,6 @@ void Application::render_()
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
 
 	mRenderer->Render(&commandList);
-
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
 	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
 	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };

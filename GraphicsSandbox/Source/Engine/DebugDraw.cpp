@@ -35,7 +35,7 @@ void DebugDraw::Initialize(gfx::RenderPass* renderPass)
 	gfx::BlendState blendState = {};
 	pipelineDesc.blendState = &blendState;
 	pipelineDesc.blendStateCount = 1;
-	pipelineDesc.rasterizationState.lineWidth = 2.0f;
+	pipelineDesc.rasterizationState.lineWidth = 1.0f;
 	
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	gPipeline = new gfx::Pipeline;
@@ -71,6 +71,27 @@ void DebugDraw::AddLine(const glm::vec3& start, const glm::vec3& end, uint32_t c
 	data->position = end;
 	data->color = color;
 	gDataOffset++;
+}
+
+void DebugDraw::AddAABB(const glm::vec3& min, const glm::vec3& max, uint32_t color)
+{
+	// Bottom
+	AddLine(min, glm::vec3(max.x, min.y, min.z), color);
+	AddLine(min, glm::vec3(min.x, min.y, max.z), color);
+	AddLine(glm::vec3(max.x, min.y, max.z), glm::vec3(min.x, min.y, max.z), color);
+	AddLine(glm::vec3(max.x, min.y, max.z), glm::vec3(max.x, min.y, min.z), color);
+
+	//Top
+	AddLine(glm::vec3(min.x, max.y, min.z), glm::vec3(max.x, max.y, min.z), color);
+	AddLine(glm::vec3(min.x, max.y, min.z), glm::vec3(min.x, max.y, max.z), color);
+	AddLine(glm::vec3(max.x, max.y, max.z), glm::vec3(min.x, max.y, max.z), color);
+	AddLine(glm::vec3(max.x, max.y, max.z), glm::vec3(max.x, max.y, min.z), color);
+
+	// Joint
+	AddLine(min, glm::vec3(min.x, max.y, min.z), color);
+	AddLine(glm::vec3(min.x, min.y, max.z), glm::vec3(min.x, max.y, max.z), color);
+	AddLine(glm::vec3(max.x, min.y, max.z), glm::vec3(max.x, max.y, max.z), color);
+	AddLine(glm::vec3(max.x, min.y, min.z), glm::vec3(max.x, max.y, min.z), color);
 }
 
 void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP)

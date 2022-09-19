@@ -36,8 +36,8 @@ struct BoundingBox
 
 	void Transform(const glm::mat4& transform)
 	{
-		glm::vec3 vmin{ std::numeric_limits<float>::max() };
-		glm::vec3 vmax{ std::numeric_limits<float>::min() };
+		glm::vec3 vmin{ FLT_MAX };
+		glm::vec3 vmax{ -FLT_MAX };
 
 		glm::vec3 corners[] = {
 			glm::vec3(min.x, min.y, min.z),

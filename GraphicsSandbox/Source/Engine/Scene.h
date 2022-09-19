@@ -38,6 +38,9 @@ public:
 
 	void SetSize(int width, int height);
 
+	void SetShowBoundingBox(bool state) { mShowBoundingBox = state; }
+	bool GetShowBoundingBox() { return mShowBoundingBox; }
+
 	void Destroy(ecs::Entity& entity);
 
 	Camera* GetCamera() {
@@ -60,6 +63,7 @@ private:
 	ecs::Entity mSun;
 
 	Camera mCamera;
+	bool mShowBoundingBox = false;
 
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;
@@ -73,6 +77,7 @@ private:
 	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);
 	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount, uint32_t subdivide = 2);
 	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);
+	void DrawBoundingBox();
 
 	void InitializeLights();
 

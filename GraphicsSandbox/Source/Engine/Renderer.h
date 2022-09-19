@@ -46,7 +46,7 @@ public:
 	void SetBloomThreshold(float val) { mBloomThreshold = val; }
 	void SetBloomStrength(float val) { mBloomStrength = val; }
 
-	~Renderer() = default;
+	virtual ~Renderer() = default;
 private:
 	std::shared_ptr<fx::Bloom> mBloomFX;
 

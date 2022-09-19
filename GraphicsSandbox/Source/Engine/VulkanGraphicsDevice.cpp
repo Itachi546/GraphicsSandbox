@@ -1304,6 +1304,7 @@ namespace gfx {
         features2_.features.pipelineStatisticsQuery = true;
         features2_.features.shaderInt16 = true;
         features2_.features.fillModeNonSolid = true;
+        features2_.features.wideLines = true;
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
@@ -1932,13 +1933,13 @@ namespace gfx {
 		vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
     }
 
-    void VulkanGraphicsDevice::DrawTriangle(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)
+    void VulkanGraphicsDevice::Draw(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)
     {
         auto cmd = GetCommandList(commandList);
         vkCmdDraw(cmd->commandBuffer, vertexCount, instanceCount, firstVertex, 0);
     }
 
-    void VulkanGraphicsDevice::DrawTriangleIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex)
+    void VulkanGraphicsDevice::DrawIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex)
     {
         auto cmd = GetCommandList(commandList);
         vkCmdDrawIndexed(cmd->commandBuffer, indexCount, instanceCount, firstIndex, 0, 0);

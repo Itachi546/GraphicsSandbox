@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "Profiler.h"
 #include "TextureCache.h"
+#include "DebugDraw.h"
 
 #include <algorithm>
 #include <sstream>
@@ -25,6 +26,8 @@ void Application::initialize_()
 	Logger::Initialize();
 	Input::Initialize(mWindow);
 	TextureCache::Initialize();
+	DebugDraw::Initialize(mSwapchainRP.get());
+
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);
 
@@ -102,7 +105,15 @@ void Application::render_()
 	gfx::DescriptorInfo descriptorInfo = { outputTexture, 0, 0, gfx::DescriptorType::Image };
 	mDevice->UpdateDescriptor(mSwapchainPipeline.get(), &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mSwapchainPipeline.get());
-	mDevice->DrawTriangle(&commandList, 6, 0, 1);
+	mDevice->Draw(&commandList, 6, 0, 1);
+
+	// Draw DebugData
+	auto camera = mScene.GetCamera();
+	glm::mat4 VP = camera->GetProjectionMatrix() * camera->GetViewMatrix();
+	DebugDraw::AddLine(glm::vec3(0.0f), glm::vec3(0.0f,  1.0f, 0.0f), 0x00ff00);
+	DebugDraw::AddLine(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f,  0.0f), 0xff0000);
+	DebugDraw::AddLine(glm::vec3(0.0f), glm::vec3(0.0f,  0.0f,  1.0f), 0x0000ff);
+	DebugDraw::Draw(&commandList, VP);
 
 	RenderUI(&commandList);
 
@@ -202,6 +213,8 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 Application::~Application()
 {
+	TextureCache::Free();
+	DebugDraw::Free();
 }
 
 bool Application::windowResizeEvent(const Event& evt)

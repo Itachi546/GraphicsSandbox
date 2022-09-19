@@ -169,6 +169,7 @@
     <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h" />
     <ClInclude Include="Source\Editor\SceneHierarchy.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
+    <ClInclude Include="Source\Engine\DebugDraw.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
     <ClInclude Include="Source\Engine\ImageLoader.h" />
@@ -211,6 +212,7 @@
     <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Source\Editor\SceneHierarchy.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
+    <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
     <ClCompile Include="Source\Engine\ECS.cpp" />
@@ -270,6 +272,12 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />

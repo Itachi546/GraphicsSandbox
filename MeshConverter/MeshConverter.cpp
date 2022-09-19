@@ -176,7 +176,7 @@ void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vect
 		*/
 }
 
-Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<float>& vertices, std::vector<uint32_t>& indices)
+Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<float>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb)
 {
 	uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(float));
 	uint32_t indexOffset  = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
@@ -213,6 +213,8 @@ Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<float>& ver
 		for(uint32_t index = 0; index < face.mNumIndices; ++index)
 			indices.push_back(face.mIndices[index]);
 	}
+	aabb.min = glm::vec3(mesh->mAABB.mMin.x, mesh->mAABB.mMin.y, mesh->mAABB.mMin.z);
+	aabb.max = glm::vec3(mesh->mAABB.mMax.x, mesh->mAABB.mMax.y, mesh->mAABB.mMax.z);
 
 	Mesh result = {
 		vertexOffset,
@@ -231,9 +233,9 @@ void ParseScene(const aiScene* scene, const std::string& basePath, const std::st
 {
 	const uint32_t nMeshes = scene->mNumMeshes;
 	out->meshes.resize(nMeshes);
-
+	out->boxes_.resize(nMeshes);
 	for (uint32_t i = 0; i < nMeshes; ++i)
-		out->meshes[i] = ParseMesh(scene->mMeshes[i], scene, out->vertexData_, out->indexData_);
+		out->meshes[i] = ParseMesh(scene->mMeshes[i], scene, out->vertexData_, out->indexData_, out->boxes_[i]);
 
 	printf("----------------------------------------------\n");
 	printf("Parsing Material\n");
@@ -260,6 +262,7 @@ void LoadFile(const std::string& filename, const std::string& exportPath, MeshDa
 	const uint32_t flags = 0 |
 		aiProcess_JoinIdenticalVertices |
 		aiProcess_Triangulate |
+		aiProcess_GenBoundingBoxes |
 		aiProcess_PreTransformVertices |
 		aiProcess_GenSmoothNormals |
 		aiProcess_LimitBoneWeights |
@@ -297,7 +300,11 @@ void SaveMeshData(const std::string& filename, MeshData* meshData)
 		nMeshes,
 		nMaterial,
 		nTextures,
-		sizeof(MeshFileHeader) + sizeof(Mesh) * nMeshes + sizeof(MaterialComponent) * nMaterial + texStrDataSize,
+		sizeof(MeshFileHeader) + 
+		sizeof(Mesh) * nMeshes + 
+		sizeof(MaterialComponent) * nMaterial + 
+		texStrDataSize + 
+		sizeof(BoundingBox) * nMeshes,
 		vertexDataSize,
 		indexDataSize
 	};
@@ -315,6 +322,9 @@ void SaveMeshData(const std::string& filename, MeshData* meshData)
 
 	// Write Textures
 	SaveStringList(outFile, meshData->textures);
+
+	// Write BoundingBox
+	outFile.write(reinterpret_cast<const char*>(meshData->boxes_.data()), sizeof(BoundingBox) * nMeshes);
 
 	// Write Vertices
 	outFile.write(reinterpret_cast<const char*>(meshData->vertexData_.data()), vertexDataSize);
@@ -342,7 +352,7 @@ int main(int argc, char** argv)
 	const char* filename = argv[1];
 	//std::string filename = "Model/bloom.obj";
 	std::string exportBasePath = std::string(argv[2]);
-	std::string newFilename = exportBasePath + TrimPathAndExtension(filename) + ".sbox";
+	std::string newFilename = exportBasePath + "/" + TrimPathAndExtension(filename) + ".sbox";
 	{
 		MeshData meshData;
 		LoadFile(filename, exportBasePath, &meshData);

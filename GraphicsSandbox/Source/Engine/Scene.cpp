@@ -156,11 +156,16 @@ ecs::Entity Scene::CreateMesh(const char* file)
 		inFile.read(path.data(), size);
 	}
 
+	// Read BoundingBox
+	meshData.boundingBoxes.resize(nMeshes);
+	inFile.read(reinterpret_cast<char*>(meshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
+
 	//Read VertexData
 	uint32_t nVertices = header.vertexDataSize / (sizeof(float) * 8);
 	uint32_t nIndices = header.indexDataSize / sizeof(uint32_t);
 
 	meshData.vertices.resize(nVertices);
+	inFile.seekg(header.dataBlockStartOffset, std::ios::beg);
 	inFile.read(reinterpret_cast<char*>(meshData.vertices.data()), header.vertexDataSize);
 
 	meshData.indices.resize(nIndices);
@@ -274,7 +279,6 @@ std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 
 Scene::~Scene()
 {
-	TextureCache::Free();
 	ecs::DestroyEntity(mComponentManager.get(), mPrimitives);
 	gfx::GpuMemoryAllocator::GetInstance()->FreeMemory();
 }

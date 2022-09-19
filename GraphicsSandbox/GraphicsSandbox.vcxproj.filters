@@ -138,6 +138,7 @@
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Editor\SceneHierarchy.h" />
     <ClInclude Include="Source\Engine\TextureCache.h" />
+    <ClInclude Include="Source\Engine\DebugDraw.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -227,6 +228,9 @@
     <ClCompile Include="Source\Engine\TextureCache.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\DebugDraw.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
@@ -268,6 +272,7 @@
     <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">
@@ -282,5 +287,6 @@
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl">
       <Filter>SHADERS</Filter>
     </None>
+    <None Include="..\Assets\Shaders\debug.vert.glsl" />
   </ItemGroup>
 </Project>

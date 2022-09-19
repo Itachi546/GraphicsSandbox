@@ -22,4 +22,6 @@ private:
 
 	std::shared_ptr<SceneHierarchy> mHierarchy;
 	std::vector<ecs::Entity> lights;
+
+	bool mShowUI = false;
 };

@@ -45,14 +45,15 @@ void EditorApplication::Initialize()
 
 void EditorApplication::RenderUI(gfx::CommandList* commandList)
 {
+	static bool enableBloom = true;
+	mRenderer->SetEnableBloom(enableBloom);
 	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
-	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove);
-
+	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
 	// Profilter Data
 	std::vector<Profiler::RangeData> profilerData;
 	Profiler::GetEntries(profilerData);
@@ -66,27 +67,30 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		}
 		ImGui::Text("%s", ss.str().c_str());
 	}
-
-	static bool enableBloom = true;
-	mRenderer->SetEnableBloom(enableBloom);
-	if (ImGui::CollapsingHeader("Bloom"))
-	{
-		ImGui::Checkbox("Enable", &enableBloom);
-		static float blurRadius = 10.0f;
-		if (ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f))
-			mRenderer->SetBlurRadius(blurRadius);
-
-		static float bloomThreshold = 1.0f;
-		if (ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f))
-			mRenderer->SetBloomThreshold(bloomThreshold);
-
-		static float bloomStrength = 0.4f;
-		if (ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f))
-			mRenderer->SetBloomStrength(bloomStrength);
-	}
 	ImGui::End();
 
-	mHierarchy->Draw();
+	if (mShowUI)
+	{
+		ImGui::Begin("Render Settings");
+		if (ImGui::CollapsingHeader("Bloom"))
+		{
+			ImGui::Checkbox("Enable", &enableBloom);
+			static float blurRadius = 10.0f;
+			if (ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f))
+				mRenderer->SetBlurRadius(blurRadius);
+
+			static float bloomThreshold = 1.0f;
+			if (ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f))
+				mRenderer->SetBloomThreshold(bloomThreshold);
+
+			static float bloomStrength = 0.4f;
+			if (ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f))
+				mRenderer->SetBloomStrength(bloomStrength);
+		}
+		ImGui::End();
+
+		mHierarchy->Draw();
+	}
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
@@ -122,9 +126,10 @@ void EditorApplication::PreUpdate(float dt) {
 		auto [x, y] = Input::GetMouseState().delta;
 		mCamera->Rotate(-y, x, dt);
 	}
-
-	auto compMgr = mScene.GetComponentManager();
 	mRenderer->SetUpdateBatches(true);
+
+	if (Input::Press(Input::Key::KEY_H))
+		mShowUI = !mShowUI;
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -136,6 +141,7 @@ void EditorApplication::InitializeScene()
 	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
 	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
 	auto compMgr = mScene.GetComponentManager();
+	/*
 	{
 		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/sponza.sbox");
 		if (mesh != ecs::INVALID_ENTITY)
@@ -146,8 +152,9 @@ void EditorApplication::InitializeScene()
 			//transform->rotation = glm::vec3(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
 		}
 	}
+	*/
 	{
-		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
+		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/teapot.sbox");
 		if (bloom != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);

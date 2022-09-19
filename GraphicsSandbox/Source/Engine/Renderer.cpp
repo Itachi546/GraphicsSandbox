@@ -259,7 +259,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	mDevice->UpdateDescriptor(mCubemapPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mCubemapPipeline.get());
 	mDevice->BindIndexBuffer(commandList, ib);
-	mDevice->DrawTriangleIndexed(commandList, mesh->indexCount, 1, mesh->indexOffset / sizeof(uint32_t));
+	mDevice->DrawIndexed(commandList, mesh->indexCount, 1, mesh->indexOffset / sizeof(uint32_t));
 }
 
 void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator)

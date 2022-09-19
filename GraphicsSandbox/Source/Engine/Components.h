@@ -99,6 +99,7 @@ struct MeshDataComponent
 	gfx::GPUBuffer* indexBuffer;
 
 	std::vector<Mesh> meshes;
+	std::vector<BoundingBox> boundingBoxes;
 
 	void SetRenderable(bool value) {
 		if (value) flags |= Renderable; else flags &= ~Renderable;

@@ -61,6 +61,98 @@ struct BoundingBox
 		max = vmax;
 	}
 };
+
+struct Plane
+{
+	Plane() { }
+
+	// From plane equation
+	Plane(float a, float b, float c, float d)
+	{
+		float mag = std::sqrtf(a * a + b * b + c * c + d * d);
+
+		normal = glm::vec3(a, b, c);
+		distance = d;
+		// Normalize 
+		if (abs(mag) > 0.000001f)
+		{
+			normal /= mag;
+			distance /= mag;
+		}
+	}
+
+	Plane(glm::vec4 abcd) : Plane(abcd.x, abcd.y, abcd.z, abcd.w)
+	{ 
+	}
+
+	Plane(const glm::vec3& normal, float distance) : normal(normal), distance(distance) {}
+
+	// Point in clockwise order
+	// Ax + By + Cz + d = 0
+	// where normal = (A, B, C)
+	// d = -Ax - By - Cz
+	// d = -dot(N, P) where P - point in the plane
+	Plane(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2)
+	{
+		GenerateFromPoints(p0, p1, p2);
+	}
+
+	void GenerateFromPoints(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2)
+	{
+		glm::vec3 e0 = p1 - p0;
+		glm::vec3 e1 = p2 - p0;
+
+		normal = glm::normalize(glm::cross(e1, e0));
+		distance = -glm::dot(normal, p0);
+	}
+
+	float GetDistance(const glm::vec3& p) const
+	{
+		return glm::dot(p, normal) + distance;
+	}
+
+	glm::vec3 normal;
+	float distance;
+};
+
+class Frustum {
+
+public:
+	Frustum() {}
+
+	bool Intersect(const BoundingBox& boundingBox);
+
+	/*
+	* Points should be in given order
+	* NTL, NTR,	NBL, NBR, FTL, FTR,	FBL, FBR
+	*/
+	void GenerateFromPoints(glm::vec3* points, uint32_t count = 8);
+
+	Plane frustumPlanes[6] = {};
+
+	enum PointLocation {
+		NTL = 0,
+		NTR,
+		NBL,
+		NBR,
+
+		FTL,
+		FTR,
+		FBL,
+		FBR
+	};
+
+	enum PlaneLocation
+	{
+		Near = 0,
+		Far,
+		Left,
+		Right,
+		Top,
+		Bottom
+	};
+};
+
 namespace MathUtils
 {
 	inline float Rand01()

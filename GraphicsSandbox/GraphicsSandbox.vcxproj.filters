@@ -231,6 +231,9 @@
     <ClCompile Include="Source\Engine\DebugDraw.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Shared\MathUtils.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
@@ -273,6 +276,7 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">
@@ -287,6 +291,5 @@
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl">
       <Filter>SHADERS</Filter>
     </None>
-    <None Include="..\Assets\Shaders\debug.vert.glsl" />
   </ItemGroup>
 </Project>

@@ -53,7 +53,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	ImGui::NewFrame();
 
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
-	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar);
+	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
 	// Profilter Data
 	std::vector<Profiler::RangeData> profilerData;
 	Profiler::GetEntries(profilerData);
@@ -75,6 +75,18 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		static bool showBoundingBox = mScene.GetShowBoundingBox();
 		if (ImGui::Checkbox("Show BoundingBox", &showBoundingBox))
 			mScene.SetShowBoundingBox(showBoundingBox);
+
+		static bool enableFrustumCulling = true;
+		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
+		mScene.SetEnableFrustumCulling(enableFrustumCulling);
+
+
+		static bool freezeFrustum = false;
+		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
+		mScene.GetCamera()->SetFreezeFrustum(freezeFrustum);
+
+
+
 		if (ImGui::CollapsingHeader("Bloom"))
 		{
 			ImGui::Checkbox("Enable", &enableBloom);
@@ -110,9 +122,9 @@ void EditorApplication::PreUpdate(float dt) {
 		bRunning = false;
 
 	if (Input::Down(Input::Key::KEY_W))
-		mCamera->Walk(-dt * walkSpeed);
-	else if (Input::Down(Input::Key::KEY_S))
 		mCamera->Walk(dt * walkSpeed);
+	else if (Input::Down(Input::Key::KEY_S))
+		mCamera->Walk(-dt * walkSpeed);
 	if (Input::Down(Input::Key::KEY_A))
 		mCamera->Strafe(-dt * walkSpeed);
 	else if (Input::Down(Input::Key::KEY_D))
@@ -141,27 +153,35 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	mCamera->SetPosition({ 0.0f, 2.0f, 10.0f });
-	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
+	mCamera->SetPosition({ 6.0f, -4.0f, 0.0f });
+	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5, 0.0f });
 	auto compMgr = mScene.GetComponentManager();
 #if 1
 	{
-		ecs::Entity mesh = mScene.CreateMesh("Assets/Models/NewSponza_Main_glTF_002.sbox");
-		if (mesh != ecs::INVALID_ENTITY)
+		ecs::Entity sponza = mScene.CreateMesh("Assets/Models/sponza.sbox");
+		if (sponza != ecs::INVALID_ENTITY)
 		{
-			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sponza);
 			transform->scale = glm::vec3(1.0f);
 			transform->position.y -= 5.0f;
-			//transform->rotation = glm::vec3(glm::pi<float>() * 0.5f, 0.0f, 0.0f);
 		}
+		/*
+		ecs::Entity curtains = mScene.CreateMesh("Assets/Models/NewSponza_IvyGrowth_gltf.sbox");
+		if (curtains != ecs::INVALID_ENTITY)
+		{
+			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(curtains);
+			transform->scale = glm::vec3(1.0f);
+			transform->position.y -= 5.0f;
+		}
+		*/
 	}
-#endif
+
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/teapot.sbox");
 		if (bloom != ecs::INVALID_ENTITY)
 		{
 			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
-			transform->scale = glm::vec3(1.0f);
+			transform->scale = glm::vec3(0.2f);
 			transform->position = glm::vec3(2.0f, -5.0f, 0.0f);
 			transform->rotation = glm::vec3(0.0f, -1.57f, 0.0f);
 			MaterialComponent* material = compMgr->GetComponent<MaterialComponent>(bloom);
@@ -169,6 +189,17 @@ void EditorApplication::InitializeScene()
 			material->albedo = glm::vec4(0.18f, 0.55f, 0.84f, 1.0f);
 		}
 	}
+	{
+		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
+		transform->scale = glm::vec3(0.2f);
+		transform->position.y = -4.8f;
+		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
+		material.roughness = 0.9f;
+		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+		material.metallic = 0.1f;
+	}
+#endif
 	{
 		ecs::Entity cube = mScene.CreateCube("TestCube");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
@@ -180,16 +211,6 @@ void EditorApplication::InitializeScene()
 		material.metallic = 0.2f;
 	}
 
-	{
-		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
-		transform->scale = glm::vec3(0.2f);
-		transform->position.y = -4.8f;
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
-		material.roughness = 0.9f;
-		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		material.metallic = 0.1f;
-	}
 }
 
 EditorApplication::~EditorApplication()

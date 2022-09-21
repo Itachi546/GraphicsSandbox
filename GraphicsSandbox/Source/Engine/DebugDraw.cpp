@@ -94,6 +94,28 @@ void DebugDraw::AddAABB(const glm::vec3& min, const glm::vec3& max, uint32_t col
 	AddLine(glm::vec3(max.x, min.y, min.z), glm::vec3(max.x, max.y, min.z), color);
 }
 
+void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t color)
+{
+	// Near Plane
+	AddLine(points[0], points[1], color);
+	AddLine(points[0], points[2], color);
+	AddLine(points[1], points[3], color);
+	AddLine(points[2], points[3], color);
+
+	// Far Plane
+	AddLine(points[4], points[5], color);
+	AddLine(points[4], points[6], color);
+	AddLine(points[5], points[7], color);
+	AddLine(points[6], points[7], color);
+
+	// Joint
+	AddLine(points[0], points[4], color);
+	AddLine(points[1], points[5], color);
+	AddLine(points[2], points[6], color);
+	AddLine(points[3], points[7], color);
+}
+
+
 void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP)
 {
 	if (gEnableDebugDraw && gDataOffset > 0)

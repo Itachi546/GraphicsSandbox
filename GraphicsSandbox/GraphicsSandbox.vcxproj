@@ -232,6 +232,7 @@
     <ClCompile Include="Source\Engine\VulkanGraphicsDevice.cpp" />
     <ClCompile Include="Source\Engine\spriv_reflect.c" />
     <ClCompile Include="Source\glfwMain.cpp" />
+    <ClCompile Include="Source\Shared\MathUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">

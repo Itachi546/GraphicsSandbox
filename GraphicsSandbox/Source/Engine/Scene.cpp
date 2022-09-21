@@ -4,6 +4,7 @@
 #include "../Shared/MeshData.h"
 #include "TextureCache.h"
 #include "DebugDraw.h"
+#include "../Shared/MathUtils.h"
 
 #include <execution>
 #include <algorithm>
@@ -36,33 +37,41 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 	auto objectComponentArray = mComponentManager->GetComponentArray<ObjectComponent>();
 	auto meshDataComponentArray = mComponentManager->GetComponentArray<MeshDataComponent>();
 
+	auto frustum = mCamera.GetFrustum();
 	for (int i = 0; i < objectComponentArray->GetCount(); ++i)
 	{
-		DrawData drawData = {};
 		const ecs::Entity& entity = objectComponentArray->entities[i];
-
 		auto& object = objectComponentArray->components[i];
 		auto& meshData = meshDataComponentArray->components[object.meshComponentIndex];
-		
 		if (meshData.IsRenderable())
 		{
-			const Mesh* mesh = meshData.GetMesh(object.meshId);
-			drawData.vertexBuffer = gfx::BufferView{ meshData.vertexBuffer,
-				meshData.vbIndex,
-				mesh->vertexOffset,
-				static_cast<uint32_t>(mesh->vertexCount * sizeof(Vertex)) };
-			drawData.indexBuffer = gfx::BufferView{ meshData.indexBuffer,
-				meshData.ibIndex,
-				mesh->indexOffset,
-				static_cast<uint32_t>(mesh->indexCount * sizeof(uint32_t)) }; 
-			drawData.indexCount = mesh->indexCount;
-
 			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			drawData.worldTransform = transform->worldMatrix;
+			BoundingBox aabb = meshData.boundingBoxes[object.meshId];
+			aabb.Transform(transform->worldMatrix);
 
-			MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
-			drawData.material = material;
-			out.push_back(std::move(drawData));
+			bool isVisible = true;
+			if (mEnableFrustumCulling && !frustum->Intersect(aabb))
+				isVisible = false;
+
+			if (isVisible)
+			{
+				DrawData drawData = {};
+				const Mesh* mesh = meshData.GetMesh(object.meshId);
+				drawData.vertexBuffer = gfx::BufferView{ meshData.vertexBuffer,
+					meshData.vbIndex,
+					mesh->vertexOffset,
+					static_cast<uint32_t>(mesh->vertexCount * sizeof(Vertex)) };
+				drawData.indexBuffer = gfx::BufferView{ meshData.indexBuffer,
+					meshData.ibIndex,
+					mesh->indexOffset,
+					static_cast<uint32_t>(mesh->indexCount * sizeof(uint32_t)) };
+				drawData.indexCount = mesh->indexCount;
+				drawData.worldTransform = transform->worldMatrix;
+
+				MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
+				drawData.material = material;
+				out.push_back(std::move(drawData));
+			}
 		}
 	}
 }
@@ -278,7 +287,7 @@ void Scene::Update(float dt)
 
 void Scene::SetSize(int width, int height)
 {
-	if (width > 0 || height > 0)
+	if (width > 0 && height > 0)
 		mCamera.SetAspect(float(width) / float(height));
 }
 

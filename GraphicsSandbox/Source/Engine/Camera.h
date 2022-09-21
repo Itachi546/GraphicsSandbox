@@ -2,6 +2,7 @@
 
 #include "GlmIncludes.h"
 
+#include <memory>
 class Frustum;
 
 class Camera
@@ -26,6 +27,11 @@ public:
 	void SetRotation(glm::vec3 rotation)
 	{
 		mRotation = mTargetRotation = rotation;
+	}
+
+	void SetFreezeFrustum(bool state)
+	{
+		mFreezeFrustum = state;
 	}
 
 	glm::vec3 GetRotation() const 
@@ -86,6 +92,9 @@ public:
 		constexpr float maxAngle = glm::radians(89.99f);
 		mTargetRotation.x = glm::clamp(mTargetRotation.x, -maxAngle, maxAngle);
 	}
+
+	std::shared_ptr<Frustum> GetFrustum() { return mFrustum; }
+
 	glm::vec3 GetForward() { return mForward; }
 	glm::vec3 GetPosition() const { return mPosition; }
 
@@ -103,13 +112,20 @@ private:
 	float mFarPlane;
 
 	glm::mat4 mView, mInvView;
-	glm::vec3 mTarget;
 	glm::vec3 mRight;
 	glm::vec3 mUp;
 	glm::vec3 mForward;
 	float mSpeed;
 	float mSensitivity;
 
+	bool mFreezeFrustum = false;
+	glm::mat4 mFreezeVP;
+	glm::vec3 mFrustumPoints[8];
+
+	std::shared_ptr<Frustum> mFrustum;
+
 	void CalculateProjection();
 	void CalculateView();
+	void CalculateFrustum();
+
 };

@@ -72,7 +72,7 @@ void main()
 	//albedo.rgb = pow(albedo.rgb, vec3(2.2f));
 
 	float roughness = material.roughness;
-	float ao = material.ao * 0.5f;
+	float ao = material.ao;
 	float metallic = material.metallic;
 	GetMetallicRoughness(material.metallicMap, material.roughnessMap, metallic, roughness);
 

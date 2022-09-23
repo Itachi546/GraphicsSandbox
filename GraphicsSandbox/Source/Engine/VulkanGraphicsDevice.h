@@ -50,7 +50,7 @@ namespace gfx
 
 		double GetTimestampFrequency() override { return properties2_.properties.limits.timestampPeriod; }
 
-		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
 		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                override;
 		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0);
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
@@ -107,7 +107,7 @@ namespace gfx
 
 		VkCommandPool* commandPool_         = nullptr;
 		VkCommandBuffer* commandBuffer_     = nullptr;
-		VkCommandPool   stagingCmdPool_     = VK_NULL_HANDLE;
+		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_   = VK_NULL_HANDLE;
 		
 		std::vector<VkDescriptorPool> descriptorPools_;

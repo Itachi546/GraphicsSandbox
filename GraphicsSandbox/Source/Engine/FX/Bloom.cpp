@@ -1,6 +1,7 @@
 #include "Bloom.h"
 #include "../GraphicsUtils.h"
 #include "../Profiler.h"
+#include "../StringConstants.h"
 namespace fx
 {
 	
@@ -153,13 +154,13 @@ namespace fx
 	void Bloom::Initialize()
 	{
 		mDownSamplePipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline("Assets/SPIRV/downsample.comp.spv", mDevice, mDownSamplePipeline.get());
+		gfx::CreateComputePipeline(StringConstants::BLOOM_DOWNSAMPLE_COMP_PATH, mDevice, mDownSamplePipeline.get());
 
 		mUpSamplePipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline("Assets/SPIRV/upsample.comp.spv", mDevice, mUpSamplePipeline.get());
+		gfx::CreateComputePipeline(StringConstants::BLOOM_UPSAMPLE_COMP_PATH, mDevice, mUpSamplePipeline.get());
 
 		mCompositePipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline("Assets/SPIRV/bloom-final.comp.spv", mDevice, mCompositePipeline.get());
+		gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_COMP_PATH, mDevice, mCompositePipeline.get());
 
 		gfx::GPUTextureDesc textureDesc = {};
 		gfx::SamplerInfo samplerInfo = {};

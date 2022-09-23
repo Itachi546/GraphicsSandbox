@@ -139,6 +139,7 @@
     <ClInclude Include="Source\Editor\SceneHierarchy.h" />
     <ClInclude Include="Source\Engine\TextureCache.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
+    <ClInclude Include="Source\Engine\StringConstants.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

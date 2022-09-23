@@ -5,6 +5,7 @@
 #include "TextureCache.h"
 #include "DebugDraw.h"
 #include "../Shared/MathUtils.h"
+#include "StringConstants.h"
 
 #include <execution>
 #include <algorithm>
@@ -26,7 +27,7 @@ void Scene::Initialize()
 	InitializeLights();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
-	mEnvMap->CreateFromHDRI("Assets/EnvironmentMap/sunset.hdr");
+	mEnvMap->CreateFromHDRI(StringConstants::HDRI_PATH);
 	mEnvMap->CalculateIrradiance();
 	mEnvMap->Prefilter();
 	mEnvMap->CalculateBRDFLUT();

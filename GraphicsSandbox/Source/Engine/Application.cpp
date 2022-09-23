@@ -7,6 +7,7 @@
 #include "Profiler.h"
 #include "TextureCache.h"
 #include "DebugDraw.h"
+#include "StringConstants.h"
 
 #include <algorithm>
 #include <sstream>
@@ -91,9 +92,11 @@ void Application::render_()
 	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
-
 	mRenderer->Render(&commandList);
+
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
+
+	RangeId swapchainRangeId = Profiler::StartRangeGPU(&commandList, "Swapchain Render");
 	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
 	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
 	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader};
@@ -118,13 +121,8 @@ void Application::render_()
 
 	mDevice->EndRenderPass(&commandList);
 	mDevice->EndDebugMarker(&commandList);
+	Profiler::EndRangeGPU(&commandList, swapchainRangeId);
 
-	/*
-	// Copy the output to swapchain
-	mDevice->BeginDebugMarker(&commandList, "Copy To Swapchain", 1.0f, 1.0f, 1.0f, 1.0f);
-	mDevice->CopyToSwapchain(&commandList, outputTexture, 0, 0);
-	mDevice->EndDebugMarker(&commandList);
-    */
 	mDevice->PrepareSwapchainForPresent(&commandList);
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 
@@ -185,8 +183,8 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
     // Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
-	char* vertexCode = Utils::ReadFile("Assets/SPIRV/copy.vert.spv", &vertexLen);
-	char* fragmentCode = Utils::ReadFile("Assets/SPIRV/copy.frag.spv", &fragmentLen);
+	char* vertexCode = Utils::ReadFile(StringConstants::COPY_VERT_PATH, &vertexLen);
+	char* fragmentCode = Utils::ReadFile(StringConstants::COPY_FRAG_PATH, &fragmentLen);
 	assert(vertexCode != nullptr);
 	assert(fragmentCode != nullptr);
 

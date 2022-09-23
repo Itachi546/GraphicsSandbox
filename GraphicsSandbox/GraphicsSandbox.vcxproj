@@ -190,6 +190,7 @@
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Engine\Renderer.h" />
     <ClInclude Include="Source\Engine\Scene.h" />
+    <ClInclude Include="Source\Engine\StringConstants.h" />
     <ClInclude Include="Source\Engine\TextureCache.h" />
     <ClInclude Include="Source\Engine\Timer.h" />
     <ClInclude Include="Source\Engine\Components.h" />

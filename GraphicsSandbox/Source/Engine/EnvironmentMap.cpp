@@ -2,7 +2,7 @@
 #include "GraphicsUtils.h"
 #include "ImageLoader.h"
 #include "Logger.h"
-
+#include "StringConstants.h"
 #include <assert.h>
 
 EnvironmentMap::EnvironmentMap()
@@ -10,13 +10,13 @@ EnvironmentMap::EnvironmentMap()
 	mDevice = gfx::GetDevice();
 
 	mHdriToCubemap = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline("Assets/SPIRV/hdri_converter.comp.spv", mDevice, mHdriToCubemap.get());
+	gfx::CreateComputePipeline(StringConstants::HDRI_CONVERTER_COMP_PATH, mDevice, mHdriToCubemap.get());
 	mIrradiancePipeline = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline("Assets/SPIRV/irradiance.comp.spv", mDevice, mIrradiancePipeline.get());
+	gfx::CreateComputePipeline(StringConstants::IRRADIANCE_COMP_PATH, mDevice, mIrradiancePipeline.get());
 	mPrefilterPipeline = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline("Assets/SPIRV/prefilter_env.comp.spv", mDevice, mPrefilterPipeline.get());
+	gfx::CreateComputePipeline(StringConstants::PREFILTER_COMP_PATH, mDevice, mPrefilterPipeline.get());
 	mBRDFPipeline = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline("Assets/SPIRV/brdf_lut.comp.spv", mDevice, mBRDFPipeline.get());
+	gfx::CreateComputePipeline(StringConstants::BRDF_LUT_COMP_PATH, mDevice, mBRDFPipeline.get());
 
 }
 

@@ -1982,7 +1982,7 @@ namespace gfx {
         vkCmdEndRenderPass(cmdList->commandBuffer);
     }
 
-    void VulkanGraphicsDevice::CopyToSwapchain(CommandList* commandList, GPUTexture* texture, uint32_t arrayLevel, uint32_t mipLevel)
+    void VulkanGraphicsDevice::CopyToSwapchain(CommandList* commandList, GPUTexture* texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel, uint32_t mipLevel)
     {
         auto cmd = GetCommandList(commandList);
         uint32_t imageIndex = swapchain_->currentImageIndex;
@@ -2012,13 +2012,18 @@ namespace gfx {
 
         vkCmdBlitImage(cmd->commandBuffer, src->image, src->layout, swapchain_->images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
 
+        VkImageLayout swapchainImageLayout = _ConvertLayout(finalSwapchainImageLayout);
+        VkPipelineStageFlagBits pipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        if (swapchainImageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+            pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+
         VkImageMemoryBarrier renderEndBarrier = CreateImageBarrier(swapchain_->images[imageIndex],
             VK_IMAGE_ASPECT_COLOR_BIT,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             0,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
+            swapchainImageLayout);
+        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, pipelineStage, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &renderEndBarrier);
     }
 
 

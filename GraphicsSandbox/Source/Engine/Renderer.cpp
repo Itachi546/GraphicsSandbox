@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "Profiler.h"
 #include "FX/Bloom.h"
+#include "StringConstants.h"
 
 #include "../Shared/MeshData.h"
 #include <vector>
@@ -35,8 +36,8 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mHdrFramebuffer = std::make_shared<gfx::Framebuffer>();
 	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get());
 
-	mTrianglePipeline = loadHDRPipeline("Assets/SPIRV/main.vert.spv", "Assets/SPIRV/main.frag.spv");
-	mCubemapPipeline = loadHDRPipeline("Assets/SPIRV/cubemap.vert.spv", "Assets/SPIRV/cubemap.frag.spv", gfx::CullMode::None);
+	mTrianglePipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
+	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
 
 	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
 }

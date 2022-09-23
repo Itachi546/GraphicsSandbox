@@ -1,7 +1,7 @@
 #include "EditorApplication.h"
 #include "../Engine/VulkanGraphicsDevice.h"
-#include "../Engine/FX/Bloom.h"
 #include "../Shared/MathUtils.h"
+#include "../Engine/DebugDraw.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
@@ -75,6 +75,10 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		static bool showBoundingBox = mScene.GetShowBoundingBox();
 		if (ImGui::Checkbox("Show BoundingBox", &showBoundingBox))
 			mScene.SetShowBoundingBox(showBoundingBox);
+
+		static bool enableDebugDraw = false;
+		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
+		DebugDraw::SetEnable(enableDebugDraw);
 
 		static bool enableFrustumCulling = true;
 		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
@@ -156,7 +160,14 @@ void EditorApplication::InitializeScene()
 	mCamera->SetPosition({ 6.0f, -4.0f, 0.0f });
 	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5, 0.0f });
 	auto compMgr = mScene.GetComponentManager();
-#if 1
+
+	ecs::Entity scene = mScene.CreateMesh("Assets/Models/scene.sbox");
+	if (scene != ecs::INVALID_ENTITY)
+	{
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(scene);
+	}
+
+#if 0
 	{
 		ecs::Entity sponza = mScene.CreateMesh("Assets/Models/sponza.sbox");
 		if (sponza != ecs::INVALID_ENTITY)
@@ -175,6 +186,7 @@ void EditorApplication::InitializeScene()
 		}
 		*/
 	}
+
 
 	{
 		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/teapot.sbox");
@@ -199,7 +211,6 @@ void EditorApplication::InitializeScene()
 		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 		material.metallic = 0.1f;
 	}
-#endif
 	{
 		ecs::Entity cube = mScene.CreateCube("TestCube");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
@@ -210,6 +221,8 @@ void EditorApplication::InitializeScene()
 		material.albedo = glm::vec4(1.0f);
 		material.metallic = 0.2f;
 	}
+#endif
+
 
 }
 

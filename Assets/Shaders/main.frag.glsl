@@ -8,6 +8,8 @@ layout(location = 1) out vec4 brightColor;
 layout(location = 0) in VS_OUT 
 {
    vec3 normal;
+   vec3 tangent;
+   vec3 bitangent;
    vec3 worldPos;
    vec3 viewDir;
    vec2 uv;
@@ -26,7 +28,7 @@ struct Material
 	float transparency;
 
 	uint albedoMap;
-	uint normalTexture;
+	uint normalMap;
 	uint emissiveMap;
 	uint metallicMap;
 	uint roughnessMap;
@@ -57,6 +59,12 @@ void GetMetallicRoughness(uint metallicMapIndex, uint roughnessMapIndex, inout f
 	}
 }
 
+vec3 GetNormalFromNormalMap(uint normalMapIndex, mat3 tbn)
+{
+    vec3 normal = texture(uTextures[normalMapIndex], fs_in.uv).rgb * 2.0f - 1.0f;
+	return normalize(tbn * normal);
+}
+
 void main()
 {
 	vec2 uv = fs_in.worldPos.xz;
@@ -71,15 +79,23 @@ void main()
 
 	//albedo.rgb = pow(albedo.rgb, vec3(2.2f));
 
-	float roughness = 0.9f;//material.roughness;
-	float ao = material.ao * 0.5f;
-	float metallic = 0.01f;//material.metallic;
+	float roughness = material.roughness;
+	float ao = material.ao;
+	float metallic = material.metallic;
 	GetMetallicRoughness(material.metallicMap, material.roughnessMap, metallic, roughness);
 
 	if(material.ambientOcclusionMap != INVALID_TEXTURE)
        ao = texture(uTextures[material.ambientOcclusionMap], fs_in.uv).r;
 
     vec3 n = normalize(fs_in.normal);
+	if(globals.enableNormalMapping > 0)
+	{
+    	vec3 t = normalize(fs_in.tangent);
+	    vec3 bt = normalize(fs_in.bitangent);
+		mat3 tbn = mat3(t, bt, n);
+		if(material.normalMap != INVALID_TEXTURE)
+		n =	GetNormalFromNormalMap(material.normalMap, tbn);
+	}
     vec3 v = normalize(fs_in.viewDir);
 	vec3 r = reflect(-v, n);
 

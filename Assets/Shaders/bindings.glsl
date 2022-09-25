@@ -18,7 +18,8 @@ layout(binding = 0) uniform readonly Globals
 
    float bloomThreshold;
    int nLight;
-   vec2 unused_;
+   int enableNormalMapping;
+   float unused_;
 
    LightData lights[128];
 } globals;

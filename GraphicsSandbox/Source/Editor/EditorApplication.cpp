@@ -76,12 +76,13 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	static float blurRadius = 10.0f;
 	static float bloomThreshold = 1.0f;
 	static float bloomStrength = 0.04f;
-
+	static bool enableNormalMapping = true;
 	if (mShowUI)
 	{
 		ImGui::Begin("Render Settings");
 		ImGui::Checkbox("Show BoundingBox", &showBoundingBox);
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
+		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
 		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
 		mScene.SetEnableFrustumCulling(enableFrustumCulling);
 		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
@@ -96,7 +97,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		ImGui::End();
 		mHierarchy->Draw();
 	}
-
+	mRenderer->SetEnableNormalMapping(enableNormalMapping);
 	mRenderer->SetBlurRadius(blurRadius);
 	mRenderer->SetBloomThreshold(bloomThreshold);
 	mRenderer->SetBloomStrength(bloomStrength);
@@ -149,74 +150,13 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	mCamera->SetPosition({ 6.0f, -4.0f, 0.0f });
-	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5, 0.0f });
+	mCamera->SetPosition({ 0.0f, 1.0f, 3.0f });
+	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
+	mScene.SetEnableFrustumCulling(false);
+
 	auto compMgr = mScene.GetComponentManager();
 
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/scene.sbox");
-	if (scene != ecs::INVALID_ENTITY)
-	{
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(scene);
-		transform->scale = glm::vec3(0.2f);
-	}
-
-#if 1
-	{
-		ecs::Entity sponza = mScene.CreateMesh("Assets/Models/sponza.sbox");
-		if (sponza != ecs::INVALID_ENTITY)
-		{
-			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sponza);
-			transform->scale = glm::vec3(1.0f);
-			transform->position.y -= 5.0f;
-		}
-		/*
-		ecs::Entity curtains = mScene.CreateMesh("Assets/Models/NewSponza_IvyGrowth_gltf.sbox");
-		if (curtains != ecs::INVALID_ENTITY)
-		{
-			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(curtains);
-			transform->scale = glm::vec3(1.0f);
-			transform->position.y -= 5.0f;
-		}
-		*/
-	}
-
-
-	{
-		ecs::Entity bloom = mScene.CreateMesh("Assets/Models/teapot.sbox");
-		if (bloom != ecs::INVALID_ENTITY)
-		{
-			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
-			transform->scale = glm::vec3(0.2f);
-			transform->position = glm::vec3(2.0f, -5.0f, 0.0f);
-			transform->rotation = glm::vec3(0.0f, -1.57f, 0.0f);
-			MaterialComponent* material = compMgr->GetComponent<MaterialComponent>(bloom);
-			material->emissive = 40.0f;
-			material->albedo = glm::vec4(0.18f, 0.55f, 0.84f, 1.0f);
-		}
-	}
-	{
-		ecs::Entity sphere = mScene.CreateSphere("TestSphere");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(sphere);
-		transform->scale = glm::vec3(0.2f);
-		transform->position.y = -4.8f;
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(sphere);
-		material.roughness = 0.9f;
-		material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		material.metallic = 0.1f;
-	}
-	{
-		ecs::Entity cube = mScene.CreateCube("TestCube");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(cube);
-		transform->scale = glm::vec3(0.2f, 0.6f, 0.2f);
-		transform->position = glm::vec3(0.0f, -4.7f, 0.5f);
-		MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(cube);
-		material.roughness = 1.0f;
-		material.albedo = glm::vec4(1.0f);
-		material.metallic = 0.2f;
-	}
-#endif
-
-
+	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
 }
 
 EditorApplication::~EditorApplication()

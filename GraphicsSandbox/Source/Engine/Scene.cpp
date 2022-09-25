@@ -110,7 +110,7 @@ ecs::Entity Scene::CreateCube(std::string_view name)
 		mComponentManager->AddComponent<NameComponent>(entity).name = name;
 
 	mComponentManager->AddComponent<TransformComponent>(entity);
-	
+	mComponentManager->AddComponent<MaterialComponent>(entity);
 	return entity;
 }
 
@@ -121,7 +121,7 @@ ecs::Entity Scene::CreatePlane(std::string_view name)
 		mComponentManager->AddComponent<NameComponent>(entity).name = name;
 
 	mComponentManager->AddComponent<TransformComponent>(entity);
-
+	mComponentManager->AddComponent<MaterialComponent>(entity);
 	ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
 	objectComp.meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(mPrimitives);
 	objectComp.meshId = mPlaneMeshId;
@@ -136,6 +136,7 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 		mComponentManager->AddComponent<NameComponent>(entity).name = name;
 
 	mComponentManager->AddComponent<TransformComponent>(entity);
+	mComponentManager->AddComponent<MaterialComponent>(entity);
 
 	ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
 	objectComp.meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(mPrimitives);
@@ -193,7 +194,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	inFile.read(reinterpret_cast<char*>(meshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
 
 	//Read VertexData
-	uint32_t nVertices = header.vertexDataSize / (sizeof(float) * 8);
+	uint32_t nVertices = header.vertexDataSize / (sizeof(Vertex));
 	uint32_t nIndices = header.indexDataSize / sizeof(uint32_t);
 
 	meshData.vertices.resize(nVertices);
@@ -227,19 +228,22 @@ ecs::Entity Scene::CreateMesh(const char* file)
 		if (materials.size() > 0)
 		{
 			MaterialComponent meshMat = materials[meshes[meshId].materialIndex];
-
+			// @TODO Maybe it is not correct to generate mipmap for normal map and 
+			// sample it like base mip level. But for now, I don't know any other 
+			// ways to remove the normal map aliasing artifacts other than using 
+			// mipmap.
 			if (meshMat.albedoMap != INVALID_TEXTURE)
 				meshMat.albedoMap = TextureCache::LoadTexture(textureFiles[meshMat.albedoMap], true);
 			if (meshMat.normalMap != INVALID_TEXTURE)
-				meshMat.normalMap = TextureCache::LoadTexture(textureFiles[meshMat.normalMap]);
+				meshMat.normalMap = TextureCache::LoadTexture(textureFiles[meshMat.normalMap], true);
 			if (meshMat.emissiveMap != INVALID_TEXTURE)
 				meshMat.emissiveMap = TextureCache::LoadTexture(textureFiles[meshMat.emissiveMap]);
 			if (meshMat.metallicMap != INVALID_TEXTURE)
-				meshMat.metallicMap = TextureCache::LoadTexture(textureFiles[meshMat.metallicMap]);
+				meshMat.metallicMap = TextureCache::LoadTexture(textureFiles[meshMat.metallicMap], true);
 			if (meshMat.roughnessMap != INVALID_TEXTURE)
-				meshMat.roughnessMap = TextureCache::LoadTexture(textureFiles[meshMat.roughnessMap]);
+				meshMat.roughnessMap = TextureCache::LoadTexture(textureFiles[meshMat.roughnessMap], true);
 			if (meshMat.ambientOcclusionMap != INVALID_TEXTURE)
-				meshMat.ambientOcclusionMap = TextureCache::LoadTexture(textureFiles[meshMat.ambientOcclusionMap]);
+				meshMat.ambientOcclusionMap = TextureCache::LoadTexture(textureFiles[meshMat.ambientOcclusionMap], true);
 			if (meshMat.opacityMap != INVALID_TEXTURE)
 				meshMat.opacityMap = TextureCache::LoadTexture(textureFiles[meshMat.opacityMap]);
 			material = { meshMat };

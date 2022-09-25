@@ -179,9 +179,9 @@ void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vect
 		*/
 }
 
-Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<float>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb)
+Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb)
 {
-	uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(float));
+	uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
 	uint32_t indexOffset  = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
 
 	aiString name = mesh->mName;
@@ -200,10 +200,16 @@ Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<float>& ver
 		aiVector3D v = mesh->mVertices[i];
 		aiVector3D n = mesh->mNormals[i];
 		aiVector3D t = bTexCoords ? mesh->mTextureCoords[0][i] : aiVector3D();
+		aiVector3D tangent = mesh->mTangents[i];
+		aiVector3D bitangent = mesh->mBitangents[i];
 
-		vertices.push_back(v.x), vertices.push_back(v.y), vertices.push_back(v.z);
-		vertices.push_back(n.x), vertices.push_back(n.y), vertices.push_back(n.z);
-		vertices.push_back(t.x), vertices.push_back(t.y);
+		Vertex vertex{ glm::vec3(v.x, v.y, v.z),
+			 glm::vec3(n.x, n.y, n.z),
+			glm::vec2(t.x, t.y),
+			glm::vec3(tangent.x, tangent.y, tangent.z),
+			glm::vec3(bitangent.x, bitangent.y, bitangent.z),
+		};
+		vertices.push_back(vertex);
 	}
 
 	for (uint32_t i = 0; i < nFaces; ++i)
@@ -251,7 +257,8 @@ void ParseScene(const aiScene* scene, const std::string& basePath, const std::st
 
 	printf("----------------------------------------------\n");
 	printf("Processing Textures\n");
-	ProcessTexture(scene, textureFiles, basePath, exportPath + "/" + TrimPathAndExtension(filename) + "/");
+	if (textureFiles.size() > 0)
+		ProcessTexture(scene, textureFiles, basePath, exportPath + "/" + TrimPathAndExtension(filename) + "/");
 	printf("----------------------------------------------\n");
 }
 
@@ -269,6 +276,7 @@ void LoadFile(const std::string& filename, const std::string& exportPath, MeshDa
 		aiProcess_PreTransformVertices |
 		aiProcess_GenSmoothNormals |
 		aiProcess_LimitBoneWeights |
+		aiProcess_CalcTangentSpace |
 		aiProcess_SplitLargeMeshes |
 		aiProcess_ImproveCacheLocality |
 		aiProcess_RemoveRedundantMaterials |
@@ -289,7 +297,7 @@ void LoadFile(const std::string& filename, const std::string& exportPath, MeshDa
 void SaveMeshData(const std::string& filename, MeshData* meshData)
 {
 	uint32_t nMeshes = (uint32_t)meshData->meshes.size();
-	uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size() * sizeof(float));
+	uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size() * sizeof(Vertex));
 	uint32_t indexDataSize = (uint32_t)(meshData->indexData_.size() * sizeof(uint32_t));
 	uint32_t nMaterial = (uint32_t)meshData->materials.size();
 	uint32_t nTextures = (uint32_t)meshData->textures.size();
@@ -300,16 +308,13 @@ void SaveMeshData(const std::string& filename, MeshData* meshData)
 	uint32_t texStrDataSize = CalculateStringListSize(meshData->textures) + sizeof(uint32_t) * nTextures;
 	MeshFileHeader header = {
 		0x12345678u,
-		nMeshes,
-		nMaterial,
-		nTextures,
+		nMeshes,nMaterial,nTextures,
 		sizeof(MeshFileHeader) + 
 		sizeof(Mesh) * nMeshes + 
 		sizeof(MaterialComponent) * nMaterial + 
 		texStrDataSize + 
 		sizeof(BoundingBox) * nMeshes,
-		vertexDataSize,
-		indexDataSize
+		vertexDataSize,indexDataSize
 	};
 
 	std::ofstream outFile(filename, std::ios::binary);

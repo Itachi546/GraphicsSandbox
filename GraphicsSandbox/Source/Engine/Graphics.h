@@ -356,6 +356,7 @@ namespace gfx
 	{
 		TextureFilter textureFilter = TextureFilter::Linear;
 		TextureWrapMode wrapMode = TextureWrapMode::ClampToEdge;
+		bool enableAnisotropicFiltering = false;
 	};
 
 	struct GPUTextureDesc

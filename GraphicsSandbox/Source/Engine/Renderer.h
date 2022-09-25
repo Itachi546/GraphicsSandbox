@@ -46,6 +46,11 @@ public:
 	void SetBloomThreshold(float val) { mBloomThreshold = val; }
 	void SetBloomStrength(float val) { mBloomStrength = val; }
 
+	void SetEnableNormalMapping(bool state)
+	{
+		mGlobalUniformData.enabledNormalMapping = int(state);
+	}
+
 	virtual ~Renderer() = default;
 private:
 	std::shared_ptr<fx::Bloom> mBloomFX;
@@ -66,7 +71,8 @@ private:
 		float dt;
 		float bloomThreshold;
 		int nLight;
-		glm::vec2 unused_;
+		int enabledNormalMapping;
+		float unused_;
 		LightData lights[128];
 	} mGlobalUniformData;
 

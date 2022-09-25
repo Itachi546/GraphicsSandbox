@@ -9,6 +9,33 @@
 constexpr const uint32_t kMaxLODs    = 8;
 constexpr const uint32_t kMaxStreams = 8;
 
+inline uint8_t PackFloatToU8(float val)
+{
+	return uint8_t(val * 127.0f + 127.5f);
+}
+
+struct Vertex
+{
+	float px, py, pz;
+	uint8_t nx, ny, nz;
+	// uv coordinate
+	float ux, uy;
+	// tangent and bitangent
+	uint8_t tx, ty, tz;
+	uint8_t bx, by, bz;
+
+	Vertex() = default;
+	Vertex(glm::vec3 position, glm::vec3 normal, glm::vec2 uv, glm::vec3 tangent = glm::vec3(0.0f), glm::vec3 bitangent = glm::vec3(0.0f)) :
+		px(position.x), py(position.y), pz(position.z),
+		nx(PackFloatToU8(normal.x)), ny(PackFloatToU8(normal.y)), nz(PackFloatToU8(normal.z)),
+		ux(uv.x), uy(uv.y),
+		tx(PackFloatToU8(tangent.x)), ty(PackFloatToU8(tangent.y)), tz(PackFloatToU8(tangent.z)),
+		bx(PackFloatToU8(bitangent.x)), by(PackFloatToU8(bitangent.y)), bz(PackFloatToU8(bitangent.z))
+	{
+	}
+};
+
+
 struct Mesh final
 {
 	uint32_t vertexOffset = 0;
@@ -102,13 +129,12 @@ struct MaterialComponent {
 
 struct MeshData
 {
-	std::vector<float> vertexData_;
+	std::vector<Vertex> vertexData_;
 	std::vector<uint32_t> indexData_;
 	std::vector<Mesh> meshes;
 	std::vector<MaterialComponent> materials;
 	std::vector<std::string> textures;
 	std::vector<BoundingBox> boxes_;
 };
-
 
 static_assert(sizeof(MaterialComponent) % 16 == 0);

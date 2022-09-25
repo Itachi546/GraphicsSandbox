@@ -11,6 +11,8 @@
 layout(location = 0) out VS_OUT 
 {
    vec3 normal;
+   vec3 tangent;
+   vec3 bitangent;
    vec3 worldPos;
    vec3 viewDir;
    vec2 uv;
@@ -35,7 +37,12 @@ void main()
    // http://www.lighthouse3d.com/tutorials/glsl-12-tutorial/the-normal-matrix/
    vs_out.worldPos	= wP.xyz;
    vs_out.uv = vec2(vertex.tu, vertex.tv);
-   vs_out.normal    = mat3(transpose(inverse(worldMatrix))) * vec3(vertex.nx, vertex.ny, vertex.nz);
+
+   mat3 normalTransform = mat3(transpose(inverse(worldMatrix)));
+   vs_out.normal    = normalTransform * UnpackU8toFloat(vertex.nx, vertex.ny, vertex.nz);
+   vs_out.tangent   = normalTransform * UnpackU8toFloat(vertex.tx, vertex.ty, vertex.tz);
+   vs_out.bitangent = normalTransform * UnpackU8toFloat(vertex.bx, vertex.by, vertex.bz);
+
    vs_out.viewDir   = globals.cameraPosition - wP.xyz;
    vs_out.matId     = gl_DrawIDARB;
 }

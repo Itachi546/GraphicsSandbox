@@ -40,6 +40,8 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
 
 	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
+
+	mGlobalUniformData.enabledNormalMapping = true;
 }
 
 // TODO: temp width and height variable

@@ -650,7 +650,7 @@ namespace gfx {
         return imageView;
     }
 
-    VkSampler CreateSampler(VkDevice device, const SamplerInfo* samplerInfo)
+    VkSampler CreateSampler(VkDevice device, const SamplerInfo* samplerInfo, float maxAnisotropy)
     {
         VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 
@@ -663,6 +663,8 @@ namespace gfx {
         createInfo.addressModeU = addressMode;
         createInfo.addressModeV = addressMode;
         createInfo.addressModeW = addressMode;
+        createInfo.anisotropyEnable = samplerInfo->enableAnisotropicFiltering;
+        createInfo.maxAnisotropy = maxAnisotropy;
         createInfo.minLod = 0.0f;
         createInfo.maxLod = 16.0f;
 
@@ -1305,10 +1307,13 @@ namespace gfx {
         features2_.features.shaderInt16 = true;
         features2_.features.fillModeNonSolid = true;
         features2_.features.wideLines = true;
+        features2_.features.samplerAnisotropy = true;
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
+        features12_.shaderInt8 = true;
         features12_.hostQueryReset = true;
+        features12_.uniformAndStorageBuffer8BitAccess = true;
         features12_.separateDepthStencilLayouts = true;
         features11_.pNext = &features12_;
         features2_.pNext = &features11_;
@@ -1807,7 +1812,7 @@ namespace gfx {
 
         if (desc->bCreateSampler)
         {
-            VkSampler sampler = CreateSampler(device_, &desc->samplerInfo);
+            VkSampler sampler = CreateSampler(device_, &desc->samplerInfo, properties2_.properties.limits.maxSamplerAnisotropy);
             internalState->sampler = sampler;
         }
 

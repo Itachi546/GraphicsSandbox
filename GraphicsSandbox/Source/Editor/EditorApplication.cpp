@@ -69,47 +69,39 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	}
 	ImGui::End();
 
+	static bool enableDebugDraw = false;
+	static bool enableFrustumCulling = true;
+	static bool freezeFrustum = false;
+	static bool showBoundingBox = mScene.GetShowBoundingBox();
+	static float blurRadius = 10.0f;
+	static float bloomThreshold = 1.0f;
+	static float bloomStrength = 0.04f;
+
 	if (mShowUI)
 	{
 		ImGui::Begin("Render Settings");
-		static bool showBoundingBox = mScene.GetShowBoundingBox();
-		if (ImGui::Checkbox("Show BoundingBox", &showBoundingBox))
-			mScene.SetShowBoundingBox(showBoundingBox);
-
-		static bool enableDebugDraw = false;
+		ImGui::Checkbox("Show BoundingBox", &showBoundingBox);
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
-		DebugDraw::SetEnable(enableDebugDraw);
-
-		static bool enableFrustumCulling = true;
 		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
 		mScene.SetEnableFrustumCulling(enableFrustumCulling);
-
-
-		static bool freezeFrustum = false;
 		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
 		mScene.GetCamera()->SetFreezeFrustum(freezeFrustum);
-
-
-
 		if (ImGui::CollapsingHeader("Bloom"))
 		{
 			ImGui::Checkbox("Enable", &enableBloom);
-			static float blurRadius = 10.0f;
-			if (ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f))
-				mRenderer->SetBlurRadius(blurRadius);
-
-			static float bloomThreshold = 1.0f;
-			if (ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f))
-				mRenderer->SetBloomThreshold(bloomThreshold);
-
-			static float bloomStrength = 0.4f;
-			if (ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f))
-				mRenderer->SetBloomStrength(bloomStrength);
+			ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f);
+			ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f);
+			ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f);
 		}
 		ImGui::End();
-
 		mHierarchy->Draw();
 	}
+
+	mRenderer->SetBlurRadius(blurRadius);
+	mRenderer->SetBloomThreshold(bloomThreshold);
+	mRenderer->SetBloomStrength(bloomStrength);
+	mScene.SetShowBoundingBox(showBoundingBox);
+	DebugDraw::SetEnable(enableDebugDraw);
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
@@ -165,9 +157,10 @@ void EditorApplication::InitializeScene()
 	if (scene != ecs::INVALID_ENTITY)
 	{
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(scene);
+		transform->scale = glm::vec3(0.2f);
 	}
 
-#if 0
+#if 1
 	{
 		ecs::Entity sponza = mScene.CreateMesh("Assets/Models/sponza.sbox");
 		if (sponza != ecs::INVALID_ENTITY)

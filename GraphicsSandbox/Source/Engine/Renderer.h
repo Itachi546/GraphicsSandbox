@@ -75,7 +75,7 @@ private:
 		std::vector<gfx::DrawIndirectCommand> drawCommands;
 		std::vector<glm::mat4> transforms;
 		std::vector<MaterialComponent> materials;
-		std::array<gfx::GPUTexture*, 64> textures;
+		std::array<gfx::GPUTexture, 64> textures;
 		uint32_t textureCount = 0;
 		gfx::BufferView vertexBuffer;
 		gfx::BufferView indexBuffer;

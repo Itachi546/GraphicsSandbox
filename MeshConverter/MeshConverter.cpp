@@ -85,7 +85,7 @@ std::string ResizeAndExportTexture(const unsigned char* src, int srcWidth, int s
 
 std::string ConvertTexture(const std::string& filename, const std::string& exportPath)
 {
-	std::string outputImagePath = exportPath + "Textures/" + TrimPathAndExtension(filename) + "_converted.png";
+	std::string outputImagePath = exportPath + TrimPathAndExtension(filename) + "_converted.png";
 
 	int width, height, nChannel;
 	stbi_uc* pixels = stbi_load(filename.c_str(), &width, &height, &nChannel, STBI_rgb_alpha);
@@ -113,6 +113,9 @@ std::string ConvertTexture(const std::string& filename, const std::string& expor
 
 void ProcessTexture(const aiScene* scene, std::vector<std::string>& textureFiles, const std::string& basePath, const std::string& exportPath)
 {
+	if(!std::filesystem::exists(exportPath))
+		std::filesystem::create_directory(exportPath);
+
 	auto converter = [&exportPath, &basePath, scene](const std::string& filename) {
 		return ConvertTexture(basePath + filename, exportPath);
 	};
@@ -229,7 +232,7 @@ Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<float>& ver
 	return result;
 }
 
-void ParseScene(const aiScene* scene, const std::string& basePath, const std::string& exportPath, MeshData* out)
+void ParseScene(const aiScene* scene, const std::string& basePath, const std::string& exportPath, const std::string& filename, MeshData* out)
 {
 	const uint32_t nMeshes = scene->mNumMeshes;
 	out->meshes.resize(nMeshes);
@@ -248,7 +251,7 @@ void ParseScene(const aiScene* scene, const std::string& basePath, const std::st
 
 	printf("----------------------------------------------\n");
 	printf("Processing Textures\n");
-	ProcessTexture(scene, textureFiles, basePath, exportPath);
+	ProcessTexture(scene, textureFiles, basePath, exportPath + "/" + TrimPathAndExtension(filename) + "/");
 	printf("----------------------------------------------\n");
 }
 
@@ -280,7 +283,7 @@ void LoadFile(const std::string& filename, const std::string& exportPath, MeshDa
 		exit(255);
 	}
 
-	ParseScene(scene, basePath, exportPath, out);
+	ParseScene(scene, basePath, exportPath, filename, out);
 }
 
 void SaveMeshData(const std::string& filename, MeshData* meshData)

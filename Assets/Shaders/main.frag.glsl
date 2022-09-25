@@ -71,9 +71,9 @@ void main()
 
 	//albedo.rgb = pow(albedo.rgb, vec3(2.2f));
 
-	float roughness = material.roughness;
-	float ao = material.ao;
-	float metallic = material.metallic;
+	float roughness = 0.9f;//material.roughness;
+	float ao = material.ao * 0.5f;
+	float metallic = 0.01f;//material.metallic;
 	GetMetallicRoughness(material.metallicMap, material.roughnessMap, metallic, roughness);
 
 	if(material.ambientOcclusionMap != INVALID_TEXTURE)

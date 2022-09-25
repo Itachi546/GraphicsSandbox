@@ -6,13 +6,16 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>C:\Users\lenovo\Documents\3D-Assets\Models\bistro_lumberyard\Exterior\exterior.obj  C:\Users\lenovo\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>C:\Users\lenovo\Documents\3D-Assets\Models\bistro_lumberyard\Exterior\exterior.obj  C:\Users\lenovo\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">
     <LocalDebuggerWorkingDirectory>$(SolutionDir)</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments>C:\Users\lenovo\Documents\3D-Assets\Models\bistro_lumberyard\Exterior\exterior.obj  C:\Users\lenovo\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
   </PropertyGroup>
 </Project>

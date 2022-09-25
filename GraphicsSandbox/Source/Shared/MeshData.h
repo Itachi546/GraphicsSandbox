@@ -52,8 +52,8 @@ struct MaterialComponent {
 	glm::vec4 albedo = glm::vec4(1.0f);
 	
 	float emissive = 0.0f;
-	float roughness = 0.1f;
-	float metallic = 1.0f;
+	float roughness = 0.9f;
+	float metallic = 0.01f;
 	float ao = 1.0f;
 
 	float transparency = 1.0f;

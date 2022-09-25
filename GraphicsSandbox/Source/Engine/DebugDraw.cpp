@@ -75,6 +75,9 @@ void DebugDraw::AddLine(const glm::vec3& start, const glm::vec3& end, uint32_t c
 
 void DebugDraw::AddAABB(const glm::vec3& min, const glm::vec3& max, uint32_t color)
 {
+	if (!gEnableDebugDraw)
+		return;
+
 	// Bottom
 	AddLine(min, glm::vec3(max.x, min.y, min.z), color);
 	AddLine(min, glm::vec3(min.x, min.y, max.z), color);
@@ -96,6 +99,9 @@ void DebugDraw::AddAABB(const glm::vec3& min, const glm::vec3& max, uint32_t col
 
 void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t color)
 {
+	if (!gEnableDebugDraw)
+		return;
+
 	// Near Plane
 	AddLine(points[0], points[1], color);
 	AddLine(points[0], points[2], color);

@@ -305,16 +305,8 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 
 	descriptorInfos[6] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
 
-
-	std::array<gfx::GPUTexture, 64> textures;
-
-	//@TODO: Temp
-	std::transform(batch.textures.begin(), batch.textures.end(), textures.begin(), [](gfx::GPUTexture* texture) {
-		return *texture;
-		});
-
 	gfx::DescriptorInfo imageArrInfo = {};
-	imageArrInfo.resource = textures.data();
+	imageArrInfo.resource = batch.textures.data();
 	imageArrInfo.offset = 0;
 	imageArrInfo.size = 64;
 	imageArrInfo.type = gfx::DescriptorType::ImageArray;
@@ -345,13 +337,15 @@ void Renderer::CreateBatch()
 	if (drawDatas.size() > 0)
 	{
 		auto addUnique = [](RenderBatch* activeBatch, gfx::GPUTexture* texture) -> uint32_t {
-			std::array<gfx::GPUTexture*, 64>& textureList = activeBatch->textures;
+			std::array<gfx::GPUTexture, 64>& textureList = activeBatch->textures;
 			uint32_t& textureCount = activeBatch->textureCount;
-			auto found = std::find(textureList.begin(), textureList.end(), texture);
+			auto found = std::find_if(textureList.begin(), textureList.end(), [texture](const gfx::GPUTexture& current) {
+				return texture->internalState == current.internalState;
+				});
 			if (found != textureList.end())
 				return (uint32_t)(std::distance(textureList.begin(), found));
 
-			textureList[textureCount++] = texture;
+			textureList[textureCount++] = *texture;
 			return textureCount - 1;
 		};
 
@@ -371,7 +365,7 @@ void Renderer::CreateBatch()
 				mRenderBatches.push_back(RenderBatch{});
 				activeBatch = &mRenderBatches.back();
 				// Initialize by default texture
-				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), TextureCache::GetDefaultTexture());
+				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), *TextureCache::GetDefaultTexture());
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
 				activeBatch->indexBuffer = drawData.indexBuffer;
 				lastBufferIndex = vbIndex;

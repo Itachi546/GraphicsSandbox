@@ -104,21 +104,21 @@ void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t col
 
 	// Near Plane
 	AddLine(points[0], points[1], color);
-	AddLine(points[0], points[2], color);
-	AddLine(points[1], points[3], color);
-	AddLine(points[2], points[3], color);
+	AddLine(points[0], points[3], color);
+	AddLine(points[1], points[2], color);
+	AddLine(points[3], points[2], color);
 
 	// Far Plane
 	AddLine(points[4], points[5], color);
-	AddLine(points[4], points[6], color);
-	AddLine(points[5], points[7], color);
-	AddLine(points[6], points[7], color);
+	AddLine(points[4], points[7], color);
+	AddLine(points[5], points[6], color);
+	AddLine(points[7], points[6], color);
 
 	// Joint
 	AddLine(points[0], points[4], color);
 	AddLine(points[1], points[5], color);
-	AddLine(points[2], points[6], color);
 	AddLine(points[3], points[7], color);
+	AddLine(points[2], points[6], color);
 }
 
 

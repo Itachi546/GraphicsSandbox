@@ -18,7 +18,7 @@ namespace DebugDraw
 
 	/*
 	* Points should be in given order
-	* NTL, NTR,	NBL, NBR, FTL, FTR,	FBL, FBR
+    * NTL, NTR, NBR, NBL, FTL, FTR, FBR, FBL
 	*/
 	void AddFrustum(const glm::vec3* points, uint32_t count = 8, uint32_t color = 0xff0000);
 

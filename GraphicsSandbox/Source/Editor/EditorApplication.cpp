@@ -119,9 +119,9 @@ void EditorApplication::PreUpdate(float dt) {
 		bRunning = false;
 
 	if (Input::Down(Input::Key::KEY_W))
-		mCamera->Walk(dt * walkSpeed);
-	else if (Input::Down(Input::Key::KEY_S))
 		mCamera->Walk(-dt * walkSpeed);
+	else if (Input::Down(Input::Key::KEY_S))
+		mCamera->Walk(dt * walkSpeed);
 	if (Input::Down(Input::Key::KEY_A))
 		mCamera->Strafe(-dt * walkSpeed);
 	else if (Input::Down(Input::Key::KEY_D))
@@ -152,11 +152,14 @@ void EditorApplication::InitializeScene()
 {
 	mCamera->SetPosition({ 0.0f, 1.0f, 3.0f });
 	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
-	mScene.SetEnableFrustumCulling(false);
+	mCamera->SetNearPlane(0.3f);
+	mCamera->SetFarPlane(3000.0f);
+	mScene.SetEnableFrustumCulling(true);
 
 	auto compMgr = mScene.GetComponentManager();
 
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
+	ecs::Entity scene = mScene.CreateMesh("Assets/Models/scene.sbox");
+	//ecs::Entity scene = mScene.CreateCube("Cube001");
 }
 
 EditorApplication::~EditorApplication()

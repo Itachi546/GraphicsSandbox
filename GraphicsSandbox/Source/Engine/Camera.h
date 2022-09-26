@@ -1,9 +1,9 @@
 #pragma once
 
 #include "GlmIncludes.h"
+#include "../Shared/MathUtils.h"
 
 #include <memory>
-class Frustum;
 
 class Camera
 {
@@ -93,12 +93,14 @@ public:
 		mTargetRotation.x = glm::clamp(mTargetRotation.x, -maxAngle, maxAngle);
 	}
 
-	std::shared_ptr<Frustum> GetFrustum() { return mFrustum; }
-
 	glm::vec3 GetForward() { return mForward; }
 	glm::vec3 GetPosition() const { return mPosition; }
 
+
+	std::shared_ptr<Frustum> mFrustum;
 private:
+	glm::vec3 mFrustumPoints[8];
+
 	glm::vec3 mPosition;
 	glm::vec3 mRotation;
 
@@ -120,12 +122,10 @@ private:
 
 	bool mFreezeFrustum = false;
 	glm::mat4 mFreezeVP;
-	glm::vec3 mFrustumPoints[8];
-
-	std::shared_ptr<Frustum> mFrustum;
 
 	void CalculateProjection();
 	void CalculateView();
 	void CalculateFrustum();
+	void CalculateFrustumPoints();
 
 };

@@ -38,7 +38,7 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 	auto objectComponentArray = mComponentManager->GetComponentArray<ObjectComponent>();
 	auto meshDataComponentArray = mComponentManager->GetComponentArray<MeshDataComponent>();
 
-	auto frustum = mCamera.GetFrustum();
+	auto frustum = mCamera.mFrustum;
 	for (int i = 0; i < objectComponentArray->GetCount(); ++i)
 	{
 		const ecs::Entity& entity = objectComponentArray->entities[i];
@@ -51,8 +51,11 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 			aabb.Transform(transform->worldMatrix);
 
 			bool isVisible = true;
-			if (mEnableFrustumCulling && !frustum->Intersect(aabb))
-				isVisible = false;
+			if (mEnableFrustumCulling)
+			{
+				if (!frustum->Intersect(aabb))
+					isVisible = false;
+			}
 
 			if (isVisible)
 			{
@@ -91,7 +94,7 @@ void Scene::DrawBoundingBox()
 		if (meshData.IsRenderable())
 		{
 			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			BoundingBox aabb =  meshData.boundingBoxes[object.meshId];
+			BoundingBox aabb = meshData.boundingBoxes[object.meshId];
 			aabb.Transform(transform->worldMatrix);
 			DebugDraw::AddAABB(aabb.min, aabb.max);
 		}
@@ -325,8 +328,12 @@ Scene::~Scene()
 void Scene::UpdateTransform()
 {
 	auto transforms = mComponentManager->GetComponentArray<TransformComponent>();
-	for (auto& transform : transforms->components)
+	std::for_each(std::execution::par, transforms->components.begin(), transforms->components.end(), [](TransformComponent& transform) {
 		transform.CalculateWorldMatrix();
+	});
+
+	//for (auto& transform : transforms->components)
+	//transform.CalculateWorldMatrix();
 }
 
 void Scene::UpdateHierarchy()

@@ -1308,6 +1308,7 @@ namespace gfx {
         features2_.features.fillModeNonSolid = true;
         features2_.features.wideLines = true;
         features2_.features.samplerAnisotropy = true;
+        features2_.features.geometryShader = true;
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
@@ -1492,6 +1493,21 @@ namespace gfx {
         {
             Attachment* attachment = (renderPass->desc.attachments + i);
             desc.format = attachment->format;
+            /*
+            * If arrayLayers is greater than 1 for framebuffer attachment then
+            * the imageview is converted to  imageview array
+            * This is currently used in layered rendering for CSM(Cascaded Shadow Map)
+            */
+            if (desc.arrayLayers > 1)
+            {
+                desc.arrayLayers = attachment->layerCount;
+                desc.imageViewType = ImageViewType::IV2DArray;
+            }
+            else
+            {
+                desc.imageViewType = ImageViewType::IV2D;
+                desc.arrayLayers = 1;
+            }
 
             VkFormat format = _ConvertFormat(attachment->format);
             if (IsAttachmentTypeDepth(format))

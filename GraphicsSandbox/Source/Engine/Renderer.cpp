@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "Profiler.h"
 #include "FX/Bloom.h"
+#include "CascadedShadowMap.h"
 #include "StringConstants.h"
 
 #include "../Shared/MeshData.h"
@@ -40,6 +41,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
 
 	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
+	mShadowMap = std::make_shared<CascadedShadowMap>();
 
 	mGlobalUniformData.enabledNormalMapping = true;
 }

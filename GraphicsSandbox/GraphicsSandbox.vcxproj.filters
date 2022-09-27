@@ -140,6 +140,7 @@
     <ClInclude Include="Source\Engine\TextureCache.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
     <ClInclude Include="Source\Engine\StringConstants.h" />
+    <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -235,6 +236,9 @@
     <ClCompile Include="Source\Shared\MathUtils.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\CascadedShadowMap.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
@@ -278,6 +282,9 @@
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl" />
     <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\shadow.frag.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\shadow.vert.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\shadow.geom.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">

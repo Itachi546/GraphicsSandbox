@@ -240,6 +240,7 @@ namespace gfx
 		uint32_t index;
 		Format format;
 		ImageLayout layout;
+		int layerCount = 1;
 	};
 
 	struct RenderPassDesc

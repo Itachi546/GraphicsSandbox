@@ -59,8 +59,7 @@ void Camera::CalculateView()
 	{
 		mFreezeVP = mProjection * mView;
 		CalculateFrustumPoints();
-		mFrustum->CreateFromPoints(mFrustumPoints);
-		//CalculateFrustum();
+		CalculateFrustumFast();
 	}
 }
 
@@ -69,8 +68,8 @@ void Camera::CalculateView()
 * Fast Extraction of Viewing Frustum Planes from the 
   View-Projection Matrix (Gribb and Hartmann 2001)
 */
-/*
-void Camera::CalculateFrustum()
+
+void Camera::CalculateFrustumFast()
 {
 	glm::vec4 col0 = glm::row(mFreezeVP, 0);
 	glm::vec4 col1 = glm::row(mFreezeVP, 1);
@@ -90,7 +89,7 @@ void Camera::CalculateFrustum()
 	// Far
 	mFrustum->planes[Frustum::Plane::Far] = Plane(col3 - col2);
 }
-*/
+
 void Camera::CalculateFrustumPoints()
 {
 	static const glm::vec3 frustumCorners[8] =

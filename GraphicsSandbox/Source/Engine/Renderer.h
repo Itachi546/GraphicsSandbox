@@ -4,11 +4,11 @@
 #include "Graphics.h"
 #include "GraphicsDevice.h"
 #include "Components.h"
-
 #include <vector>
 
 class gfx::GpuMemoryAllocator;
 class Scene;
+class CascadedShadowMap;
 
 enum class OutputTextureType
 {
@@ -53,7 +53,6 @@ public:
 
 	virtual ~Renderer() = default;
 private:
-	std::shared_ptr<fx::Bloom> mBloomFX;
 
 	struct LightData
 	{
@@ -105,8 +104,9 @@ private:
 	gfx::Format mHDRDepthFormat = gfx::Format::D32_SFLOAT;
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
 
-	// fx Variables
 	const int kMaxEntity = 10'000;
+	std::shared_ptr<fx::Bloom> mBloomFX;
+	std::shared_ptr<CascadedShadowMap> mShadowMap;
 
 	std::shared_ptr<gfx::Pipeline> loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();

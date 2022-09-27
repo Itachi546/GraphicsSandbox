@@ -41,6 +41,8 @@ void DebugDraw::Initialize(gfx::RenderPass* renderPass)
 	gPipeline = new gfx::Pipeline;
 	device->CreateGraphicsPipeline(&pipelineDesc, gPipeline);
 
+	delete[] shaderDesc[0].code;
+	delete[] shaderDesc[1].code;
 
 	gfx::GPUBufferDesc bufferDesc;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;

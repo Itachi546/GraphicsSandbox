@@ -40,7 +40,7 @@ namespace gfx
 		void CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out)                           override;
 		void CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)                        override;
 		void CreateSemaphore(Semaphore* out)                                                   override;
-		void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out)                       override;          
+		void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out, uint32_t layerCount)  override;          
 		void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
 		void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)                   override;

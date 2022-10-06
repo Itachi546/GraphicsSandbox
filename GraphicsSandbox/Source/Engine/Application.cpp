@@ -159,7 +159,13 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	renderPassDesc.width = props.width;
 	renderPassDesc.height = props.height;
 
-	gfx::Attachment attachment{ 0, mSwapchainColorFormat, gfx::ImageLayout::ColorAttachmentOptimal };
+	gfx::GPUTextureDesc attachmentDesc;
+	attachmentDesc.bCreateSampler = false;
+	attachmentDesc.bindFlag = gfx::BindFlag::RenderTarget;
+	attachmentDesc.format = mSwapchainColorFormat;
+	attachmentDesc.width = props.width;
+	attachmentDesc.height = props.height;
+	gfx::Attachment attachment{ 0, attachmentDesc};
 
 	renderPassDesc.attachmentCount = 1;
 	renderPassDesc.attachments = &attachment;

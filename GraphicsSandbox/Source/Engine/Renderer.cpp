@@ -7,6 +7,7 @@
 #include "FX/Bloom.h"
 #include "CascadedShadowMap.h"
 #include "StringConstants.h"
+#include "DebugDraw.h"
 
 #include "../Shared/MeshData.h"
 #include <vector>
@@ -21,11 +22,29 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	gfx::RenderPassDesc desc;
 	desc.width = 1920;
 	desc.height = 1080;
+
+	gfx::GPUTextureDesc colorAttachment = {};
+	colorAttachment.bCreateSampler = true;
+	colorAttachment.format = mHDRColorFormat;
+	colorAttachment.bindFlag = gfx::BindFlag::RenderTarget | gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
+	colorAttachment.imageAspect = gfx::ImageAspect::Color;
+	colorAttachment.width = desc.width;
+	colorAttachment.height = desc.height;
+
+
+	gfx::GPUTextureDesc depthAttachment = {};
+	depthAttachment.bCreateSampler = true;
+	depthAttachment.format = mHDRDepthFormat;
+	depthAttachment.bindFlag = gfx::BindFlag::DepthStencil | gfx::BindFlag::ShaderResource;
+	depthAttachment.imageAspect = gfx::ImageAspect::Depth;
+	depthAttachment.width = desc.width;
+	depthAttachment.height = desc.height;
+
 	gfx::Attachment attachments[3] = 
 	{
-		gfx::Attachment{0, mHDRColorFormat, gfx::ImageLayout::ColorAttachmentOptimal},
-		gfx::Attachment{1, mHDRColorFormat, gfx::ImageLayout::ColorAttachmentOptimal},
-		gfx::Attachment{ 2, mHDRDepthFormat, gfx::ImageLayout::DepthStencilAttachmentOptimal },
+		gfx::Attachment{0, colorAttachment},
+		gfx::Attachment{2, depthAttachment},
+		gfx::Attachment{1, colorAttachment}
 	};
 
 	desc.attachmentCount = static_cast<uint32_t>(std::size(attachments));
@@ -35,7 +54,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mDevice->CreateRenderPass(&desc, mHdrRenderPass.get());
 
 	mHdrFramebuffer = std::make_shared<gfx::Framebuffer>();
-	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get());
+	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get(), 1);
 
 	mTrianglePipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
 	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
@@ -54,11 +73,19 @@ void Renderer::Update(float dt)
 		CreateBatch();
 		mUpdateBatches = false;
 	}
-	Camera* camera = mScene->GetCamera();
 
+	auto compMgr = mScene->GetComponentManager();
+	// Generate light Direction
+	glm::mat3 transform = glm::toMat4(compMgr->GetComponent<TransformComponent>(mScene->GetSun())->rotation);
+
+	glm::vec3 direction = normalize(transform * glm::vec3(0.0f, 1.0f, 0.0f));
+	Camera* camera = mScene->GetCamera();
+	mShadowMap->Update(camera, direction);
+	DebugDraw::AddLine(direction * 5.0f, direction, 0xff0000);
+
+	// Update Global Uniform Data
 	glm::mat4 P = camera->GetProjectionMatrix();
 	mGlobalUniformData.P = P;
-
 	glm::mat4 V = camera->GetViewMatrix();
 	mGlobalUniformData.V = V;
 	mGlobalUniformData.VP = mGlobalUniformData.P * V;
@@ -66,7 +93,6 @@ void Renderer::Update(float dt)
 	mGlobalUniformData.dt += dt;
 	mGlobalUniformData.bloomThreshold = mBloomThreshold;
 
-	auto compMgr = mScene->GetComponentManager();
 	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
 	std::vector<LightComponent>& lights = lightArrComponent->components;
 	std::vector<ecs::Entity>& entities = lightArrComponent->entities;
@@ -92,57 +118,101 @@ void Renderer::Update(float dt)
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
 }
 
-void Renderer::Render(gfx::CommandList* commandList)
+void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 {
-	gfx::ImageBarrierInfo barriers[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mHdrFramebuffer->attachments[2]},
-	};
+	// BeginShadow Pass
+	auto rangeId = Profiler::StartRangeGPU(commandList, "Shadow Pass");
+	mShadowMap->BeginRender(commandList);
 
-	gfx::PipelineBarrierInfo colorAttachmentBarrier = { barriers, 2, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput};
-	gfx::PipelineBarrierInfo depthAttachmentBarrier = { &barriers[2], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
-	mDevice->PipelineBarrier(commandList, &colorAttachmentBarrier);
-	mDevice->PipelineBarrier(commandList, &depthAttachmentBarrier);
-
-	auto hdrPass = Profiler::StartRangeGPU(commandList, "HDR Pass");
-	mDevice->BeginRenderPass(commandList, mHdrRenderPass.get(), mHdrFramebuffer.get());
-
-	/*
-	* TODO: Currently PerObjectData is extracted from the
-	* DrawData by iterating through it. In future maybe
-	* we can do culling in the compute shader and set
-	* PerObjectBuffer from compute shader.
-	*/
-	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
-
-	mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
-
-	// offset is used to keep track of the buffer offset of transform data
-	// so as we don't have to use absolute index but relative
-	// We have all transform and material data in same buffer loaded at one
-	// and the buffer is binded relatively according to the batch
-
-	uint32_t offset = 0;
+	uint32_t lastOffset = 0;
+	auto pipeline = mShadowMap->mPipeline.get();
+	auto cascadeInfoBuffer = mShadowMap->mBuffer.get();
 	for (auto& batch : mRenderBatches)
 	{
-		DrawBatch(commandList, batch, offset, allocator);
-		// NOTE: for now the size of DrawCommand, Transform and Material is same
-		// We need to create offset within the batch later if we decide to share
-		// materials
-		offset += (uint32_t)batch.drawCommands.size();
+		gfx::BufferView& vbView = batch.vertexBuffer;
+		gfx::BufferView& ibView = batch.indexBuffer;
+
+		auto vb = vbView.buffer;
+		auto ib = ibView.buffer;
+
+		gfx::DescriptorInfo descriptorInfos[3] = {};
+		descriptorInfos[0] = { vb, 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[1] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[2] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+
+		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(commandList, pipeline);
+
+		mDevice->BindIndexBuffer(commandList, ib);
+		mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
+		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
-	mDevice->EndDebugMarker(commandList);
+	mShadowMap->EndRender(commandList);
+	Profiler::EndRangeGPU(commandList, rangeId);
+}
 
-	auto& envMap = mScene->GetEnvironmentMap();
-	gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
-	
-	mDevice->BeginDebugMarker(commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
-	DrawCubemap(commandList, envMap->GetCubemap().get());
-	mDevice->EndDebugMarker(commandList);
+void Renderer::Render(gfx::CommandList* commandList)
+{
+	{
+		// Draw Shadow Map
+		DrawShadowMap(commandList);
+		gfx::ImageBarrierInfo shadowBarrier = {
+				gfx::ImageBarrierInfo{gfx::AccessFlag::DepthStencilWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, &mShadowMap->mFramebuffer->attachments[0]},
+		};
+		gfx::PipelineBarrierInfo barrier = { &shadowBarrier, 1, gfx::PipelineStage::LateFramentTest, gfx::PipelineStage::FragmentShader};
+		mDevice->PipelineBarrier(commandList, &barrier);
+	}
 
-	mDevice->EndRenderPass(commandList);
-	Profiler::EndRangeGPU(commandList, hdrPass);
+	// Begin HDR RenderPass
+	{
+		gfx::ImageBarrierInfo barriers[] = {
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mHdrFramebuffer->attachments[2]},
+		};
+
+		gfx::PipelineBarrierInfo colorAttachmentBarrier = { barriers, 2, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput };
+		gfx::PipelineBarrierInfo depthAttachmentBarrier = { &barriers[2], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+		mDevice->PipelineBarrier(commandList, &colorAttachmentBarrier);
+		mDevice->PipelineBarrier(commandList, &depthAttachmentBarrier);
+
+		auto hdrPass = Profiler::StartRangeGPU(commandList, "HDR Pass");
+		mDevice->BeginRenderPass(commandList, mHdrRenderPass.get(), mHdrFramebuffer.get());
+
+		/*
+		* TODO: Currently PerObjectData is extracted from the
+		* DrawData by iterating through it. In future maybe
+		* we can do culling in the compute shader and set
+		* PerObjectBuffer from compute shader.
+		*/
+		mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
+
+		// offset is used to keep track of the buffer offset of transform data
+		// so as we don't have to use absolute index but relative
+		// We have all transform and material data in same buffer loaded at one
+		// and the buffer is binded relatively according to the batch
+
+		uint32_t offset = 0;
+		for (auto& batch : mRenderBatches)
+		{
+			DrawBatch(commandList, batch, offset);
+			// NOTE: for now the size of DrawCommand, Transform and Material is same
+			// We need to create offset within the batch later if we decide to share
+			// materials
+			offset += (uint32_t)batch.drawCommands.size();
+		}
+		mDevice->EndDebugMarker(commandList);
+
+		// Draw Cubemap
+		auto& envMap = mScene->GetEnvironmentMap();
+		gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
+
+		mDevice->BeginDebugMarker(commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
+		DrawCubemap(commandList, envMap->GetCubemap().get());
+		mDevice->EndDebugMarker(commandList);
+		mDevice->EndRenderPass(commandList);
+		Profiler::EndRangeGPU(commandList, hdrPass);
+	}
 
 	if (mEnableBloom)
 	{
@@ -267,23 +337,9 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	mDevice->DrawIndexed(commandList, mesh->indexCount, 1, mesh->indexOffset / sizeof(uint32_t));
 }
 
-void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator)
+
+void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset)
 {
-	// Copy PerObjectDrawData to the buffer
-	//PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
-	glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr) + lastOffset;
-	MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr) + lastOffset;
-	gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr) + lastOffset;
-
-	uint32_t transformCount = (uint32_t)batch.transforms.size();
-	std::memcpy(transformPtr, batch.transforms.data(), transformCount * sizeof(glm::mat4));
-
-	uint32_t materialCount = (uint32_t)batch.materials.size();
-	std::memcpy(materialCompPtr, batch.materials.data(), materialCount * sizeof(MaterialComponent));
-
-	uint32_t drawCommandCount = (uint32_t)batch.drawCommands.size();
-	std::memcpy(drawCommandPtr, batch.drawCommands.data(), drawCommandCount * sizeof(gfx::DrawIndirectCommand));
-
 	gfx::BufferView& vbView = batch.vertexBuffer;
 	gfx::BufferView& ibView = batch.indexBuffer;
 
@@ -293,15 +349,15 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	auto& envMap = mScene->GetEnvironmentMap();
 
 	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[9] = {};
+	gfx::DescriptorInfo descriptorInfos[10] = {};
 
 	descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 
 	descriptorInfos[1] = { vb, 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
 
-	descriptorInfos[2] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), transformCount * (uint32_t)sizeof(glm::mat4), gfx::DescriptorType::StorageBuffer};
+	descriptorInfos[2] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer};
 
-	descriptorInfos[3] = { mMaterialBuffer.get(), (uint32_t)(lastOffset * sizeof(MaterialComponent)), materialCount * (uint32_t)sizeof(MaterialComponent), gfx::DescriptorType::StorageBuffer};
+	descriptorInfos[3] = { mMaterialBuffer.get(), (uint32_t)(lastOffset * sizeof(MaterialComponent)), (uint32_t)(batch.materials.size() * (uint32_t)sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer};
 
 	descriptorInfos[4] = { envMap->GetIrradianceMap().get(), 0, 0, gfx::DescriptorType::Image };
 
@@ -309,18 +365,21 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 
 	descriptorInfos[6] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
 
+	descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
+	descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
+
 	gfx::DescriptorInfo imageArrInfo = {};
 	imageArrInfo.resource = batch.textures.data();
 	imageArrInfo.offset = 0;
 	imageArrInfo.size = 64;
 	imageArrInfo.type = gfx::DescriptorType::ImageArray;
-	descriptorInfos[7] = imageArrInfo;
+	descriptorInfos[9] = imageArrInfo;
 
 	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mTrianglePipeline.get());
 
 	mDevice->BindIndexBuffer(commandList, ib);
-	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), drawCommandCount, sizeof(gfx::DrawIndirectCommand));
+	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 }
 
 void Renderer::CreateBatch()
@@ -397,6 +456,27 @@ void Renderer::CreateBatch()
 
 			assert(activeBatch->transforms.size() == activeBatch->drawCommands.size());
 			assert(activeBatch->transforms.size() == activeBatch->materials.size());
+		}
+
+		// Copy PerObjectDrawData to the buffer
+        //PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
+		uint32_t lastOffset = 0;
+		for (auto& batch : mRenderBatches)
+		{
+			glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr) + lastOffset;
+			MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr) + lastOffset;
+			gfx::DrawIndirectCommand* drawCommandPtr = static_cast<gfx::DrawIndirectCommand*>(mDrawIndirectBuffer->mappedDataPtr) + lastOffset;
+
+			uint32_t transformCount = (uint32_t)batch.transforms.size();
+			std::memcpy(transformPtr, batch.transforms.data(), transformCount * sizeof(glm::mat4));
+
+			uint32_t materialCount = (uint32_t)batch.materials.size();
+			std::memcpy(materialCompPtr, batch.materials.data(), materialCount * sizeof(MaterialComponent));
+
+			uint32_t drawCommandCount = (uint32_t)batch.drawCommands.size();
+			std::memcpy(drawCommandPtr, batch.drawCommands.data(), drawCommandCount * sizeof(gfx::DrawIndirectCommand));
+
+			lastOffset += (uint32_t)batch.transforms.size();
 		}
 	}
 }

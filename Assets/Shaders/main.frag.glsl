@@ -39,6 +39,7 @@ struct Material
 #define FRAGMENT_SHADER
 #include "pbr.glsl"
 #include "bindings.glsl"
+#include "shadow.glsl"
 
 void GetMetallicRoughness(uint metallicMapIndex, uint roughnessMapIndex, inout float metallic, inout float roughness)
 {
@@ -104,6 +105,9 @@ void main()
 
 	vec3 f0	= mix(vec3(0.04), albedo.rgb, metallic);
 
+	// Calculate shadow factor
+	
+
 	int nLight = globals.nLight;
 	for(int i = 0; i < nLight; ++i)
 	{
@@ -111,17 +115,21 @@ void main()
 		//Light light = light[i];
     	vec3 l = light.position;
 		float attenuation = 1.0f;
+		float shadow = 1.0f;
 		if(light.type > 0.2f)
 		{
-            light.position - fs_in.worldPos;
+            vec3 l = light.position - fs_in.worldPos;
 		    float dist = length(l);
 			attenuation	= 1.0f / (dist * dist);
      		l /= dist;
         }
 		else 
+		{
     		l= normalize(l);
-    	vec3 h = normalize(v + l);
+			shadow = CalculateShadowFactor(fs_in.worldPos, length(fs_in.viewDir));
+		}
 
+    	vec3 h = normalize(v + l);
 		float NoL =	clamp(dot(n, l), 0.0, 1.0);
 		float LoH =	clamp(dot(l, h), 0.0, 1.0);
 		float NoH =	clamp(dot(n, h), 0.0, 1.0);
@@ -134,7 +142,7 @@ void main()
 		vec3  Kd = (1.0f - Ks) * (1.0f - metallic);
 		vec3 specular =	(V * F * D) / (4.0f * NoV * NoL + 0.0001f);
 
-		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation;
+		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation * shadow;
 	}
 
 	vec3 Ks = F_SchlickRoughness(NoV, f0, roughness);

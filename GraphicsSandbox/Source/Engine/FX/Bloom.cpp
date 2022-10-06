@@ -168,7 +168,7 @@ namespace fx
 		textureDesc.width = mWidth >> 1;
 		textureDesc.height = mHeight >> 1;
 		textureDesc.mipLevels = kMaxMipLevel;
-		textureDesc.bindFlag = gfx::BindFlag::ShaderResource;
+		textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 		textureDesc.format = mFormat;
 		mDevice->CreateTexture(&textureDesc, &mDownSampleTexture);
 	}

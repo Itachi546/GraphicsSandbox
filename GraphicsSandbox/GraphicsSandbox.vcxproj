@@ -291,15 +291,13 @@
     <None Include="..\Assets\Shaders\pbr.glsl">
       <FileType>Document</FileType>
     </None>
-    <CustomBuild Include="..\Assets\Shaders\shadow.frag.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\shadow.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\shadow.geom.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <None Include="..\Assets\Shaders\shadow.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

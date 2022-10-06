@@ -1,20 +1,22 @@
 #version 450
 
-layout(triangles, invocations = 6) in;
-layout(triangle_strip, max_vertices = 18) out;
+layout(triangles, invocations = 5) in;
+layout(triangle_strip, max_vertices = 3) out;
 
-layout(binding = 0) uniform CascadeInfo
+#extension GL_GOOGLE_include_directive : require
+#include "shadow.glsl"
+
+layout(binding = 2, std140) uniform CascadeInfo
 {
-   int cascadeCount;
-   mat4 lightVP[6];
+   Cascade cascades[5];
 };
 
 void main()
 { 
-   for(int i = 0; i < cascadeCount; ++i)
+   for(int i = 0; i < gl_in.length(); ++i)
    {
       gl_Layer = gl_InvocationID;
-      gl_Position = lightVP[i] * gl_in[i].gl_Position;
+      gl_Position = cascades[gl_InvocationID].VP * gl_in[i].gl_Position;
       EmitVertex();
    }
    EndPrimitive();

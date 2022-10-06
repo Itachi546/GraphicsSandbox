@@ -19,7 +19,7 @@ namespace gfx
 		virtual void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0) = 0;
 		virtual void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CreateSemaphore(Semaphore* out) = 0;
-		virtual void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out) = 0;
+		virtual void CreateFramebuffer(RenderPass* renderPass, Framebuffer* out, uint32_t layerCount) = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
 		virtual void GenerateMipmap(GPUTexture* src, uint32_t mipCount) = 0;

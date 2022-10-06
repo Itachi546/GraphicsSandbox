@@ -37,6 +37,8 @@ public:
 	{
 		mUpdateBatches = state;
 	}
+	
+	std::shared_ptr<CascadedShadowMap> GetShadowMap() { return mShadowMap; }
 
 	gfx::GPUTexture* GetOutputTexture(OutputTextureType colorTextureType);
 
@@ -111,7 +113,9 @@ private:
 	std::shared_ptr<gfx::Pipeline> loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
-	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::GpuMemoryAllocator* allocator);
+	void DrawShadowMap(gfx::CommandList* commandList);
+	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset);
+
 	void CreateBatch();
 
 	bool mUpdateBatches = true;

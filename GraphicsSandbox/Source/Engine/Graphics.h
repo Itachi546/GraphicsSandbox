@@ -33,6 +33,7 @@ namespace gfx
 		R16B16G16A16_SFLOAT,
 		R32B32G32A32_SFLOAT,
 		R32G32_SFLOAT,
+		D16_UNORM,
 		D32_SFLOAT,
 		D32_SFLOAT_S8_UINT,
 		D24_UNORM_S8_UINT,
@@ -235,29 +236,6 @@ namespace gfx
 		PipelineStage dstStage;
 	};
 
-	struct Attachment
-	{
-		uint32_t index;
-		Format format;
-		ImageLayout layout;
-		int layerCount = 1;
-	};
-
-	struct RenderPassDesc
-	{
-		uint32_t attachmentCount;
-		Attachment* attachments;
-
-		uint32_t width;
-		uint32_t height;
-		bool hasDepthAttachment = false;
-	};
-
-	struct RenderPass : public GraphicsDeviceResource
-	{
-		RenderPassDesc desc;
-	};
-
 	struct Pipeline : public GraphicsDeviceResource
 	{
 	};
@@ -336,7 +314,8 @@ namespace gfx
 		ShaderResource = 1 << 3,
 		RenderTarget = 1 << 4,
 		DepthStencil = 1 << 5,
-		IndirectBuffer = 1 << 6
+		IndirectBuffer = 1 << 6,
+		StorageImage = 1 << 7
 	};
 
 	struct GPUBufferDesc
@@ -375,6 +354,28 @@ namespace gfx
 		ImageAspect imageAspect = ImageAspect::Color;
 		ImageViewType imageViewType = ImageViewType::IV2D;
 		Format format = Format::R8G8B8A8_UNORM;
+	};
+
+	struct Attachment
+	{
+		uint32_t index;
+		GPUTextureDesc desc;
+	};
+
+
+	struct RenderPassDesc
+	{
+		uint32_t attachmentCount;
+		Attachment* attachments;
+
+		uint32_t width;
+		uint32_t height;
+		bool hasDepthAttachment = false;
+	};
+
+	struct RenderPass : public GraphicsDeviceResource
+	{
+		RenderPassDesc desc;
 	};
 
 	struct GPUTexture : public GPUResource

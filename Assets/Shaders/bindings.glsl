@@ -45,5 +45,5 @@ layout(binding = 2) readonly buffer TransformData
    layout(binding = 4) uniform samplerCube uIrradianceMap;
    layout(binding = 5) uniform samplerCube uPrefilterEnvMap;
    layout(binding = 6) uniform sampler2D   uBRDFLUT;
-   layout(binding = 7) uniform sampler2D   uTextures[64];
+   layout(binding = 9) uniform sampler2D   uTextures[64];
 #endif

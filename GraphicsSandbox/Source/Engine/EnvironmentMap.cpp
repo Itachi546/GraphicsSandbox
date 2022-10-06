@@ -33,7 +33,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	gfx::GPUTextureDesc hdriDesc{};
 	hdriDesc.width = width;
 	hdriDesc.height = height;
-	hdriDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	hdriDesc.bindFlag = gfx::BindFlag::StorageImage | gfx::BindFlag::ShaderResource;
 	hdriDesc.imageViewType = gfx::ImageViewType::IV2D;
 	hdriDesc.format = gfx::Format::R32B32G32A32_SFLOAT;
 	hdriDesc.bCreateSampler = true;
@@ -63,7 +63,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	// Create Destination Cubemap texture
 	gfx::GPUTextureDesc cubemapDesc{};
 	cubemapDesc.width = cubemapDesc.height = mCubemapDims;
-	cubemapDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	cubemapDesc.bindFlag = gfx::BindFlag::StorageImage | gfx::BindFlag::ShaderResource;
 	cubemapDesc.imageViewType = gfx::ImageViewType::IVCubemap;
 	cubemapDesc.arrayLayers = 6;
 	cubemapDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
@@ -115,7 +115,7 @@ void EnvironmentMap::CalculateIrradiance()
 	mIrradianceTexture = std::make_shared<gfx::GPUTexture>();
 	gfx::GPUTextureDesc irrDesc{};
 	irrDesc.width = irrDesc.height = mIrrTexDims;
-	irrDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	irrDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 	irrDesc.imageViewType = gfx::ImageViewType::IVCubemap;
 	irrDesc.arrayLayers = 6;
 	irrDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
@@ -165,7 +165,7 @@ void EnvironmentMap::Prefilter()
 	mPrefilterTexture = std::make_shared<gfx::GPUTexture>();
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mPrefilterDims;
-	desc.bindFlag = gfx::BindFlag::ShaderResource;
+	desc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 	desc.imageViewType = gfx::ImageViewType::IVCubemap;
 	desc.arrayLayers = 6;
 	desc.mipLevels = nMaxMipLevel;
@@ -224,7 +224,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mBRDFTexture = std::make_shared<gfx::GPUTexture>();
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mBRDFDims;
-	desc.bindFlag = gfx::BindFlag::ShaderResource;
+	desc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 	desc.imageViewType = gfx::ImageViewType::IV2D;
 	desc.format = gfx::Format::R16G16_SFLOAT;
 	desc.imageAspect = gfx::ImageAspect::Color;

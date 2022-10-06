@@ -393,6 +393,8 @@ namespace gfx {
             return VK_FORMAT_R32G32_SFLOAT;
         case Format::B8G8R8A8_UNORM:
             return VK_FORMAT_B8G8R8A8_UNORM;
+        case Format::D16_UNORM:
+            return VK_FORMAT_D16_UNORM;
         case Format::D32_SFLOAT:
             return VK_FORMAT_D32_SFLOAT;
         case Format::D32_SFLOAT_S8_UINT:
@@ -542,7 +544,10 @@ namespace gfx {
 
     bool IsAttachmentTypeDepth(VkFormat format)
     {
-        return (format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT);
+        return (format == VK_FORMAT_D32_SFLOAT ||
+                format == VK_FORMAT_D32_SFLOAT_S8_UINT ||
+                format == VK_FORMAT_D16_UNORM ||
+                format == VK_FORMAT_D24_UNORM_S8_UINT );
     }
 
     uint32_t FindGraphicsQueueIndex(VkPhysicalDevice physicalDevice)
@@ -667,13 +672,13 @@ namespace gfx {
         createInfo.maxAnisotropy = maxAnisotropy;
         createInfo.minLod = 0.0f;
         createInfo.maxLod = 16.0f;
-
+        
         VkSampler sampler = 0;
 		VK_CHECK(vkCreateSampler(device, &createInfo, nullptr, &sampler));
         return sampler;
     }
 
-    VkFramebuffer createFramebufferInternal(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height)
+    VkFramebuffer createFramebufferInternal(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height, uint32_t layerCount = 1)
     {
         VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
         createInfo.renderPass = renderPass;
@@ -681,7 +686,7 @@ namespace gfx {
         createInfo.pAttachments = imageViews;
         createInfo.width = width;
         createInfo.height = height;
-        createInfo.layers = 1;
+        createInfo.layers = layerCount;
 
         VkFramebuffer framebuffer = 0;
         VK_CHECK(vkCreateFramebuffer(device, &createInfo, nullptr, &framebuffer));
@@ -1412,24 +1417,28 @@ namespace gfx {
         for (uint32_t i = 0; i < desc->attachmentCount; ++i)
         {
             const Attachment& attachment = desc->attachments[i];
-            VkFormat format = _ConvertFormat(attachment.format);
-            VkImageLayout layout = _ConvertLayout(attachment.layout);
+            VkFormat format = _ConvertFormat(attachment.desc.format);
 
-            if (IsAttachmentTypeDepth(format))
+            VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+            uint32_t index = attachment.index;
+            assert(index < desc->attachmentCount);
+            if (attachment.desc.imageAspect == ImageAspect::Depth)
             {
+                layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
                 hasDepthAttachment = true;
-                depthAttachmentIndex = i;
+                depthAttachmentIndex = index;
             }
 
-            attachments[i].format = format;
-            attachments[i].samples = VK_SAMPLE_COUNT_1_BIT;
-            attachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            attachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachments[i].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[i].initialLayout = layout;
-            attachments[i].finalLayout = layout;
-            attachmentRef[i] = { attachment.index, layout};
+            attachments[index].format = format;
+            attachments[index].samples = VK_SAMPLE_COUNT_1_BIT;
+            attachments[index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachments[index].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachments[index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachments[index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachments[index].initialLayout = layout;
+            attachments[index].finalLayout = layout;
+            attachmentRef[index] = { attachment.index, layout};
         }
 
         VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
@@ -1448,7 +1457,6 @@ namespace gfx {
         subpassDescription.colorAttachmentCount = static_cast<uint32_t>(attachmentRef.size());
         subpassDescription.pColorAttachments = attachmentRef.data();
 
-
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
 
@@ -1465,71 +1473,39 @@ namespace gfx {
         out->internalState = vulkanRenderPass;
         out->desc = *desc;
     }
-    
-    void VulkanGraphicsDevice::CreateFramebuffer(RenderPass* renderPass, Framebuffer* out)
+
+    void VulkanGraphicsDevice::CreateFramebuffer(RenderPass* renderPass, Framebuffer* out, uint32_t layerCount)
     {
         assert(renderPass != nullptr);
         auto rp = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
 
         auto vkFramebuffer = std::make_shared<VulkanFramebuffer>();
-        
+
         uint32_t attachmentCount = renderPass->desc.attachmentCount;
 
         uint32_t width = renderPass->desc.width;
 		uint32_t height = renderPass->desc.height;
-        GPUTextureDesc desc = {};
-        desc.width = width;
-        desc.height = height;
-        desc.depth = 1;
-        desc.arrayLayers = 1;
-        desc.mipLevels = 1;
-        desc.imageType = ImageType::I2D;
-        desc.imageViewType = ImageViewType::IV2D;
-        desc.bCreateSampler = true;
 
         std::vector<VkImageView> imageViews(attachmentCount);
         out->attachments.resize(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
         {
             Attachment* attachment = (renderPass->desc.attachments + i);
-            desc.format = attachment->format;
-            /*
-            * If arrayLayers is greater than 1 for framebuffer attachment then
-            * the imageview is converted to  imageview array
-            * This is currently used in layered rendering for CSM(Cascaded Shadow Map)
-            */
-            if (desc.arrayLayers > 1)
-            {
-                desc.arrayLayers = attachment->layerCount;
-                desc.imageViewType = ImageViewType::IV2DArray;
-            }
-            else
-            {
-                desc.imageViewType = ImageViewType::IV2D;
-                desc.arrayLayers = 1;
-            }
+            uint32_t index = attachment->index;
+			GPUTexture* texture = &out->attachments[index];
+            attachment->desc.width = width;
+            attachment->desc.height = height;
 
-            VkFormat format = _ConvertFormat(attachment->format);
-            if (IsAttachmentTypeDepth(format))
-            {
-                desc.imageAspect = ImageAspect::Depth;
-                desc.bindFlag = BindFlag::DepthStencil;
-                out->depthAttachmentIndex = i;
-            }
-            else
-            {
-                desc.imageAspect = ImageAspect::Color; 
-                desc.bindFlag = BindFlag::RenderTarget | BindFlag::ShaderResource;
-            }
+            assert(attachment->desc.arrayLayers == layerCount);
 
-            GPUTexture* texture = &out->attachments[i];
-            CreateTexture(&desc, texture);
-            imageViews[i] = std::static_pointer_cast<VulkanTexture>(texture->internalState)->imageViews[0]; 
+            CreateTexture(&attachment->desc, texture);
+            imageViews[index] = std::static_pointer_cast<VulkanTexture>(texture->internalState)->imageViews[0]; 
+            if (attachment->desc.imageAspect == ImageAspect::Depth)
+                out->depthAttachmentIndex = attachment->index;
         }
 
-        vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), attachmentCount, width, height);
+        vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), attachmentCount, width, height, layerCount);
         out->internalState = vkFramebuffer;
-
     }
     void VulkanGraphicsDevice::CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)
     {
@@ -1662,18 +1638,6 @@ namespace gfx {
         dynamicState.pDynamicStates = dynamicStates;
         createInfo.pDynamicState = &dynamicState;
 
-        /*
-        std::vector<VkPushConstantRange> pushConstantRanges;
-        std::vector<VkDescriptorSetLayoutBinding> setLayoutBindings;
-        for (auto& shader : shaderReflections)
-        {
-            if (shader.pushConstantRanges.size() > 0)
-                pushConstantRanges.insert(pushConstantRanges.end(), shader.pushConstantRanges.begin(), shader.pushConstantRanges.end());
-
-            if (shader.descriptorSetLayoutBinding.size() > 0)
-                setLayoutBindings.insert(setLayoutBindings.end(), shader.descriptorSetLayoutBinding.begin(), shader.descriptorSetLayoutBinding.end());
-        }
-        */
 		vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderReflection.descriptorSetLayoutBinding, shaderReflection.descriptorSetLayoutCount);
 
 		VkPipelineLayout pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderReflection.pushConstantRanges);
@@ -1791,10 +1755,15 @@ namespace gfx {
             usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             depthAttachment = true;
         }
+
         if (HasFlag(desc->bindFlag, BindFlag::RenderTarget))
             usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-        if (HasFlag(desc->bindFlag, BindFlag::ShaderResource))
-            usage |= (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
+
+        if (desc->bCreateSampler && HasFlag(desc->bindFlag, BindFlag::ShaderResource))
+            usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+
+        if (HasFlag(desc->bindFlag, BindFlag::StorageImage))
+            usage |=  VK_IMAGE_USAGE_STORAGE_BIT;
 
         if(!depthAttachment)
 			usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -1924,7 +1893,7 @@ namespace gfx {
             if (i == fbDepthAttachmentIndex)
                 clearValues[i].depthStencil = { 1.0f, 0 };
             else
-                clearValues[i].color = { 0.0f, 0.0f, 0.0f, 1 };
+                clearValues[i].color = { 0.5f, 0.5f, 0.5f, 1 };
         }
 
         VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -2348,7 +2317,6 @@ namespace gfx {
 					
 					assert(vkTexture->imageViews.size() > mipLevel);
 					descriptorInfo.imageInfo.imageView = vkTexture->imageViews[mipLevel];
-
 					assert(vkTexture->sampler != VK_NULL_HANDLE);
 					descriptorInfo.imageInfo.sampler = vkTexture->sampler;
                     descriptorInfos.push_back(descriptorInfo);

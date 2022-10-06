@@ -2,6 +2,7 @@
 #include "../Engine/VulkanGraphicsDevice.h"
 #include "../Shared/MathUtils.h"
 #include "../Engine/DebugDraw.h"
+#include "../Engine/CascadedShadowMap.h"
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
@@ -70,13 +71,16 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	ImGui::End();
 
 	static bool enableDebugDraw = false;
-	static bool enableFrustumCulling = true;
+	static bool enableFrustumCulling = false;
 	static bool freezeFrustum = false;
 	static bool showBoundingBox = mScene.GetShowBoundingBox();
 	static float blurRadius = 10.0f;
 	static float bloomThreshold = 1.0f;
 	static float bloomStrength = 0.04f;
 	static bool enableNormalMapping = true;
+	static float shadowSplitLambda = 0.85f;
+	static float shadowDistance = 150.0f;
+
 	if (mShowUI)
 	{
 		ImGui::Begin("Render Settings");
@@ -94,9 +98,20 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 			ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f);
 			ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f);
 		}
+		if (ImGui::CollapsingHeader("Cascaded ShadowMap"))
+		{
+			ImGui::SliderFloat("SplitLambda", &shadowSplitLambda, 0.0f, 1.0f);
+			ImGui::SliderFloat("ShadowDistance", &shadowDistance, 5.0f, 500.0f);
+		}
+
 		ImGui::End();
 		mHierarchy->Draw();
 	}
+
+	auto shadowMap = mRenderer->GetShadowMap();
+	shadowMap->SetSplitLambda(shadowSplitLambda);
+	shadowMap->SetShadowDistance(shadowDistance);
+
 	mRenderer->SetEnableNormalMapping(enableNormalMapping);
 	mRenderer->SetBlurRadius(blurRadius);
 	mRenderer->SetBloomThreshold(bloomThreshold);
@@ -152,14 +167,13 @@ void EditorApplication::InitializeScene()
 {
 	mCamera->SetPosition({ 0.0f, 3.0f, 10.0f });
 	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
-	mCamera->SetNearPlane(0.3f);
-	mCamera->SetFarPlane(3000.0f);
+	mCamera->SetNearPlane(0.1f);
+	mCamera->SetFarPlane(1000.0f);
 	mScene.SetEnableFrustumCulling(true);
 
 	auto compMgr = mScene.GetComponentManager();
 
 	ecs::Entity scene = mScene.CreateMesh("Assets/Models/scene.sbox");
-	//ecs::Entity scene = mScene.CreateCube("Cube001");
 }
 
 EditorApplication::~EditorApplication()

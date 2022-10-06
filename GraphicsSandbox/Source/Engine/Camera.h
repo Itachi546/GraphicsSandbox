@@ -95,7 +95,7 @@ public:
 
 	glm::vec3 GetForward() { return mForward; }
 	glm::vec3 GetPosition() const { return mPosition; }
-
+	
 	std::shared_ptr<Frustum> mFrustum;
 	glm::vec3 mFrustumPoints[8];
 private:

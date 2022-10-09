@@ -20,5 +20,4 @@ void main()
    Vertex vertex = aVertices[gl_VertexIndex]; 
    mat4 worldMatrix = aTransformData[gl_DrawIDARB];
    gl_Position = worldMatrix * vec4(vertex.px, vertex.py, vertex.pz, 1.0f);
-   gl_Position.z = max(gl_Position.z, -1.0f);
 }

@@ -9,6 +9,7 @@ layout(triangle_strip, max_vertices = 3) out;
 layout(binding = 2, std140) uniform CascadeInfo
 {
    Cascade cascades[5];
+   vec4 shadowDims;
 };
 
 void main()

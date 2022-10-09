@@ -49,21 +49,22 @@ private:
 	std::unique_ptr<gfx::GPUBuffer> mBuffer;
 
 	const int kNumCascades = 5;
-	const int kShadowDims = 2048;
+	const int kShadowDims = 4096;
 
 	float kShadowDistance = 150.0f;
-	float kSplitLambda = 0.9f;
-	float kNearDistance = 0.01f;
+	float kSplitLambda = 0.45f;
+	float kNearDistance = 0.1f;
 
 	gfx::GraphicsDevice* mDevice;
 
-
+	struct Cascade {
+		glm::mat4 VP;
+		glm::vec4 splitDistance;
+	};
 	struct CascadeData
 	{
-		struct Cascade {
-			glm::mat4 VP;
-			glm::vec4 splitDistance;
-		} cascades[5];
+		Cascade cascades[5];
+		glm::vec4 shadowDims;
 	} mCascadeData;
 
 	void CalculateSplitDistance();

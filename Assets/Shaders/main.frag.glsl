@@ -41,6 +41,35 @@ struct Material
 #include "bindings.glsl"
 #include "shadow.glsl"
 
+/*
+const mat4 biasMat = mat4( 
+	0.5, 0.0, 0.0, 0.0,
+	0.0, 0.5, 0.0, 0.0,
+	0.0, 0.0, 1.0, 0.0,
+	0.5, 0.5, 0.0, 1.0 
+);
+
+float CalculateShadowFS(vec3 worldPos, float camDist)
+{
+
+    int currentCascade = 0;
+    for(int i = 0; i < MAX_CASCADES; ++i)
+    {
+        if(camDist < cascades[i].splitDistance.x) 
+        {
+    		currentCascade = i;
+            break;
+        }
+    }
+
+    vec4 fragPosLightSpace = (biasMat * cascades[currentCascade].VP) * vec4(worldPos, 1.0f);
+    vec3 projCoord = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    //projCoord = projCoord * 0.5f + 0.5f;
+
+    float depthFromTexture = texture(uDepthMap, vec3(projCoord.xy, currentCascade)).r;
+    return depthFromTexture < projCoord.z - 0.005 ? 0.0f : 1.0f;
+}
+*/
 void GetMetallicRoughness(uint metallicMapIndex, uint roughnessMapIndex, inout float metallic, inout float roughness)
 {
 	if(metallicMapIndex != INVALID_TEXTURE)
@@ -126,7 +155,8 @@ void main()
 		else 
 		{
     		l= normalize(l);
-			shadow = CalculateShadowFactor(fs_in.worldPos, length(fs_in.viewDir));
+			vec4 lightSpacePos = globals.V * vec4(fs_in.worldPos, 1.0f);
+			shadow = CalculateShadowFactor(fs_in.worldPos, abs(lightSpacePos.z));
 		}
 
     	vec3 h = normalize(v + l);

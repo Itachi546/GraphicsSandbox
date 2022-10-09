@@ -94,14 +94,14 @@ void Camera::CalculateFrustumPoints()
 {
 	static const glm::vec3 frustumCorners[8] =
 	{
-		glm::vec3(-1.0f,  1.0f, -1.0f),
-		glm::vec3(1.0f,  1.0f, -1.0f),
-		glm::vec3(1.0f, -1.0f, -1.0f),
-		glm::vec3(-1.0f, -1.0f, -1.0f),
-		glm::vec3(-1.0f,  1.0f,  1.0f),
-		glm::vec3(1.0f,  1.0f,  1.0f),
-		glm::vec3(1.0f, -1.0f,  1.0f),
-		glm::vec3(-1.0f, -1.0f,  1.0f),
+		glm::vec3(-1.0f,  1.0f, -1.0f),  // NTL
+		glm::vec3(1.0f,  1.0f, -1.0f),   // NTR
+		glm::vec3(1.0f, -1.0f, -1.0f),   // NBR
+		glm::vec3(-1.0f, -1.0f, -1.0f),  // NBL
+		glm::vec3(-1.0f,  1.0f,  1.0f),  // FTL
+		glm::vec3(1.0f,  1.0f,  1.0f),   // FTR
+		glm::vec3(1.0f, -1.0f,  1.0f),   // FBR
+		glm::vec3(-1.0f, -1.0f,  1.0f),  // FBL
 	};
 
 	// Project frustum corners into world space

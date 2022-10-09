@@ -5,6 +5,8 @@
 #include "Camera.h"
 #include "DebugDraw.h"
 
+#include <limits>
+
 CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 {
 	{
@@ -21,7 +23,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		depthAttachment.height = kShadowDims;
 		depthAttachment.arrayLayers = kNumCascades;
 		depthAttachment.imageViewType = gfx::ImageViewType::IV2DArray;
-
+		depthAttachment.samplerInfo.enableBorder = true;
 		gfx::Attachment attachments[] = {
 			{0, depthAttachment},
 		};
@@ -53,6 +55,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		pipelineDesc.renderPass = mRenderPass.get();
 		pipelineDesc.rasterizationState.enableDepthTest = true;
 		pipelineDesc.rasterizationState.enableDepthWrite = true;
+		pipelineDesc.rasterizationState.enableDepthClamp = true;
 		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Front;
 
 		mPipeline = std::make_unique<gfx::Pipeline>();
@@ -79,61 +82,72 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 	CalculateSplitDistance();
 }
 
+std::array<glm::vec3, 8> CalculateFrustumCorners(glm::mat4 VP)
+{
+	std::array<glm::vec3, 8> frustumCorners =
+	{
+		glm::vec3(-1.0f,  1.0f, -1.0f),  // NTL
+		glm::vec3(1.0f,  1.0f, -1.0f),   // NTR
+		glm::vec3(1.0f, -1.0f, -1.0f),   // NBR
+		glm::vec3(-1.0f, -1.0f, -1.0f),  // NBL
+		glm::vec3(-1.0f,  1.0f,  1.0f),  // FTL
+		glm::vec3(1.0f,  1.0f,  1.0f),   // FTR
+		glm::vec3(1.0f, -1.0f,  1.0f),   // FBR
+		glm::vec3(-1.0f, -1.0f,  1.0f),  // FBL
+	};
+
+	// Project frustum corners into world space
+	// inv(view) * inv(projection) * p
+	// inv(A) * inv(B) = inv(BA)
+	glm::mat4 invCam = glm::inverse(VP);
+	for (uint32_t i = 0; i < 8; i++)
+	{
+		glm::vec4 invCorner = invCam * glm::vec4(frustumCorners[i], 1.0f);
+		frustumCorners[i] = invCorner / invCorner.w;
+	}
+
+	return frustumCorners;
+}
+
 void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 {
-	auto cameraFrustum = camera->mFrustumPoints;
-	float lastSplitDistance = 0.0f;
+	CalculateSplitDistance();
 
+	auto cameraFrustum = camera->mFrustumPoints;
+	float lastSplitDistance = kNearDistance;
+
+	glm::vec3 ld = glm::normalize(lightDirection);
 	for (int cascade = 0; cascade < kNumCascades; ++cascade)
 	{
-		float splitDistance = mCascadeData.cascades[cascade].splitDistance.x;
-		glm::vec3 thisCascadeFrustum[8] = {};
-		// Calculate frustum corner for current split
+		Cascade& currentCascade = mCascadeData.cascades[cascade];
+		float splitDistance = currentCascade.splitDistance.x;
+		glm::mat4 V = camera->GetViewMatrix();
+		glm::mat4 P = glm::perspective(camera->GetFOV(), camera->GetAspect(), lastSplitDistance, splitDistance);
+		auto frustumCorners = CalculateFrustumCorners(P * V);
+
 		glm::vec3 center = glm::vec3(0.0f);
-		for (int i = 0; i < 4; ++i)
-		{
-			glm::vec3 direction = glm::normalize(cameraFrustum[i + 4] - cameraFrustum[i]);
-			thisCascadeFrustum[i]     = cameraFrustum[i] + direction * lastSplitDistance;
-			thisCascadeFrustum[i + 4] = cameraFrustum[i] + direction * splitDistance;
-			center += thisCascadeFrustum[i] + thisCascadeFrustum[i + 4];
-		}
-		center /= 8.0f;
+		for (int i = 0; i < frustumCorners.size(); ++i)
+			center += frustumCorners[i];
+		center /= float(frustumCorners.size());
 
-#if 0
-		// Create viewMatrix
-		glm::mat4 viewMatrix = glm::lookAt(center + glm::normalize(lightDirection), center, glm::vec3(0.0f, 1.0f, 0.0f));
-		// Calculate bounding box in the lightSpace that tightly fit the frustum
-		glm::vec3 min = glm::vec3(FLT_MAX);
-		glm::vec3 max = glm::vec3(-FLT_MAX);
-		for (int i = 0; i < 8; ++i)
-		{
+		glm::mat4 lightView = glm::lookAt(center + ld, center, glm::vec3(0.0f, 1.0f, 0.0f));
+		glm::vec3 minPoint = glm::vec3(std::numeric_limits<float>::max());
+		glm::vec3 maxPoint = glm::vec3(std::numeric_limits<float>::min());
 
-			glm::vec3 p = glm::vec3(viewMatrix * glm::vec4(thisCascadeFrustum[i], 1.0f));
-			min = glm::min(p, min);
-			max = glm::max(p, max);
+		for (const auto& v : frustumCorners)
+		{
+			glm::vec3 p = lightView * glm::vec4(v, 1.0f);
+			minPoint = glm::min(minPoint, p);
+			maxPoint = glm::max(maxPoint, p);
 		}
 
-		// Create OrthoMatrix
-		glm::mat4 projectionMatrix = glm::ortho(min.x, max.x, min.y, max.y, min.z, max.z);
-		mCascadeData.cascades[cascade].VP = projectionMatrix * viewMatrix;
-#else 
-		float radius = 0.0f;
-		for (int i = 0; i < 8; ++i)
-			radius = std::max(radius, glm::length2(center - thisCascadeFrustum[i]));
-
-		radius = std::sqrt(radius);
-		radius = std::ceil(radius * 16.0f) / 16.0f;
-
-		glm::mat4 projection = glm::ortho(-radius, radius, -radius, radius, 0.0f, 2.0f * radius);
-		glm::mat4 view = glm::lookAt(center + radius * lightDirection, center, glm::vec3(0.0f, 1.0f, 0.0f));
-		mCascadeData.cascades[cascade].VP = projection * view;
-#endif
-		DebugDraw::AddFrustum(thisCascadeFrustum, 8, colors[cascade]);
+		glm::mat4 lightProj = glm::ortho(minPoint.x, maxPoint.x, minPoint.y, maxPoint.y, minPoint.z, maxPoint.z);
+		currentCascade.VP = lightProj * lightView;
 		lastSplitDistance = splitDistance;
 	}
 
 	// Copy data to uniform buffer
-	//mCascadeData.nCascade = (float)kNumCascades;
+	mCascadeData.shadowDims = glm::vec4(kShadowDims, kShadowDims, kNumCascades, kNumCascades);
 	std::memcpy(mBuffer->mappedDataPtr, &mCascadeData, sizeof(CascadeData));
 }
 
@@ -160,6 +174,14 @@ void CascadedShadowMap::EndRender(gfx::CommandList* commandList)
 
 void CascadedShadowMap::CalculateSplitDistance()
 {
+#if 0
+	mCascadeData.cascades[0].splitDistance.x = kShadowDistance / 50.0f;
+	mCascadeData.cascades[1].splitDistance.x = kShadowDistance / 25.0f;
+	mCascadeData.cascades[2].splitDistance.x = kShadowDistance / 10.0f;
+	mCascadeData.cascades[3].splitDistance.x = kShadowDistance / 5.0f;
+	mCascadeData.cascades[4].splitDistance.x = kShadowDistance;
+#else 
+
 	float clipRange = kShadowDistance - kNearDistance;
 	float minZ = kNearDistance;
 	float maxZ = kNearDistance + clipRange;
@@ -174,4 +196,5 @@ void CascadedShadowMap::CalculateSplitDistance()
 		float d = kSplitLambda * (log - uniform) + uniform;
 		mCascadeData.cascades[i].splitDistance = glm::vec4(d - kNearDistance);
 	}
+#endif
 }

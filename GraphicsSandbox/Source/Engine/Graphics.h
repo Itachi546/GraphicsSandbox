@@ -254,7 +254,7 @@ namespace gfx
 
 		bool enableDepthTest = false;
 		bool enableDepthWrite = false;
-
+		bool enableDepthClamp = false;
 		float lineWidth = 1.0f;
 		float pointSize = 1.0f;
 	};
@@ -337,6 +337,7 @@ namespace gfx
 		TextureFilter textureFilter = TextureFilter::Linear;
 		TextureWrapMode wrapMode = TextureWrapMode::ClampToEdge;
 		bool enableAnisotropicFiltering = false;
+		bool enableBorder = false;
 	};
 
 	struct GPUTextureDesc

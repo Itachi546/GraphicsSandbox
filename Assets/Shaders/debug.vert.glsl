@@ -22,7 +22,7 @@ void main()
 {
    DebugData data = aVertices[gl_VertexIndex];
    gl_Position = VP * vec4(data.x, data.y, data.z, 1.0f);
-
+   gl_Position.y = -gl_Position.y;
    color.b = (data.color & 0xFF) / 255.0f;
    color.g = ((data.color >> 8) & 0xFF) / 255.0f;
    color.r = ((data.color >> 16) & 0xFF) / 255.0f;

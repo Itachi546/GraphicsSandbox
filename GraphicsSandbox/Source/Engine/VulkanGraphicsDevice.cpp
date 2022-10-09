@@ -673,6 +673,9 @@ namespace gfx {
         createInfo.minLod = 0.0f;
         createInfo.maxLod = 16.0f;
         
+        if (samplerInfo->enableBorder)
+            createInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+
         VkSampler sampler = 0;
 		VK_CHECK(vkCreateSampler(device, &createInfo, nullptr, &sampler));
         return sampler;
@@ -1314,6 +1317,7 @@ namespace gfx {
         features2_.features.wideLines = true;
         features2_.features.samplerAnisotropy = true;
         features2_.features.geometryShader = true;
+        features2_.features.depthClamp = true;
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
@@ -1595,6 +1599,7 @@ namespace gfx {
         rasterizationState.frontFace = _ConvertFrontFace(rs.frontFace);
         rasterizationState.polygonMode = _ConvertPolygonMode(rs.polygonMode);
         createInfo.pRasterizationState = &rasterizationState;
+        rasterizationState.depthClampEnable = rs.enableDepthClamp;
 
         VkPipelineMultisampleStateCreateInfo multisampleState = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
         multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -1788,6 +1793,7 @@ namespace gfx {
         createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+
         VmaAllocation allocation = {};
         VkImage image = createImageInternal(vmaAllocator_, &createInfo, &allocation);
 
@@ -1907,7 +1913,7 @@ namespace gfx {
 
         vkCmdList->waitStages.push_back(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
-        VkViewport viewport = { 0.0f, (float)height, (float)width, -float(height),0.0f, 1.0f};
+        VkViewport viewport = {0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f};
         VkRect2D scissor = { {0, 0}, {width, height} };
 
         vkCmdSetViewport(vkCmdList->commandBuffer, 0, 1, &viewport);

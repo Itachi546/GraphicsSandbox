@@ -63,10 +63,10 @@ public:
 		CalculateProjection();
 	}
 
-	float GetFOV() const { return mFov; }
-
-	float GetNearPlane() const { return mNearPlane; }
-	float GetFarPlane()  const { return mFarPlane; }
+	inline float GetFOV() const { return mFov; }
+	inline float GetAspect() const { return mAspect; }
+	inline float GetNearPlane() const { return mNearPlane; }
+	inline 	float GetFarPlane()  const { return mFarPlane; }
 
 	void Walk(float dt)
 	{

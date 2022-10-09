@@ -78,7 +78,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	static float bloomThreshold = 1.0f;
 	static float bloomStrength = 0.04f;
 	static bool enableNormalMapping = true;
-	static float shadowSplitLambda = 0.85f;
+	static float shadowSplitLambda = 0.45f;
 	static float shadowDistance = 150.0f;
 
 	if (mShowUI)
@@ -88,9 +88,8 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
 		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
 		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
-		mScene.SetEnableFrustumCulling(enableFrustumCulling);
 		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
-		mScene.GetCamera()->SetFreezeFrustum(freezeFrustum);
+
 		if (ImGui::CollapsingHeader("Bloom"))
 		{
 			ImGui::Checkbox("Enable", &enableBloom);
@@ -111,7 +110,8 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	auto shadowMap = mRenderer->GetShadowMap();
 	shadowMap->SetSplitLambda(shadowSplitLambda);
 	shadowMap->SetShadowDistance(shadowDistance);
-
+	mScene.SetEnableFrustumCulling(enableFrustumCulling);
+	mScene.GetCamera()->SetFreezeFrustum(freezeFrustum);
 	mRenderer->SetEnableNormalMapping(enableNormalMapping);
 	mRenderer->SetBlurRadius(blurRadius);
 	mRenderer->SetBloomThreshold(bloomThreshold);
@@ -173,7 +173,9 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/scene.sbox");
+	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
+	ecs::Entity sphere = mScene.CreateSphere("Sphere00");
+	compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(1.0f);
 }
 
 EditorApplication::~EditorApplication()

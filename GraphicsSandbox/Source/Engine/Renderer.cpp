@@ -262,7 +262,6 @@ std::shared_ptr<gfx::Pipeline> Renderer::loadHDRPipeline(const char* vsPath, con
 	pipelineDesc.rasterizationState.enableDepthTest = true;
 	pipelineDesc.rasterizationState.enableDepthWrite = true;
 	pipelineDesc.rasterizationState.cullMode = cullMode;
-	pipelineDesc.rasterizationState.frontFace = gfx::FrontFace::Anticlockwise;
 
 	gfx::BlendState blendState[2] = {};
 	pipelineDesc.blendState = blendState;

@@ -16,7 +16,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 
 		gfx::GPUTextureDesc depthAttachment = {};
 		depthAttachment.bCreateSampler = true;
-		depthAttachment.format = gfx::Format::D16_UNORM;
+		depthAttachment.format = gfx::Format::D24_UNORM_S8_UINT;
 		depthAttachment.bindFlag = gfx::BindFlag::DepthStencil | gfx::BindFlag::ShaderResource;
 		depthAttachment.imageAspect = gfx::ImageAspect::Depth;
 		depthAttachment.width = kShadowDims;
@@ -132,7 +132,7 @@ void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 
 		glm::mat4 lightView = glm::lookAt(center + ld, center, glm::vec3(0.0f, 1.0f, 0.0f));
 		glm::vec3 minPoint = glm::vec3(std::numeric_limits<float>::max());
-		glm::vec3 maxPoint = glm::vec3(std::numeric_limits<float>::min());
+		glm::vec3 maxPoint = glm::vec3(std::numeric_limits<float>::lowest());
 
 		for (const auto& v : frustumCorners)
 		{

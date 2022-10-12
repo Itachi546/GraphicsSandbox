@@ -14,6 +14,7 @@ layout(location = 0) out VS_OUT
    vec3 tangent;
    vec3 bitangent;
    vec3 worldPos;
+   vec3 lsPos;
    vec3 viewDir;
    vec2 uv;
    flat uint matId;
@@ -42,6 +43,7 @@ void main()
    vs_out.normal    = normalTransform * UnpackU8toFloat(vertex.nx, vertex.ny, vertex.nz);
    vs_out.tangent   = normalTransform * UnpackU8toFloat(vertex.tx, vertex.ty, vertex.tz);
    vs_out.bitangent = normalTransform * UnpackU8toFloat(vertex.bx, vertex.by, vertex.bz);
+   vs_out.lsPos     = vec3(globals.V * wP);
 
    vs_out.viewDir   = globals.cameraPosition - wP.xyz;
    vs_out.matId     = gl_DrawIDARB;

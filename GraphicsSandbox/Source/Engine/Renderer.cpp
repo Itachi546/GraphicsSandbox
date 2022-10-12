@@ -88,7 +88,7 @@ void Renderer::Update(float dt)
 	mGlobalUniformData.P = P;
 	glm::mat4 V = camera->GetViewMatrix();
 	mGlobalUniformData.V = V;
-	mGlobalUniformData.VP = mGlobalUniformData.P * V;
+	mGlobalUniformData.VP = P * V;
 	mGlobalUniformData.cameraPosition = camera->GetPosition();
 	mGlobalUniformData.dt += dt;
 	mGlobalUniformData.bloomThreshold = mBloomThreshold;

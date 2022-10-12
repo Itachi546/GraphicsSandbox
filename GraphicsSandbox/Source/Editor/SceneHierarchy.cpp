@@ -1,9 +1,30 @@
 #include "SceneHierarchy.h"
-
+#include "../Engine/Input.h"
 #include "ImGui/imgui.h"
+#include "../Engine/DebugDraw.h"
 
 SceneHierarchy::SceneHierarchy(Scene* scene) : mScene(scene), mSelected(ecs::INVALID_ENTITY)
 {
+}
+
+void SceneHierarchy::Update(float dt)
+{
+	auto componentManager = mScene->GetComponentManager();
+	if (Input::Down(Input::Key::KEY_DELETE))
+	{
+		if (mSelected != mScene->GetSun())
+		{
+			mScene->Destroy(mSelected);
+			mSelected = ecs::INVALID_ENTITY;
+		}
+	}
+
+	auto lightComp = componentManager->GetComponent<LightComponent>(mSelected);
+	if (lightComp && lightComp->type == LightType::Point)
+	{
+		glm::vec3 position = componentManager->GetComponent<TransformComponent>(mSelected)->position;
+		DebugDraw::AddAABB(position + glm::vec3(-0.1f), position + glm::vec3(0.1f));
+	}
 }
 
 void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::ComponentManager> compMgr)
@@ -14,13 +35,13 @@ void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::Com
 		name = compMgr->GetComponent<NameComponent>(entity)->name;
 
 	HierarchyComponent* hierarchyComponent = compMgr->GetComponent<HierarchyComponent>(entity);
+
 	if (hierarchyComponent && hierarchyComponent->childrens.size() > 0)
 	{
 		if (ImGui::TreeNode(name.c_str()))
 		{
 			for (ecs::Entity child : hierarchyComponent->childrens)
 				CreateTreeNode(child, compMgr);
-
 			ImGui::TreePop();
 		}
 	}
@@ -49,7 +70,7 @@ void SceneHierarchy::CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> c
 				CreateTreeNode(entities[i], componentManager);
 			else
 			{
-				if(component->parent == ecs::INVALID_ENTITY)
+				if (component->parent == ecs::INVALID_ENTITY)
 					CreateTreeNode(entities[i], componentManager);
 			}
 		}
@@ -74,6 +95,11 @@ void SceneHierarchy::CreateComponentTab(std::shared_ptr<ecs::ComponentManager> c
 			MaterialComponent* material = componentManager->GetComponent<MaterialComponent>(mSelected);
 			if (material)
 				DrawMaterialComponent(material);
+
+			LightComponent* light = componentManager->GetComponent<LightComponent>(mSelected);
+			if (light)
+				DrawLightComponent(light);
+
 		}
 		else {
 			ImGui::Text("No Entity selected");
@@ -83,39 +109,82 @@ void SceneHierarchy::CreateComponentTab(std::shared_ptr<ecs::ComponentManager> c
 	}
 }
 
+void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
+{
+	if (ImGui::BeginTabItem("Create Objects"))
+	{
+		if (ImGui::Button("Sphere"))
+			mSelected = mScene->CreateSphere("Sphere");
+		if(ImGui::Button("Cube"))
+			mSelected = mScene->CreateCube("Cube");
+		if(ImGui::Button("Plane"))
+			mSelected = mScene->CreatePlane("Plane");
+		if (ImGui::Button("Light"))
+			mSelected = mScene->CreateLight("Light");
+		ImGui::EndTabItem();
+	}
+}
+
+
 void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 {
-	transform->dirty = ImGui::DragFloat3("Position", &transform->position[0]);
-
-	glm::vec3 rotation = glm::eulerAngles(transform->rotation);
-	if (ImGui::DragFloat3("Rotation", &rotation[0], 0.001f, -3.141592f, 3.141592f))
+	if (ImGui::CollapsingHeader("Transform Component"))
 	{
-		transform->rotation = rotation;
-		transform->dirty = true;
-	}
+		transform->dirty = ImGui::DragFloat3("Position", &transform->position[0]);
 
-	static bool uniform = true;
-	float scaleFactor = transform->scale.x;
-	ImGui::Checkbox("Uniform Scaling", &uniform);
-	if (uniform)
-	{
-		if (ImGui::DragFloat("Scale", &scaleFactor, 0.01f, -1000.0f, 1000.0f))
+		glm::vec3 rotation = glm::eulerAngles(transform->rotation);
+		if (ImGui::DragFloat3("Rotation", &rotation[0], 0.001f, -3.141592f, 3.141592f))
 		{
-			transform->scale = { scaleFactor,scaleFactor, scaleFactor };
+			transform->rotation = rotation;
 			transform->dirty = true;
 		}
+
+		static bool uniform = true;
+		float scaleFactor = transform->scale.x;
+		ImGui::Checkbox("Uniform Scaling", &uniform);
+		if (uniform)
+		{
+			if (ImGui::DragFloat("Scale", &scaleFactor, 0.01f, -1000.0f, 1000.0f))
+			{
+				transform->scale = { scaleFactor,scaleFactor, scaleFactor };
+				transform->dirty = true;
+			}
+		}
+		else
+			transform->dirty = ImGui::DragFloat3("Scale", &transform->scale[0], 0.01f, -1000.0f, 1000.0f);
 	}
-	else
-		transform->dirty = ImGui::DragFloat3("Scale", &transform->scale[0], 0.01f, -1000.0f, 1000.0f);
 }
 
 void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 {
-	ImGui::ColorEdit3("Albedo", &material->albedo[0]);
-	ImGui::SliderFloat("Roughness", &material->roughness, 0.0f, 1.0f);
-	ImGui::SliderFloat("Metallic", &material->metallic, 0.0f, 1.0f);
-	ImGui::SliderFloat("Emissive", &material->emissive, 0.0f, 100.0f);
-	ImGui::SliderFloat("AO", &material->ao, 0.0f, 1.0f);
+	if (ImGui::CollapsingHeader("Material Component"))
+	{
+		ImGui::ColorEdit3("Albedo", &material->albedo[0]);
+		ImGui::SliderFloat("Roughness", &material->roughness, 0.0f, 1.0f);
+		ImGui::SliderFloat("Metallic", &material->metallic, 0.0f, 1.0f);
+		ImGui::SliderFloat("Emissive", &material->emissive, 0.0f, 100.0f);
+		ImGui::SliderFloat("AO", &material->ao, 0.0f, 1.0f);
+	}
+}
+
+void SceneHierarchy::DrawLightComponent(LightComponent* light)
+{
+	if (ImGui::CollapsingHeader("Light Component"))
+	{
+		ImGui::ColorPicker3("LightColor", &light->color[0]);
+		ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 100.0f);
+
+		const char* lightTypes[] = {
+			"Directional",
+			"Point"
+		};
+
+		int currentItem = (int)light->type;
+		if (ImGui::Combo("Light Type", &currentItem, lightTypes, IM_ARRAYSIZE(lightTypes)))
+		{
+			light->type = (LightType)(currentItem);
+		}
+	}
 }
 
 void SceneHierarchy::Draw()
@@ -126,6 +195,7 @@ void SceneHierarchy::Draw()
 	{
 		CreateHierarchyTab(componentManager);
 		CreateComponentTab(componentManager);
+		CreateObjectTab(componentManager);
 		ImGui::EndTabBar();
 	}
 	ImGui::End();

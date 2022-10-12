@@ -43,7 +43,7 @@ public:
 
 	void SetEnableFrustumCulling(bool state) { mEnableFrustumCulling = state; }
 
-	void Destroy(ecs::Entity& entity);
+	void Destroy(ecs::Entity entity);
 
 	Camera* GetCamera() {
 		return &mCamera;
@@ -83,6 +83,8 @@ private:
 	void DrawBoundingBox();
 
 	void InitializeLights();
+
+	void RemoveChild(ecs::Entity parent, ecs::Entity child);
 
 	friend class Renderer;
 };

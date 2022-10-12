@@ -21,14 +21,14 @@ const mat4 biasMat = mat4(
 	0.5, 0.5, 0.0, 1.0 
 );
 
-float textureProj(int cascadeIndex, vec4 shadowCoord, vec2 offset, float bias)
+float textureProj(vec4 shadowCoord, vec2 offset, int cascadeIndex, float bias)
 {
   float shadow = 1.0;
   float currentDepth = shadowCoord.z;
   if(currentDepth > -1.0 && currentDepth <  1.0)
   {
      float depthFromTexture = texture(uDepthMap, vec3(shadowCoord.xy + offset, cascadeIndex)).r;
-	 if(shadowCoord.w > 0.0 && depthFromTexture < currentDepth - bias)
+	 if(shadowCoord.w > 0.0 && depthFromTexture < currentDepth)
 	    shadow = 0.0f;
   }
   return shadow;
@@ -41,37 +41,37 @@ float CalculateShadowFromTexture(vec3 worldPos, int cascadeIndex)
 
     Cascade cascade = cascades[cascadeIndex];
     // Transform into light NDC Coordinate
-    vec4 lsPosition = biasMat * cascade.VP * vec4(worldPos, 1.0f);
-    lsPosition.xyz /= lsPosition.w;
+    vec4 shadowCoord = (biasMat * cascade.VP) * vec4(worldPos, 1.0f);
 
-    float shadow = 0.0f;
+    float shadowFactor = 0.0f;
     vec2 invRes = 1.0f / shadowDims.xy;
-    float sampleCount = 0.0f;
+
+    int sampleCount = 0;
     for(int x = -1; x <= 1; ++x)
     {
        for(int y = -1; y <= 1; ++y)
        {
-          shadow += textureProj(cascadeIndex, lsPosition, vec2(x * invRes.x, y * invRes.y), 0.0f);
+          shadowFactor += textureProj(shadowCoord / shadowCoord.w, vec2(x * invRes.x, y * invRes.y), cascadeIndex, 0.0f);
           sampleCount ++;
        }
     }
-    return shadow /= sampleCount;
+    return shadowFactor / sampleCount;
 }
 
-float CalculateShadowFactor(vec3 worldPos, float camDist)
+float CalculateShadowFactor(vec3 worldPos, float camDist, out int cascadeIndex)
 {
 
-    int currentCascade = 0;
+    cascadeIndex = 0;
     for(int i = 0; i < MAX_CASCADES; ++i)
     {
         if(camDist < cascades[i].splitDistance.x) 
         {
-    		currentCascade = i;
+    		cascadeIndex = i;
             break;
         }
     }
 
-    return CalculateShadowFromTexture(worldPos, currentCascade);
+    return CalculateShadowFromTexture(worldPos, cascadeIndex);
 }
 
 #endif

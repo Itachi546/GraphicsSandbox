@@ -32,7 +32,7 @@ void Camera::Update(float dt)
 	mRotation += (mTargetRotation - mRotation) * 0.8f * dt;
 
 	CalculateView();
-	//DebugDraw::AddFrustum(mFrustumPoints, 8, 0x00ff00);
+	DebugDraw::AddFrustum(mFrustumPoints, 8, 0xff0000);
 }
 
 void Camera::CalculateProjection()

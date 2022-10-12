@@ -280,6 +280,7 @@ ecs::Entity Scene::CreateLight(std::string_view name)
 	ecs::Entity entity = ecs::CreateEntity();
 	mComponentManager->AddComponent<TransformComponent>(entity);
 	mComponentManager->AddComponent<LightComponent>(entity);
+	mComponentManager->AddComponent<NameComponent>(entity).name = name;
 	return entity;
 }
 
@@ -299,8 +300,20 @@ void Scene::SetSize(int width, int height)
 		mCamera.SetAspect(float(width) / float(height));
 }
 
-void Scene::Destroy(ecs::Entity& entity)
+void Scene::Destroy(ecs::Entity entity)
 {
+	if (mComponentManager->HasComponent<HierarchyComponent>(entity))
+	{
+		auto hierarchy = mComponentManager->GetComponent<HierarchyComponent>(entity);
+		if (hierarchy->parent != ecs::INVALID_ENTITY)
+			RemoveChild(hierarchy->parent, entity);
+
+		if (hierarchy->childrens.size() > 0)
+		{
+			for (const auto& child : hierarchy->childrens)
+				Destroy(child);
+		}
+	}
 	ecs::DestroyEntity(mComponentManager.get(), entity);
 }
 
@@ -580,8 +593,18 @@ void Scene::InitializeLights()
 	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(mSun);
 	transform.position = glm::vec3(0.0f, 1.0f, 0.0f);
 	transform.rotation = glm::vec3(-0.967f, 0.021f, 0.675f);
+	//transform.rotation = glm::vec3(0.0f, 0.021f, 0.375f);
 	LightComponent& light = mComponentManager->AddComponent<LightComponent>(mSun);
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
 	light.intensity = 1.0f;
 	light.type = LightType::Directional;
+}
+
+void Scene::RemoveChild(ecs::Entity parent, ecs::Entity child)
+{
+	auto comp = mComponentManager->GetComponent<HierarchyComponent>(parent);
+	if (comp->RemoveChild(child))
+		Logger::Info("Children Removed of Id: " + std::to_string(child));
+	else
+		Logger::Warn("No Children of Id: " + std::to_string(child));
 }

@@ -132,11 +132,22 @@ struct LightComponent
 	glm::vec3 color = glm::vec3(1.0f);
 	float intensity = 1.0f;
 	float radius = 1;
-	LightType type = LightType::Directional;
+	LightType type = LightType::Point;
 };
 
 struct HierarchyComponent
 {
 	ecs::Entity parent = ecs::INVALID_ENTITY;
 	std::vector<ecs::Entity> childrens;
+
+	bool RemoveChild(ecs::Entity child)
+	{
+		auto found = std::find(childrens.begin(), childrens.end(), child);
+		if (found != childrens.end())
+		{
+			childrens.erase(found);
+			return true;
+		}
+		return false;
+	}
 };

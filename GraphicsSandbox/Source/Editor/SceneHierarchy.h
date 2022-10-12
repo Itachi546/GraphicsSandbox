@@ -6,7 +6,7 @@ class SceneHierarchy
 {
 public:
 	SceneHierarchy(Scene* scene);
-
+	void Update(float dt);
 	void Draw();
 
 private:
@@ -20,7 +20,11 @@ private:
 
 	void CreateComponentTab(std::shared_ptr<ecs::ComponentManager> mgr);
 
+	void CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr);
+
 	void DrawTransformComponent(TransformComponent* transform);
 
 	void DrawMaterialComponent(MaterialComponent* material);
+
+	void DrawLightComponent(LightComponent* light);
 };

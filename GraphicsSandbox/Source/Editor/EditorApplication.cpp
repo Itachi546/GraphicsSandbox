@@ -157,6 +157,8 @@ void EditorApplication::PreUpdate(float dt) {
 
 	if (Input::Press(Input::Key::KEY_H))
 		mShowUI = !mShowUI;
+
+	mHierarchy->Update(dt);
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -165,17 +167,19 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	mCamera->SetPosition({ 0.0f, 3.0f, 10.0f });
-	mCamera->SetRotation({ 0.0f, glm::pi<float>(), 0.0f });
+	mCamera->SetPosition({ 5.0f, 1.0f, 5.0f });
+	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
 	mCamera->SetNearPlane(0.1f);
 	mCamera->SetFarPlane(1000.0f);
 	mScene.SetEnableFrustumCulling(true);
 
 	auto compMgr = mScene.GetComponentManager();
 
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
-	ecs::Entity sphere = mScene.CreateSphere("Sphere00");
-	compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(1.0f);
+	ecs::Entity scene = mScene.CreateMesh("Assets/Models/animated_character.sbox");
+	if (scene)
+		compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(0.03f);
+	ecs::Entity plane = mScene.CreatePlane("Plane00");
+	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
 }
 
 EditorApplication::~EditorApplication()

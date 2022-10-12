@@ -108,7 +108,6 @@
     <ClInclude Include="Source\Engine\GraphicsUtils.h">
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Test\PBRTest.h" />
     <ClInclude Include="Source\Test\BloomTest.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
     <ClInclude Include="Source\Editor\ImGui\imconfig.h">
@@ -141,6 +140,7 @@
     <ClInclude Include="Source\Engine\DebugDraw.h" />
     <ClInclude Include="Source\Engine\StringConstants.h" />
     <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
+    <ClInclude Include="Source\Test\SponzaTest.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

@@ -2,10 +2,10 @@
 
 #include "../Engine/GraphicsSandbox.h"
 
-class BloomTestApplication : public Application
+class BloomTest : public Application
 {
 public:
-	BloomTestApplication() = default;
+	BloomTest() = default;
 
 	void Initialize() override
 	{
@@ -80,6 +80,7 @@ private:
 			material.roughness = 0.9f;
 			material.albedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 			material.metallic = 0.1f;
+			material.ao = 0.3f;
 		}
 		{
 			ecs::Entity plane = mScene.CreatePlane("TestPlane");
@@ -90,6 +91,7 @@ private:
 			material.roughness = 1.0f;
 			material.albedo = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
 			material.metallic = 0.0f;
+			material.ao = 0.3f;
 		}
 
 		{
@@ -100,9 +102,10 @@ private:
 			transform->position.y -= 1.0f;
 
 			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
-			material.roughness = 0.1f;
+			material.roughness = 0.5f;
 			material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
-			material.metallic = 0.9f;
+			material.metallic = 1.0f;
+			material.ao = 0.3f;
 		}
 		{
 			ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
@@ -144,5 +147,8 @@ private:
 			material.emissive = 10.0f;
 		}
 
+		mScene.SetEnableFrustumCulling(false);
+		mScene.SetShowBoundingBox(false);
+		DebugDraw::SetEnable(false);
 	}
 };

@@ -11,13 +11,14 @@ layout(location = 0) in VS_OUT
    vec3 tangent;
    vec3 bitangent;
    vec3 worldPos;
+   vec3 lsPos;
    vec3 viewDir;
    vec2 uv;
    flat uint matId;
 } fs_in;
 
 const uint INVALID_TEXTURE = 0xFFFFFFFF;
-
+const float globalAOMultiplier = 0.5f;
 struct Material
 {
 	vec4 albedo;
@@ -41,6 +42,7 @@ struct Material
 #include "bindings.glsl"
 #include "shadow.glsl"
 
+#define CASCADE_DEBUG_COLOR 0
 /*
 const mat4 biasMat = mat4( 
 	0.5, 0.0, 0.0, 0.0,
@@ -95,9 +97,15 @@ vec3 GetNormalFromNormalMap(uint normalMapIndex, mat3 tbn)
 	return normalize(tbn * normal);
 }
 
+vec3 cascadeColor[4] = vec3[](
+    vec3(1.0, 0.0, 0.0),
+    vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 0.0, 1.0),
+    vec3(1.0, 1.0, 0.0)
+);
+
 void main()
 {
-	vec2 uv = fs_in.worldPos.xz;
 	Material material = aMaterialData[fs_in.matId];
 	vec4 albedo = material.albedo;
 
@@ -110,12 +118,12 @@ void main()
 	//albedo.rgb = pow(albedo.rgb, vec3(2.2f));
 
 	float roughness = material.roughness;
-	float ao = material.ao;
+	float ao = material.ao * globalAOMultiplier;
 	float metallic = material.metallic;
 	GetMetallicRoughness(material.metallicMap, material.roughnessMap, metallic, roughness);
 
 	if(material.ambientOcclusionMap != INVALID_TEXTURE)
-       ao = texture(uTextures[material.ambientOcclusionMap], fs_in.uv).r;
+       ao = texture(uTextures[material.ambientOcclusionMap], fs_in.uv).r * globalAOMultiplier;
 
     vec3 n = normalize(fs_in.normal);
 	if(globals.enableNormalMapping > 0)
@@ -138,6 +146,7 @@ void main()
 	
 
 	int nLight = globals.nLight;
+	int cascadeIndex = 0;
 	for(int i = 0; i < nLight; ++i)
 	{
 	    LightData light = globals.lights[i];
@@ -155,8 +164,7 @@ void main()
 		else 
 		{
     		l= normalize(l);
-			vec4 lightSpacePos = globals.V * vec4(fs_in.worldPos, 1.0f);
-			shadow = CalculateShadowFactor(fs_in.worldPos, abs(lightSpacePos.z));
+			shadow = CalculateShadowFactor(fs_in.worldPos, abs(fs_in.lsPos.z), cascadeIndex);
 		}
 
     	vec3 h = normalize(v + l);
@@ -204,6 +212,11 @@ void main()
 	}
 	else 
 	    brightColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	#if CASCADE_DEBUG_COLOR
+	     Lo *= cascadeColor[cascadeIndex] * 0.5f;
+	#endif
+
 
 	fragColor =	vec4(Lo, 1.0f);
 }

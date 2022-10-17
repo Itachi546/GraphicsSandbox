@@ -19,7 +19,7 @@ layout(binding = 0) uniform readonly Globals
    float bloomThreshold;
    int nLight;
    int enableNormalMapping;
-   float unused_;
+   int enableCascadeDebug;
 
    LightData lights[128];
 } globals;

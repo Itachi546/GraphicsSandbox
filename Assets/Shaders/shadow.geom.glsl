@@ -16,8 +16,8 @@ void main()
 { 
    for(int i = 0; i < gl_in.length(); ++i)
    {
-      gl_Layer = gl_InvocationID;
       gl_Position = cascades[gl_InvocationID].VP * gl_in[i].gl_Position;
+      gl_Layer = gl_InvocationID;
       EmitVertex();
    }
    EndPrimitive();

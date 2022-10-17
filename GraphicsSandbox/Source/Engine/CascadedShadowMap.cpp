@@ -23,7 +23,9 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		depthAttachment.height = kShadowDims;
 		depthAttachment.arrayLayers = kNumCascades;
 		depthAttachment.imageViewType = gfx::ImageViewType::IV2DArray;
+		depthAttachment.samplerInfo.wrapMode = gfx::TextureWrapMode::ClampToBorder;
 		depthAttachment.samplerInfo.enableBorder = true;
+
 		gfx::Attachment attachments[] = {
 			{0, depthAttachment},
 		};
@@ -78,8 +80,6 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		mBuffer = std::make_unique<gfx::GPUBuffer>();
 		mDevice->CreateBuffer(&bufferDesc, mBuffer.get());
 	}
-
-	CalculateSplitDistance();
 }
 
 std::array<glm::vec3, 8> CalculateFrustumCorners(glm::mat4 VP)
@@ -111,10 +111,10 @@ std::array<glm::vec3, 8> CalculateFrustumCorners(glm::mat4 VP)
 
 void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 {
-	CalculateSplitDistance();
+	CalculateSplitDistance(camera);
 
 	auto cameraFrustum = camera->mFrustumPoints;
-	float lastSplitDistance = kNearDistance;
+	float lastSplitDistance = camera->GetNearPlane();
 
 	glm::vec3 ld = glm::normalize(lightDirection);
 	for (int cascade = 0; cascade < kNumCascades; ++cascade)
@@ -134,14 +134,14 @@ void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 		glm::vec3 minPoint = glm::vec3(std::numeric_limits<float>::max());
 		glm::vec3 maxPoint = glm::vec3(std::numeric_limits<float>::lowest());
 
+		float radius = 0.0f;
 		for (const auto& v : frustumCorners)
 		{
-			glm::vec3 p = lightView * glm::vec4(v, 1.0f);
-			minPoint = glm::min(minPoint, p);
-			maxPoint = glm::max(maxPoint, p);
+			float distance = glm::length(v - center);
+			radius = glm::max(radius, distance);
 		}
-
-		glm::mat4 lightProj = glm::ortho(minPoint.x, maxPoint.x, minPoint.y, maxPoint.y, minPoint.z, maxPoint.z);
+		radius = std::ceil(radius * 16.0f) / 16.0f;
+		glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, -radius, radius);
 		currentCascade.VP = lightProj * lightView;
 		lastSplitDistance = splitDistance;
 	}
@@ -172,7 +172,7 @@ void CascadedShadowMap::EndRender(gfx::CommandList* commandList)
 }
 
 
-void CascadedShadowMap::CalculateSplitDistance()
+void CascadedShadowMap::CalculateSplitDistance(Camera* camera)
 {
 #if 0
 	mCascadeData.cascades[0].splitDistance.x = kShadowDistance / 50.0f;
@@ -182,9 +182,10 @@ void CascadedShadowMap::CalculateSplitDistance()
 	mCascadeData.cascades[4].splitDistance.x = kShadowDistance;
 #else 
 
-	float clipRange = kShadowDistance - kNearDistance;
-	float minZ = kNearDistance;
-	float maxZ = kNearDistance + clipRange;
+	float nearDistance = camera->GetNearPlane();
+	float clipRange = kShadowDistance - nearDistance;
+	float minZ = nearDistance;
+	float maxZ = nearDistance + clipRange;
 	float range = maxZ - minZ;
 	float ratio = maxZ / minZ;
 
@@ -194,7 +195,7 @@ void CascadedShadowMap::CalculateSplitDistance()
 		float log = minZ * std::pow(ratio, p);
 		float uniform = minZ + range * p;
 		float d = kSplitLambda * (log - uniform) + uniform;
-		mCascadeData.cascades[i].splitDistance = glm::vec4(d - kNearDistance);
+		mCascadeData.cascades[i].splitDistance = glm::vec4(d - nearDistance);
 	}
 #endif
 }

@@ -63,6 +63,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mShadowMap = std::make_shared<CascadedShadowMap>();
 
 	mGlobalUniformData.enabledNormalMapping = true;
+	mGlobalUniformData.enableCascadeDebug = 0;
 }
 
 // TODO: temp width and height variable

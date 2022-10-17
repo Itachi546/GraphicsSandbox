@@ -47,7 +47,7 @@ public:
 	void SetBlurRadius(float blurRadius) { mBloomBlurRadius = blurRadius; }
 	void SetBloomThreshold(float val) { mBloomThreshold = val; }
 	void SetBloomStrength(float val) { mBloomStrength = val; }
-
+	void SetDebugCascade(bool state) { mGlobalUniformData.enableCascadeDebug = (int)state; }
 	void SetEnableNormalMapping(bool state)
 	{
 		mGlobalUniformData.enabledNormalMapping = int(state);
@@ -63,6 +63,7 @@ private:
 		glm::vec3 color;
 		float lightType;
 	};
+
 	struct GlobalUniformData
 	{
 		glm::mat4 P;
@@ -73,7 +74,7 @@ private:
 		float bloomThreshold;
 		int nLight;
 		int enabledNormalMapping;
-		float unused_;
+		int enableCascadeDebug;
 		LightData lights[128];
 	} mGlobalUniformData;
 

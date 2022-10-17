@@ -25,7 +25,7 @@ float textureProj(vec4 shadowCoord, vec2 offset, int cascadeIndex, float bias)
 {
   float shadow = 1.0;
   float currentDepth = shadowCoord.z;
-  if(currentDepth > -1.0 && currentDepth <  1.0)
+  if(currentDepth >	-1.0 &&	currentDepth <	1.0)
   {
      float depthFromTexture = texture(uDepthMap, vec3(shadowCoord.xy + offset, cascadeIndex)).r;
 	 if(shadowCoord.w > 0.0 && depthFromTexture < currentDepth)
@@ -44,7 +44,8 @@ float CalculateShadowFromTexture(vec3 worldPos, int cascadeIndex)
     vec4 shadowCoord = (biasMat * cascade.VP) * vec4(worldPos, 1.0f);
 
     float shadowFactor = 0.0f;
-    vec2 invRes = 1.0f / shadowDims.xy;
+    const float scale = 0.75f;
+    vec2 invRes = scale / shadowDims.xy;
 
     int sampleCount = 0;
     for(int x = -1; x <= 1; ++x)

@@ -22,7 +22,6 @@ public:
 
 	void SetSplitLambda(float splitLambda) {
 		this->kSplitLambda = splitLambda;
-		CalculateSplitDistance();
 	}
 
 	gfx::DescriptorInfo GetCascadeBufferDescriptor()
@@ -49,11 +48,10 @@ private:
 	std::unique_ptr<gfx::GPUBuffer> mBuffer;
 
 	const int kNumCascades = 5;
-	const int kShadowDims = 4096;
+	const int kShadowDims = 2048;
 
 	float kShadowDistance = 150.0f;
-	float kSplitLambda = 0.45f;
-	float kNearDistance = 0.1f;
+	float kSplitLambda = 0.85f;
 
 	gfx::GraphicsDevice* mDevice;
 
@@ -67,7 +65,7 @@ private:
 		glm::vec4 shadowDims;
 	} mCascadeData;
 
-	void CalculateSplitDistance();
+	void CalculateSplitDistance(Camera* camera);
 
 	uint32_t colors[5] = {
 	0xff0000,

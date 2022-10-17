@@ -59,7 +59,7 @@ class SponzaTest : public Application
 		mScene.SetShowBoundingBox(false);
 		DebugDraw::SetEnable(false);
 		mRenderer->GetShadowMap()->SetShadowDistance(150.0f);
-		mRenderer->GetShadowMap()->SetSplitLambda(0.45f);
+		mRenderer->GetShadowMap()->SetSplitLambda(0.85f);
 
 
 		auto compMgr = mScene.GetComponentManager();
@@ -70,7 +70,10 @@ class SponzaTest : public Application
 		compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(1.0f);
 		compMgr->GetComponent<TransformComponent>(sphere)->scale = glm::vec3(0.4f);
 		compMgr->GetComponent<TransformComponent>(sphere)->position.y += 2.0f;
-		compMgr->GetComponent<MaterialComponent>(sphere)->albedo = glm::vec4(0.001f, 0.235f, 1.0f, 1.0f);
+		compMgr->GetComponent<MaterialComponent>(sphere)->albedo = glm::vec4(0.01f, 0.235f, 1.0f, 1.0f);
+
+		// Set Sun
+		compMgr->GetComponent<TransformComponent>(mScene.GetSun())->rotation = glm::vec3(0.1f, 1.0f, 0.0f);
 	}
 
 	private:

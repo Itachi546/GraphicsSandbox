@@ -78,9 +78,9 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	static float bloomThreshold = 1.0f;
 	static float bloomStrength = 0.04f;
 	static bool enableNormalMapping = true;
-	static float shadowSplitLambda = 0.45f;
+	static float shadowSplitLambda = 0.85f;
 	static float shadowDistance = 150.0f;
-
+	static bool showCascade = false;
 	if (mShowUI)
 	{
 		ImGui::Begin("Render Settings");
@@ -88,6 +88,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
 		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
 		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
+		ImGui::Checkbox("Show Cascade", &showCascade);
 		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
 
 		if (ImGui::CollapsingHeader("Bloom"))
@@ -116,6 +117,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mRenderer->SetBlurRadius(blurRadius);
 	mRenderer->SetBloomThreshold(bloomThreshold);
 	mRenderer->SetBloomStrength(bloomStrength);
+	mRenderer->SetDebugCascade(showCascade);
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
 
@@ -171,7 +173,7 @@ void EditorApplication::InitializeScene()
 	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
 	mCamera->SetNearPlane(0.1f);
 	mCamera->SetFarPlane(1000.0f);
-	mScene.SetEnableFrustumCulling(true);
+	mScene.SetEnableFrustumCulling(false);
 
 	auto compMgr = mScene.GetComponentManager();
 
@@ -180,6 +182,31 @@ void EditorApplication::InitializeScene()
 		compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(0.03f);
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
+}
+
+void EditorApplication::InitializeCSMScene()
+{
+	mCamera->SetPosition({ 5.0f, 1.0f, 5.0f });
+	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
+	mCamera->SetNearPlane(0.1f);
+	mCamera->SetFarPlane(1000.0f);
+	mScene.SetEnableFrustumCulling(false);
+
+	auto compMgr = mScene.GetComponentManager();
+
+	const int kNumObjects = 10;
+	for (int i = 0; i < kNumObjects; ++i)
+	{
+		ecs::Entity cube = mScene.CreateCube("cube" + std::to_string(i));
+		TransformComponent* comp = compMgr->GetComponent<TransformComponent>(cube);
+		comp->position.x += ((kNumObjects * 0.5f) - i) * 4.0f;
+		comp->position.y += 2.0f;
+		comp->scale.y = 2.0f;
+	}
+
+	ecs::Entity plane = mScene.CreatePlane("Plane");
+	TransformComponent* comp = compMgr->GetComponent<TransformComponent>(plane);
+	comp->scale = glm::vec3(40.0f);
 }
 
 EditorApplication::~EditorApplication()

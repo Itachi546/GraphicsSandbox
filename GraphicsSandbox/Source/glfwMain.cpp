@@ -6,7 +6,7 @@
 int main(int argc, char** argv)
 {
 	Timer timer;
-	Application* application = new SponzaTest();
+	Application* application = new EditorApplication();
 
 	if (!glfwInit())
 		glfwInit();

@@ -38,8 +38,13 @@ void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::Com
 
 	if (hierarchyComponent && hierarchyComponent->childrens.size() > 0)
 	{
-		if (ImGui::TreeNode(name.c_str()))
-		{
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnDoubleClick;
+		if (mSelected == entity)
+			flags |= ImGuiTreeNodeFlags_Selected;
+
+		bool nodeOpen = ImGui::TreeNodeEx(name.c_str(), flags);
+		if (ImGui::IsItemClicked()) mSelected = entity;
+		if (nodeOpen) {
 			for (ecs::Entity child : hierarchyComponent->childrens)
 				CreateTreeNode(child, compMgr);
 			ImGui::TreePop();

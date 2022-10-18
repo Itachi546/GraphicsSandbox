@@ -240,4 +240,5 @@ namespace ecs
 	}
 
 	void DestroyEntity(ComponentManager* mgr, Entity& entity);
+	void Destroy(ComponentManager* mgr);
 }

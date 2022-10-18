@@ -1,13 +1,9 @@
 #include "../GraphicsSandbox/Source/Shared/MeshData.h"
 
-#include <iostream>
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
-#include <assimp/pbrmaterial.h>
 #include <assimp/material.h>
-#include <chrono>
-#include <execution>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -18,6 +14,11 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#include <iostream>
+#include <cstdint>
+#include <string>
+#include <chrono>
+#include <execution>
 #include <fstream>
 #include <algorithm>
 #include <numeric>
@@ -138,9 +139,9 @@ void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vect
 
 	// PBR Roughness and Metallic
 	float temp = 1.0f;
-	if (aiGetMaterialFloat(assimpMat, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, &temp) == AI_SUCCESS)
+	if (aiGetMaterialFloat(assimpMat, AI_MATKEY_METALLIC_FACTOR, &temp) == AI_SUCCESS)
 		material.metallic = temp;
-	if (aiGetMaterialFloat(assimpMat, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, &temp) == AI_SUCCESS)
+	if (aiGetMaterialFloat(assimpMat, AI_MATKEY_ROUGHNESS_FACTOR, &temp) == AI_SUCCESS)
 		material.roughness = temp;
 
 	// Textures
@@ -170,8 +171,6 @@ void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vect
 	if (aiGetMaterialTexture(assimpMat, aiTextureType_METALNESS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 		material.metallicMap = AddUnique(textureFiles, Path.C_Str());
 
-	if (assimpMat->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &Path) == aiReturn_SUCCESS)
-		material.metallicMap = AddUnique(textureFiles, Path.C_Str());
 	/*
 	if (aiGetMaterialTexture(assimpMat, aiTextureType_OPACITY, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 		material.opacityMap = AddUnique(textureFiles, Path.C_Str());
@@ -179,7 +178,7 @@ void ParseMaterial(aiMaterial* assimpMat, MaterialComponent& material, std::vect
 		*/
 }
 
-Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb)
+Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, const aiMatrix4x4& nodeTransform)
 {
 	uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
 	uint32_t indexOffset  = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
@@ -238,28 +237,61 @@ Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& ve
 	return result;
 }
 
+void ParseAnimation(const aiScene* scene, uint32_t nAnimations, aiAnimation** animations)
+{
+
+}
+
+void ParseNode(const aiScene* scene, const aiNode* node, MeshData* out)
+{
+	aiString name = node->mName;
+	if (node->mNumMeshes > 0)
+	{
+		const uint32_t nMeshes = node->mNumMeshes;
+		for (uint32_t i = 0; i < nMeshes; ++i)
+		{
+			uint32_t meshId = node->mMeshes[i];
+			aiMatrix4x4 transformation = node->mTransformation;
+			out->meshes[meshId] = ParseMesh(scene->mMeshes[meshId], scene, out->vertexData_, out->indexData_, out->boxes_[meshId], transformation);
+		}
+	}
+
+	for (uint32_t i = 0; i < node->mNumChildren; ++i)
+		ParseNode(scene, node->mChildren[i], out);
+}
+
 void ParseScene(const aiScene* scene, const std::string& basePath, const std::string& exportPath, const std::string& filename, MeshData* out)
 {
 	const uint32_t nMeshes = scene->mNumMeshes;
+	const uint32_t nMaterials = scene->mNumMaterials;
 	out->meshes.resize(nMeshes);
 	out->boxes_.resize(nMeshes);
-	for (uint32_t i = 0; i < nMeshes; ++i)
-		out->meshes[i] = ParseMesh(scene->mMeshes[i], scene, out->vertexData_, out->indexData_, out->boxes_[i]);
+	out->materials.resize(nMaterials);
 
+	if (scene->mRootNode)
+		ParseNode(scene, scene->mRootNode, out);
+
+	std::vector<std::string>& textureFiles = out->textures;
 	printf("----------------------------------------------\n");
 	printf("Parsing Material\n");
-	std::vector<std::string>& textureFiles = out->textures;
-	const uint32_t nMaterials = scene->mNumMaterials;
-	out->materials.resize(nMaterials);
 	for (uint32_t i = 0; i < nMaterials; ++i)
 		ParseMaterial(scene->mMaterials[i], out->materials[i], textureFiles);
 	printf("----------------------------------------------\n");
 
-	printf("----------------------------------------------\n");
-	printf("Processing Textures\n");
 	if (textureFiles.size() > 0)
+	{
+		printf("----------------------------------------------\n");
+		printf("Processing Textures\n");
 		ProcessTexture(scene, textureFiles, basePath, exportPath + "/" + TrimPathAndExtension(filename) + "/");
-	printf("----------------------------------------------\n");
+		printf("----------------------------------------------\n");
+	}
+
+	if (scene->HasAnimations())
+	{
+		printf("----------------------------------------------\n");
+		printf("Processing Animation\n");
+		ParseAnimation(scene, scene->mNumAnimations, scene->mAnimations);
+	}
 }
 
 void LoadFile(const std::string& filename, const std::string& exportPath, MeshData* out)
@@ -270,10 +302,10 @@ void LoadFile(const std::string& filename, const std::string& exportPath, MeshDa
 	const std::string basePath = (pathSeparator != std::string::npos) ? filename.substr(0, pathSeparator + 1) : std::string();
 
 	const uint32_t flags = 0 |
-		aiProcess_JoinIdenticalVertices |
 		aiProcess_Triangulate |
+		/*aiProcess_PreTransformVertices |*/
 		aiProcess_GenBoundingBoxes |
-		aiProcess_PreTransformVertices |
+		aiProcess_JoinIdenticalVertices |
 		aiProcess_GenSmoothNormals |
 		aiProcess_LimitBoneWeights |
 		aiProcess_CalcTangentSpace |

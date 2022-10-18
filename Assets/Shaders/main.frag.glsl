@@ -49,10 +49,10 @@ void GetMetallicRoughness(uint metallicMapIndex, uint roughnessMapIndex, inout f
 	if(metallicMapIndex != INVALID_TEXTURE)
 	{
 	    vec4 metallicRoughness = texture(uTextures[metallicMapIndex], fs_in.uv);
-    	if(roughnessMapIndex == INVALID_TEXTURE)
+    	if(roughnessMapIndex == metallicMapIndex)
 		{
-			   roughness = metallicRoughness.g;
 			   metallic = metallicRoughness.b;
+			   roughness = metallicRoughness.g;
 		}
 	    else 
 		{

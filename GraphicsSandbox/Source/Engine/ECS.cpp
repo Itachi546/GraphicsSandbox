@@ -12,4 +12,13 @@ namespace ecs
 		entity = 0;
 	}
 
+	void Destroy(ComponentManager* mgr)
+	{
+		for (uint32_t i = 0; i < MAX_COMPONENTS; ++i)
+		{
+			std::shared_ptr<IComponentArray> comp = mgr->GetBaseComponentArray(i);
+			comp.reset();
+		}
+	}
+
 }

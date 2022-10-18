@@ -334,7 +334,7 @@ std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 
 Scene::~Scene()
 {
-	ecs::DestroyEntity(mComponentManager.get(), mPrimitives);
+	ecs::Destroy(mComponentManager.get());
 	gfx::GpuMemoryAllocator::GetInstance()->FreeMemory();
 }
 

@@ -8,7 +8,7 @@
 
 constexpr const uint32_t kMaxLODs    = 8;
 constexpr const uint32_t kMaxStreams = 8;
-
+constexpr const uint32_t EMPTY_NODE = 0xffffffff;
 inline uint8_t PackFloatToU8(float val)
 {
 	return uint8_t(val * 127.0f + 127.5f);
@@ -129,12 +129,12 @@ struct MaterialComponent {
 
 struct MeshData
 {
+	std::vector<Mesh> meshes_;
+	std::vector<MaterialComponent> materials_;
+	std::vector<std::string> textures_;
+	std::vector<BoundingBox> boxes_;
 	std::vector<Vertex> vertexData_;
 	std::vector<uint32_t> indexData_;
-	std::vector<Mesh> meshes;
-	std::vector<MaterialComponent> materials;
-	std::vector<std::string> textures;
-	std::vector<BoundingBox> boxes_;
 };
 
 static_assert(sizeof(MaterialComponent) % 16 == 0);

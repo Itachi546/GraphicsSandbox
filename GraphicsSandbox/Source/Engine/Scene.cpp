@@ -161,7 +161,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	assert(header.magicNumber == 0x12345678u);
 
 	std::string name = file;
-	name = name.substr(name.find_last_of('/') + 1, name.size() - 1);
+	name = name.substr(name.find_last_of("/\\") + 1, name.size() - 1);
 	name = name.substr(0, name.find_first_of('.'));
 	ecs::Entity parent = ecs::CreateEntity();
 	mComponentManager->AddComponent<NameComponent>(parent).name = name;

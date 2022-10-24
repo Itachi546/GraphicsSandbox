@@ -1,9 +1,12 @@
 #include "SceneHierarchy.h"
+#include "FileDialog.h"
 #include "../Engine/Input.h"
 #include "ImGui/imgui.h"
 #include "../Engine/DebugDraw.h"
 
-SceneHierarchy::SceneHierarchy(Scene* scene) : mScene(scene), mSelected(ecs::INVALID_ENTITY)
+SceneHierarchy::SceneHierarchy(Scene* scene, Platform::WindowType window) : mScene(scene),
+    mSelected(ecs::INVALID_ENTITY),
+	mWindow(window)
 {
 }
 
@@ -126,6 +129,11 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 			mSelected = mScene->CreatePlane("Plane");
 		if (ImGui::Button("Light"))
 			mSelected = mScene->CreateLight("Light");
+		if (ImGui::Button("Mesh"))
+		{
+			std::wstring file = FileDialog::Open(L"", mWindow, L"Model(*.sbox)\0*.sbox\0\0");
+			mSelected = mScene->CreateMesh(Platform::WStringToString(file).c_str());
+		}
 		ImGui::EndTabItem();
 	}
 }
@@ -137,10 +145,10 @@ void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 	{
 		transform->dirty = ImGui::DragFloat3("Position", &transform->position[0]);
 
-		glm::vec3 rotation = glm::eulerAngles(transform->rotation);
-		if (ImGui::DragFloat3("Rotation", &rotation[0], 0.001f, -3.141592f, 3.141592f))
+		glm::vec3 rotation = glm::degrees(transform->rotation);
+		if (ImGui::DragFloat3("Rotation", &rotation[0], 1.0f, -180.0f, 180.0f))
 		{
-			transform->rotation = rotation;
+			transform->rotation = glm::radians(rotation);
 			transform->dirty = true;
 		}
 

@@ -159,6 +159,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorApplication.h" />
+    <ClInclude Include="Source\Editor\FileDialog.h" />
     <ClInclude Include="Source\Editor\ImGui\imconfig.h" />
     <ClInclude Include="Source\Editor\ImGui\imgui.h" />
     <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h" />

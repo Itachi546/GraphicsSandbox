@@ -5,13 +5,13 @@
 class SceneHierarchy
 {
 public:
-	SceneHierarchy(Scene* scene);
+	SceneHierarchy(Scene* scene, Platform::WindowType window);
 	void Update(float dt);
 	void Draw();
 
 private:
 	Scene* mScene;
-
+	Platform::WindowType mWindow;
 	ecs::Entity mSelected;
 
 	void CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::ComponentManager> compMgr);

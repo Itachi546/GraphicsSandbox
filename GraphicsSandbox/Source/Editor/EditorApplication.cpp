@@ -41,7 +41,7 @@ void EditorApplication::Initialize()
 	mCamera = mScene.GetCamera();
 	InitializeScene();
 
-	mHierarchy = std::make_shared<SceneHierarchy>(&mScene);
+	mHierarchy = std::make_shared<SceneHierarchy>(&mScene, mWindow);
 }
 
 void EditorApplication::RenderUI(gfx::CommandList* commandList)

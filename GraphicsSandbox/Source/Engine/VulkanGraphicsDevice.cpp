@@ -590,7 +590,7 @@ namespace gfx {
         VkWin32SurfaceCreateInfoKHR win32SurfaceCreateInfo = { VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR };
         win32SurfaceCreateInfo.hinstance = GetModuleHandle(0);
 #if defined GLFW_WINDOW
-        win32SurfaceCreateInfo.hwnd = glfwGetWin32Window(window);
+        win32SurfaceCreateInfo.hwnd = Platform::GetWindowHandle(window);
 #else
         Utils::ShowMessageBox("Unsupported WindowType", "Error", MessageType::Error);
         exit(EXIT_ERROR);

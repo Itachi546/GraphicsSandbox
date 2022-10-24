@@ -77,7 +77,7 @@ void Renderer::Update(float dt)
 
 	auto compMgr = mScene->GetComponentManager();
 	// Generate light Direction
-	glm::mat3 transform = glm::toMat4(compMgr->GetComponent<TransformComponent>(mScene->GetSun())->rotation);
+	glm::mat3 transform = compMgr->GetComponent<TransformComponent>(mScene->GetSun())->GetRotationMatrix();
 
 	glm::vec3 direction = normalize(transform * glm::vec3(0.0f, 1.0f, 0.0f));
 	Camera* camera = mScene->GetCamera();
@@ -104,7 +104,7 @@ void Renderer::Update(float dt)
 		glm::vec3 position = glm::vec3(0.0f);
 
 		if (lights[i].type == LightType::Directional)
-			position = normalize(glm::toMat4(transform->rotation) * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
+			position = normalize(transform->GetRotationMatrix() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
 		else if (lights[i].type == LightType::Point)
 			position = transform->worldMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		else {

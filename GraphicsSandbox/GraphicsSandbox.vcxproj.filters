@@ -141,6 +141,7 @@
     <ClInclude Include="Source\Engine\StringConstants.h" />
     <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
     <ClInclude Include="Source\Test\SponzaTest.h" />
+    <ClInclude Include="Source\Editor\FileDialog.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

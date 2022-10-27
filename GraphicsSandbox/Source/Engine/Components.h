@@ -33,7 +33,8 @@ struct TransformComponent
 	glm::vec3 rotation{ 0.0f, 0.0f, 0.0f};
 	glm::vec3 scale{ 1.0f, 1.0f, 1.0f };
 
-	glm::mat4 localMatrix{ 1.0f };
+	glm::mat4 defaultMatrix{ 1.0f };
+	glm::mat4 localMatrix{1.0f};
 	glm::mat4 worldMatrix{ 1.0f };
 
 	bool dirty = true;
@@ -43,7 +44,7 @@ struct TransformComponent
 		{
 			localMatrix = glm::translate(glm::mat4(1.0f), position) *
 				          glm::yawPitchRoll(rotation.y, rotation.x, rotation.z) *
-				          glm::scale(glm::mat4(1.0f), scale);
+				          glm::scale(glm::mat4(1.0f), scale) * defaultMatrix;
 			worldMatrix = localMatrix;
 			dirty = false;
 		}

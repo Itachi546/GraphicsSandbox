@@ -180,7 +180,7 @@ namespace MeshConverter {
 			*/
 	}
 
-	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, const aiMatrix4x4& nodeTransform)
+	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb)
 	{
 		uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
 		uint32_t indexOffset = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
@@ -239,28 +239,80 @@ namespace MeshConverter {
 		return result;
 	}
 
+	glm::mat4 AIMat4toGLM(const aiMatrix4x4& transform)
+	{
+		glm::mat4 result(1.0f);
+		for (int i = 0; i < 4; ++i)
+			for (int j = 0; j < 4; ++j)
+				result[i][j] = transform[i][j];
+		return result;
+	}
+
 	void ParseAnimation(const aiScene* scene, uint32_t nAnimations, aiAnimation** animations)
 	{
 
 	}
 
-	void ParseNode(const aiScene* scene, const aiNode* node, MeshData* out)
+	int AddNode(const aiNode* aiNode, int parent, std::vector<Node>& nodes_)
 	{
-		aiString name = node->mName;
-		fprintf(stdout, "%s\n", name.C_Str());
-		if (node->mNumMeshes > 0)
+		int currentNode = static_cast<int>(nodes_.size());
 		{
-			const uint32_t nMeshes = node->mNumMeshes;
-			for (uint32_t i = 0; i < nMeshes; ++i)
-			{
-				uint32_t meshId = node->mMeshes[i];
-				aiMatrix4x4 transformation = node->mTransformation;
-				out->meshes_[meshId] = ParseMesh(scene->mMeshes[meshId], scene, out->vertexData_, out->indexData_, out->boxes_[meshId], transformation);
-			}
+			Node node = {};
+			assert(aiNode->mName.length <= 64);
+			std::strcpy(node.name, aiNode->mName.C_Str());
+			node.parent = parent;
+			node.firstChild = -1;
+			node.nextSibling = -1;
+			node.lastSibling = -1;
+			node.localTransform = AIMat4toGLM(aiNode->mTransformation);
+			nodes_.push_back(std::move(node));
 		}
 
-		for (uint32_t i = 0; i < node->mNumChildren; ++i)
-			ParseNode(scene, node->mChildren[i], out);
+		if (parent > -1)
+		{
+			int firstSibling = nodes_[parent].firstChild;
+			// if first sibling is not present we add current child as 
+			// first child as well as last child
+			if (firstSibling == -1)
+			{
+				nodes_[parent].firstChild = currentNode;
+				// Cache the first child so that when we try to 
+				// add the next sibling we can refer to the lastest one 
+				// from the lastSibling
+				nodes_[parent].lastSibling = currentNode;
+			}
+			else {
+				int dest = nodes_[parent].lastSibling;
+				for (dest = firstSibling;
+					nodes_[dest].nextSibling != -1;
+					dest = nodes_[dest].nextSibling);
+				nodes_[dest].nextSibling = currentNode;
+				nodes_[dest].lastSibling = currentNode;
+			}
+		}
+		return currentNode;
+	}
+
+	void ParseNode(const aiScene* scene, const aiNode* aiNode, MeshData* out, int parent = -1)
+	{
+		int currentNode = AddNode(aiNode, parent, out->nodes_);
+		if (aiNode->mNumMeshes > 0)
+		{
+			assert(aiNode->mNumMeshes <= 1);
+			const uint32_t nMeshes = aiNode->mNumMeshes;
+			for (uint32_t i = 0; i < nMeshes; ++i)
+			{
+				uint32_t meshId = aiNode->mMeshes[i];
+				out->meshes_[meshId] = ParseMesh(scene->mMeshes[meshId], scene, out->vertexData_, out->indexData_, out->boxes_[meshId]);
+				out->nodes_[currentNode].meshId = meshId;
+			}
+		}
+		else {
+			out->nodes_[currentNode].meshId = -1;
+		}
+
+		for (uint32_t i = 0; i < aiNode->mNumChildren; ++i)
+			ParseNode(scene, aiNode->mChildren[i], out, currentNode);
 	}
 
 	void ParseScene(const aiScene* scene, const std::string& basePath, const std::string& exportPath, const std::string& filename, MeshData* out)
@@ -270,7 +322,6 @@ namespace MeshConverter {
 		out->meshes_.resize(nMeshes);
 		out->boxes_.resize(nMeshes);
 		out->materials_.resize(nMaterials);
-
 		if (scene->mRootNode)
 			ParseNode(scene, scene->mRootNode, out);
 
@@ -331,6 +382,7 @@ namespace MeshConverter {
 
 	void SaveMeshData(const std::string& filename, MeshData* meshData)
 	{
+		uint32_t nNodes = (uint32_t)meshData->nodes_.size();
 		uint32_t nMeshes = (uint32_t)meshData->meshes_.size();
 		uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size() * sizeof(Vertex));
 		uint32_t indexDataSize = (uint32_t)(meshData->indexData_.size() * sizeof(uint32_t));
@@ -343,12 +395,13 @@ namespace MeshConverter {
 		uint32_t texStrDataSize = CalculateStringListSize(meshData->textures_) + sizeof(uint32_t) * nTextures;
 		MeshFileHeader header = {
 			0x12345678u,
-			nMeshes,nMaterial,nTextures,
+			nNodes,	nMeshes,nMaterial,nTextures,
 			sizeof(MeshFileHeader) +
 			sizeof(Mesh) * nMeshes +
 			sizeof(MaterialComponent) * nMaterial +
 			texStrDataSize +
-			sizeof(BoundingBox) * nMeshes,
+			sizeof(BoundingBox) * nMeshes + 
+			sizeof(Node) * nNodes,
 			vertexDataSize,indexDataSize
 		};
 
@@ -357,6 +410,9 @@ namespace MeshConverter {
 		// Write header
 		outFile.write(reinterpret_cast<const char*>(&header), sizeof(header));
 
+		// Write Nodes
+		outFile.write(reinterpret_cast<const char*>(meshData->nodes_.data()), sizeof(Node) * nNodes);
+
 		// Write MeshData
 		outFile.write(reinterpret_cast<const char*>(meshData->meshes_.data()), sizeof(Mesh) * nMeshes);
 
@@ -364,7 +420,8 @@ namespace MeshConverter {
 		outFile.write(reinterpret_cast<const char*>(meshData->materials_.data()), sizeof(MaterialComponent) * nMaterial);
 
 		// Write Textures
-		SaveStringList(outFile, meshData->textures_);
+		if(nTextures > 0)
+			SaveStringList(outFile, meshData->textures_);
 
 		// Write BoundingBox
 		outFile.write(reinterpret_cast<const char*>(meshData->boxes_.data()), sizeof(BoundingBox) * nMeshes);

@@ -35,6 +35,16 @@ struct Vertex
 	}
 };
 
+struct Node {
+	char name[64];
+	int parent;
+	int firstChild;
+	int nextSibling;
+	// Not like last but more like last added sibling
+	int lastSibling;
+	int meshId;
+	glm::mat4 localTransform;
+};
 
 struct Mesh final
 {
@@ -54,6 +64,8 @@ struct MeshFileHeader
 {
 	// Check integrity
 	uint32_t magicNumber;
+
+	uint32_t nodeCount;
 
 	uint32_t meshCount;
 
@@ -129,6 +141,7 @@ struct MaterialComponent {
 
 struct MeshData
 {
+	std::vector<Node> nodes_;
 	std::vector<Mesh> meshes_;
 	std::vector<MaterialComponent> materials_;
 	std::vector<std::string> textures_;

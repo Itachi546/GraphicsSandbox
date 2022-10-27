@@ -141,7 +141,7 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 
 void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 {
-	if (ImGui::CollapsingHeader("Transform Component"))
+	if (ImGui::CollapsingHeader("Transform Component", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		transform->dirty = ImGui::DragFloat3("Position", &transform->position[0]);
 
@@ -170,7 +170,7 @@ void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 
 void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 {
-	if (ImGui::CollapsingHeader("Material Component"))
+	if (ImGui::CollapsingHeader("Material Component", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::ColorEdit3("Albedo", &material->albedo[0]);
 		ImGui::SliderFloat("Roughness", &material->roughness, 0.0f, 1.0f);
@@ -182,7 +182,7 @@ void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 
 void SceneHierarchy::DrawLightComponent(LightComponent* light)
 {
-	if (ImGui::CollapsingHeader("Light Component"))
+	if (ImGui::CollapsingHeader("Light Component", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		ImGui::ColorPicker3("LightColor", &light->color[0]);
 		ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 100.0f);

@@ -199,7 +199,7 @@ namespace ecs
 		template<typename T, typename ...Args>
 		T& AddComponent(Entity& entity, Args&& ...args)
 		{
-			uint32_t compId = GetComponentTypeId<T>(compId);
+			uint32_t compId = GetComponentTypeId<T>();
 			assert(compId < MAX_COMPONENTS);
 			auto comp = GetComponentArray<T>();
 			assert(comp != nullptr);

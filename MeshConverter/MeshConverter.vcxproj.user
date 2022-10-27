@@ -8,4 +8,7 @@
     <LocalDebuggerCommandArguments>C:\Users\lenovo\Documents\3D-Assets\Models\character\animated_character.fbx C:\Users\lenovo\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup>
+    <ShowAllFiles>true</ShowAllFiles>
+  </PropertyGroup>
 </Project>

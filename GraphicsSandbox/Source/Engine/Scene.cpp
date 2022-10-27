@@ -147,6 +147,89 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 	return entity;
 }
 
+ecs::Entity Scene::CreateMeshEntity(uint32_t meshComponentIndex, const Node& node,
+	int materialIndex,
+	const std::vector<MaterialComponent>& materials, 
+	const std::vector<std::string>& textures, ecs::Entity parent)
+{
+	ecs::Entity entity = ecs::CreateEntity();
+
+	// Name Component
+	mComponentManager->AddComponent<NameComponent>(entity).name = node.name;
+
+	// TransformComponent
+	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(entity);
+	transform.defaultMatrix = node.localTransform;
+
+	int meshId = node.meshId;
+	if (meshId > -1)
+	{
+		// Object Component
+		ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
+		objectComp.meshComponentIndex = meshComponentIndex;
+		objectComp.meshId = meshId;
+
+		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
+		if (materials.size() > 0)
+		{
+			material = materials[materialIndex];
+			// @TODO Maybe it is not correct to generate mipmap for normal map and 
+			// sample it like base mip level. But for now, I don't know any other 
+			// ways to remove the normal map aliasing artifacts other than using mipmap.
+			if (material.albedoMap != INVALID_TEXTURE)
+				material.albedoMap = TextureCache::LoadTexture(textures[material.albedoMap], true);
+			if (material.normalMap != INVALID_TEXTURE)
+				material.normalMap = TextureCache::LoadTexture(textures[material.normalMap], true);
+			if (material.emissiveMap != INVALID_TEXTURE)
+				material.emissiveMap = TextureCache::LoadTexture(textures[material.emissiveMap]);
+			if (material.metallicMap != INVALID_TEXTURE)
+				material.metallicMap = TextureCache::LoadTexture(textures[material.metallicMap], true);
+			if (material.roughnessMap != INVALID_TEXTURE)
+				material.roughnessMap = TextureCache::LoadTexture(textures[material.roughnessMap], true);
+			if (material.ambientOcclusionMap != INVALID_TEXTURE)
+				material.ambientOcclusionMap = TextureCache::LoadTexture(textures[material.ambientOcclusionMap], true);
+			if (material.opacityMap != INVALID_TEXTURE)
+				material.opacityMap = TextureCache::LoadTexture(textures[material.opacityMap]);
+		}
+	}
+
+	if (parent != ecs::INVALID_ENTITY)
+	{
+		auto hierarchyCompArr = mComponentManager->GetComponentArray<HierarchyComponent>();
+		mComponentManager->AddComponent<HierarchyComponent>(entity).parent = parent;
+		std::size_t parentIndex = hierarchyCompArr->GetIndex(parent);
+		if (parentIndex == ~0ull)
+			mComponentManager->AddComponent<HierarchyComponent>(parent).childrens.push_back(entity);
+		else
+			hierarchyCompArr->components[parentIndex].childrens.push_back(entity);
+	}
+
+	return entity;
+}
+
+ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, uint32_t meshCompIndex, const std::vector<Node>& nodes, std::vector<Mesh>& meshes, std::vector<MaterialComponent>& materials, std::vector<std::string>& textures)
+{
+	if (root == -1)
+		return ecs::INVALID_ENTITY;
+
+	const Node& node = nodes[root];
+	int materialIndex = -1;
+
+	if (node.meshId > -1)
+		materialIndex = meshes[node.meshId].materialIndex;
+	ecs::Entity entity = CreateMeshEntity(meshCompIndex, node, materialIndex, materials, textures, parent);
+
+	// Add Child
+	if(node.firstChild != -1)
+		TraverseNode(node.firstChild, entity, meshCompIndex, nodes, meshes, materials, textures);
+
+	// Check sibling
+	if(node.nextSibling != -1)
+		TraverseNode(node.nextSibling, parent, meshCompIndex, nodes, meshes, materials, textures);
+
+	return entity;
+}
+
 ecs::Entity Scene::CreateMesh(const char* file)
 {
 	std::ifstream inFile(file, std::ios::binary);
@@ -163,14 +246,15 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	std::string name = file;
 	name = name.substr(name.find_last_of("/\\") + 1, name.size() - 1);
 	name = name.substr(0, name.find_first_of('.'));
-	ecs::Entity parent = ecs::CreateEntity();
-	mComponentManager->AddComponent<NameComponent>(parent).name = name;
-	mComponentManager->AddComponent<TransformComponent>(parent);
 
-	MeshDataComponent& meshData = mComponentManager->AddComponent<MeshDataComponent>(parent);
-	uint32_t nMeshes = header.meshCount;
+	// Read Nodes
+	uint32_t nNodes = header.nodeCount;
+	std::vector<Node> nodes(nNodes);
+	inFile.read(reinterpret_cast<char*>(nodes.data()), sizeof(Node) * nNodes);
 
 	// Read Meshes
+	MeshDataComponent meshData = {};
+	uint32_t nMeshes = header.meshCount;
 	std::vector<Mesh>& meshes = meshData.meshes;
 	meshes.resize(nMeshes);
 	inFile.read(reinterpret_cast<char*>(meshes.data()), sizeof(Mesh) * nMeshes);
@@ -182,16 +266,18 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	
 	// Read Texture Path
 	std::vector<std::string> textureFiles(header.textureCount);
-	for (uint32_t i = 0; i < header.textureCount; ++i)
+	if (header.textureCount > 0)
 	{
-		uint32_t size = 0;
-		inFile.read(reinterpret_cast<char*>(&size), 4);
+		for (uint32_t i = 0; i < header.textureCount; ++i)
+		{
+			uint32_t size = 0;
+			inFile.read(reinterpret_cast<char*>(&size), 4);
 
-		std::string& path = textureFiles[i];
-		path.resize(size);
-		inFile.read(path.data(), size);
+			std::string& path = textureFiles[i];
+			path.resize(size);
+			inFile.read(path.data(), size);
+		}
 	}
-
 	// Read BoundingBox
 	meshData.boundingBoxes.resize(nMeshes);
 	inFile.read(reinterpret_cast<char*>(meshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
@@ -210,7 +296,6 @@ ecs::Entity Scene::CreateMesh(const char* file)
 
 	// Allocate GPU Memory
 	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
-
 	gfx::GPUBufferDesc bufferDesc;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	bufferDesc.usage = gfx::Usage::Default;
@@ -222,57 +307,14 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	gfx::GPUBuffer* ib = gpuAllocator->AllocateBuffer(&bufferDesc, &meshData.ibIndex);
 	meshData.CopyDataToBuffer(gpuAllocator, vb, ib);
 
-	auto createObjectAndMaterial = [this, &materials, &meshes, &textureFiles](ecs::Entity entity, std::size_t meshComponentIndex, uint32_t meshId) {
-		ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
-		objectComp.meshComponentIndex = meshComponentIndex;
-		objectComp.meshId = meshId;
+	// Create Root Node
+	const Node& node = nodes[0];
+	ecs::Entity entity = CreateMeshEntity(-1, node, -1, materials, textureFiles, ecs::INVALID_ENTITY);
+	mComponentManager->AddComponent<MeshDataComponent>(entity, meshData);
+	auto meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(entity);
 
-		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
-		if (materials.size() > 0)
-		{
-			MaterialComponent meshMat = materials[meshes[meshId].materialIndex];
-			// @TODO Maybe it is not correct to generate mipmap for normal map and 
-			// sample it like base mip level. But for now, I don't know any other 
-			// ways to remove the normal map aliasing artifacts other than using 
-			// mipmap.
-			if (meshMat.albedoMap != INVALID_TEXTURE)
-				meshMat.albedoMap = TextureCache::LoadTexture(textureFiles[meshMat.albedoMap], true);
-			if (meshMat.normalMap != INVALID_TEXTURE)
-				meshMat.normalMap = TextureCache::LoadTexture(textureFiles[meshMat.normalMap], true);
-			if (meshMat.emissiveMap != INVALID_TEXTURE)
-				meshMat.emissiveMap = TextureCache::LoadTexture(textureFiles[meshMat.emissiveMap]);
-			if (meshMat.metallicMap != INVALID_TEXTURE)
-				meshMat.metallicMap = TextureCache::LoadTexture(textureFiles[meshMat.metallicMap], true);
-			if (meshMat.roughnessMap != INVALID_TEXTURE)
-				meshMat.roughnessMap = TextureCache::LoadTexture(textureFiles[meshMat.roughnessMap], true);
-			if (meshMat.ambientOcclusionMap != INVALID_TEXTURE)
-				meshMat.ambientOcclusionMap = TextureCache::LoadTexture(textureFiles[meshMat.ambientOcclusionMap], true);
-			if (meshMat.opacityMap != INVALID_TEXTURE)
-				meshMat.opacityMap = TextureCache::LoadTexture(textureFiles[meshMat.opacityMap]);
-			material = { meshMat };
-		}
-	};
-
-	std::size_t meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(parent);
-	if (nMeshes == 1)
-		createObjectAndMaterial(parent, meshComponentIndex, 0);
-	else
-	{
-		mComponentManager->AddComponent<HierarchyComponent>(parent);
-		auto hierarchyCompArr = mComponentManager->GetComponentArray<HierarchyComponent>();
-		std::size_t parentIndex = hierarchyCompArr->GetIndex(parent);
-
-		for (uint32_t i = 0; i < nMeshes; ++i)
-		{
-			ecs::Entity child = ecs::CreateEntity();
-			mComponentManager->AddComponent<NameComponent>(child).name = meshes[i].meshName;
-			mComponentManager->AddComponent<TransformComponent>(child);
-			mComponentManager->AddComponent<HierarchyComponent>(child).parent = parent;
-			hierarchyCompArr->components[parentIndex].childrens.push_back(child);
-			createObjectAndMaterial(child, meshComponentIndex, i);
-		}
-	}
-	return parent;
+	TraverseNode(node.firstChild, entity, (uint32_t)meshComponentIndex, nodes, meshes, materials, textureFiles);
+	return entity;
 }
 
 ecs::Entity Scene::CreateLight(std::string_view name)

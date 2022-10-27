@@ -180,6 +180,7 @@ void EditorApplication::InitializeScene()
 	ecs::Entity scene = mScene.CreateMesh("Assets/Models/animated_character.sbox");
 	if (scene)
 		compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(0.03f);
+
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
 }

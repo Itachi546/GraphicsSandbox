@@ -7,7 +7,9 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_vulkan.h"
+#include "ImPlot/implot.h"
 
+#include "../Engine/Interpolator.h"
 #include <iomanip>
 #include <algorithm>
 
@@ -16,6 +18,7 @@ void EditorApplication::Initialize()
 	initialize_();
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
+	ImPlot::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	ImGui_ImplGlfw_InitForVulkan(mWindow, true);
 
@@ -104,10 +107,43 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 			ImGui::SliderFloat("ShadowDistance", &shadowDistance, 5.0f, 500.0f);
 		}
 
+		if (ImGui::CollapsingHeader("Interpolators"))
+		{
+			static glm::dvec2 a(0.0f, 0.0f);
+			static glm::dvec2 b(1.0f, 1.0f);
+			static glm::dvec2 c1(0.0f, 0.4f);
+			static glm::dvec2 c2(1.0f, 0.6f);
+
+			std::vector<double> bezierX;
+			std::vector<double> bezierY;
+			for (int i = 0; i < 80; ++i)
+			{
+				double x = Interpolator::BezierSpline<double>(a.x, b.x, c1.x, c2.x, double(i) / 80.0);
+				double y = Interpolator::BezierSpline<double>(a.y, b.y, c1.y, c2.y, double(i) / 80.0);
+				bezierX.push_back(x);
+				bezierY.push_back(y);
+			}
+			if (ImPlot::BeginPlot("Curve"))
+			{
+				double v1x[] = { a.x, c1.x };
+				double v1y[] = { a.y, c1.y };
+				ImPlot::PlotLine("line", v1x, v1y, 2);
+
+				double v2x[] = { b.x, c2.x };
+				double v2y[] = { b.y, c2.y };
+				ImPlot::PlotLine("line", v2x, v2y, 2);
+
+				ImPlot::DragPoint(2, &c1.x, &c1.y, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+				ImPlot::DragPoint(3, &c2.x, &c2.y, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+
+				ImPlot::PlotLine("Curve", bezierX.data(), bezierY.data(), (int)bezierX.size());
+				ImPlot::EndPlot();
+			}
+		}
+
 		ImGui::End();
 		mHierarchy->Draw();
 	}
-
 	auto shadowMap = mRenderer->GetShadowMap();
 	shadowMap->SetSplitLambda(shadowSplitLambda);
 	shadowMap->SetShadowDistance(shadowDistance);
@@ -214,5 +250,6 @@ EditorApplication::~EditorApplication()
 {
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
+	ImPlot::DestroyContext();
 	ImGui::DestroyContext();
 }

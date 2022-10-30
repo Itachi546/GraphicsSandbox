@@ -110,30 +110,6 @@
     </ClInclude>
     <ClInclude Include="Source\Test\BloomTest.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
-    <ClInclude Include="Source\Editor\ImGui\imconfig.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h">
-      <Filter>ImGui</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Editor\SceneHierarchy.h" />
     <ClInclude Include="Source\Engine\TextureCache.h" />
@@ -142,6 +118,17 @@
     <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
     <ClInclude Include="Source\Test\SponzaTest.h" />
     <ClInclude Include="Source\Editor\FileDialog.h" />
+    <ClInclude Include="Source\Engine\Interpolator.h" />
+    <ClInclude Include="Source\Editor\ImGui\imconfig.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h" />
+    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h" />
+    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h" />
+    <ClInclude Include="Source\Editor\ImPlot\implot.h" />
+    <ClInclude Include="Source\Editor\ImPlot\implot_internal.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -201,27 +188,6 @@
     <ClCompile Include="Source\Editor\EditorApplication.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_demo.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_draw.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_impl_glfw.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp">
-      <Filter>ImGui</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Profiler.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
@@ -238,6 +204,36 @@
       <Filter>SOURCE</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\CascadedShadowMap.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui_demo.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui_draw.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui_impl_glfw.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImPlot\implot.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImPlot\implot_demo.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\ImPlot\implot_items.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>

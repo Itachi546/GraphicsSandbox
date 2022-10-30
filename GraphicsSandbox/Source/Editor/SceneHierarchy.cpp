@@ -1,7 +1,8 @@
 #include "SceneHierarchy.h"
 #include "FileDialog.h"
-#include "../Engine/Input.h"
 #include "ImGui/imgui.h"
+
+#include "../Engine/Input.h"
 #include "../Engine/DebugDraw.h"
 
 SceneHierarchy::SceneHierarchy(Scene* scene, Platform::WindowType window) : mScene(scene),
@@ -138,17 +139,15 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 	}
 }
 
-
 void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 {
 	if (ImGui::CollapsingHeader("Transform Component", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		transform->dirty = ImGui::DragFloat3("Position", &transform->position[0]);
-
-		glm::vec3 rotation = glm::degrees(transform->rotation);
+		glm::vec3 rotation = glm::degrees(glm::eulerAngles(transform->rotation));
 		if (ImGui::DragFloat3("Rotation", &rotation[0], 1.0f, -180.0f, 180.0f))
 		{
-			transform->rotation = glm::radians(rotation);
+			transform->rotation = glm::quat(glm::radians(rotation));
 			transform->dirty = true;
 		}
 

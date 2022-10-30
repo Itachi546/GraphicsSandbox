@@ -87,21 +87,24 @@ void Application::render_()
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	Profiler::BeginFrameGPU(&commandList);
-
-
 	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 
 	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
 	mRenderer->Render(&commandList);
 
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
-
 	RangeId swapchainRangeId = Profiler::StartRangeGPU(&commandList, "Swapchain Render");
-	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
-	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
-	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader};
 
+	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
+	gfx::ImageBarrierInfo shaderReadBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
+	gfx::PipelineBarrierInfo shaderReadPipelineBarrier = { &shaderReadBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader};
+	mDevice->PipelineBarrier(&commandList, &shaderReadPipelineBarrier);
+
+	gfx::GPUTexture* sceneDepthTexture = mRenderer->GetOutputTexture(OutputTextureType::HDRDepth);
+	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::None, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, sceneDepthTexture };
+	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
+	mDevice->CopyToSwapchain(&commandList, sceneDepthTexture, gfx::ImageLayout::DepthStencilAttachmentOptimal);
 
 	mDevice->BeginRenderPass(&commandList, mSwapchainRP.get(), nullptr);
 	gfx::DescriptorInfo descriptorInfo = { outputTexture, 0, 0, gfx::DescriptorType::Image };
@@ -118,11 +121,11 @@ void Application::render_()
 	DebugDraw::Draw(&commandList, VP);
 
 	RenderUI(&commandList);
-
 	mDevice->EndRenderPass(&commandList);
+
 	mDevice->EndDebugMarker(&commandList);
 	Profiler::EndRangeGPU(&commandList, swapchainRangeId);
-
+	
 	mDevice->PrepareSwapchainForPresent(&commandList);
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 
@@ -159,16 +162,24 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	renderPassDesc.width = props.width;
 	renderPassDesc.height = props.height;
 
-	gfx::GPUTextureDesc attachmentDesc;
-	attachmentDesc.bCreateSampler = false;
-	attachmentDesc.bindFlag = gfx::BindFlag::RenderTarget;
-	attachmentDesc.format = mSwapchainColorFormat;
-	attachmentDesc.width = props.width;
-	attachmentDesc.height = props.height;
-	gfx::Attachment attachment{ 0, attachmentDesc};
+	gfx::GPUTextureDesc colorAttachment;
+	colorAttachment.bCreateSampler = false;
+	colorAttachment.bindFlag = gfx::BindFlag::RenderTarget;
+	colorAttachment.format = mSwapchainColorFormat;
+	colorAttachment.width = props.width;
+	colorAttachment.height = props.height;
 
-	renderPassDesc.attachmentCount = 1;
-	renderPassDesc.attachments = &attachment;
+	gfx::GPUTextureDesc depthAttachment;
+	depthAttachment.bCreateSampler = false;
+	depthAttachment.bindFlag = gfx::BindFlag::DepthStencil;
+	depthAttachment.format = mSwapchainDepthFormat;
+	depthAttachment.imageAspect = gfx::ImageAspect::Depth;
+	depthAttachment.width = props.width;
+	depthAttachment.height = props.height;
+	gfx::Attachment attachments[] = { {0, colorAttachment}, {1, depthAttachment, true}};
+
+	renderPassDesc.attachmentCount = (uint32_t)std::size(attachments);
+	renderPassDesc.attachments = attachments;
 	renderPassDesc.hasDepthAttachment = false;
 	mDevice->CreateRenderPass(&renderPassDesc, mSwapchainRP.get());
 
@@ -178,8 +189,9 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.height = mHeight;
 	swapchainDesc.vsync = false;
 	swapchainDesc.colorFormat = mSwapchainColorFormat;
+	swapchainDesc.depthFormat = mSwapchainDepthFormat;
 	swapchainDesc.fullscreen = false;
-	swapchainDesc.enableDepth = false;
+	swapchainDesc.enableDepth = true;
 	swapchainDesc.renderPass = mSwapchainRP.get();
 	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	mDevice->CreateSwapchain(&swapchainDesc, window);
@@ -203,6 +215,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 	pipelineDesc.renderPass = mSwapchainRP.get();
 	pipelineDesc.rasterizationState.enableDepthTest = false;
+	pipelineDesc.rasterizationState.enableDepthWrite = false;
 	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
 	gfx::BlendState blendState = {};
 	pipelineDesc.blendState = &blendState;

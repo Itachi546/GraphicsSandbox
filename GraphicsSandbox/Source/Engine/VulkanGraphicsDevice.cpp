@@ -614,7 +614,7 @@ namespace gfx {
 	std::pair<VkImage, VmaAllocation> CreateSwapchainDepthImage(VmaAllocator vmaAllocator, VkFormat depthFormat, uint32_t width, uint32_t height)
     {
         VkImageCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        createInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
         createInfo.format = depthFormat;
@@ -1427,16 +1427,23 @@ namespace gfx {
 
             uint32_t index = attachment.index;
             assert(index < desc->attachmentCount);
+
             if (attachment.desc.imageAspect == ImageAspect::Depth)
             {
                 layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
                 hasDepthAttachment = true;
                 depthAttachmentIndex = index;
+
             }
+
+            // For DepthPrepass
+            VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            if(attachment.loadOp)
+                loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 
             attachments[index].format = format;
             attachments[index].samples = VK_SAMPLE_COUNT_1_BIT;
-            attachments[index].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachments[index].loadOp = loadOp;
             attachments[index].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             attachments[index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
             attachments[index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -1467,7 +1474,6 @@ namespace gfx {
         VkRenderPass renderPass = 0;
         VK_CHECK(vkCreateRenderPass(device_, &createInfo, nullptr, &renderPass));
         return renderPass;
-
     }
 
     void VulkanGraphicsDevice::CreateRenderPass(const RenderPassDesc* desc, RenderPass* out)
@@ -1866,7 +1872,7 @@ namespace gfx {
         };
 
         if (swapchain_->depthImages.size() > 0)
-            renderBeginBarrier.push_back(CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL));
+            renderBeginBarrier.push_back(CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL));
         vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
     }
 
@@ -1882,6 +1888,8 @@ namespace gfx {
 
         uint32_t width = swapchain_->desc.width;
         uint32_t height = swapchain_->desc.height;
+
+        uint32_t attachmentCount = renderPass->desc.attachmentCount;
         if (framebuffer)
         {
             vkFramebuffer = std::static_pointer_cast<VulkanFramebuffer>(framebuffer->internalState)->framebuffer;
@@ -1890,9 +1898,10 @@ namespace gfx {
             height = renderPass->desc.height;
         }
         else
+        {
             vkFramebuffer = swapchain_->framebuffers[imageIndex];
+        }
 
-        uint32_t attachmentCount = renderPass->desc.attachmentCount;
         std::vector<VkClearValue> clearValues(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
         {
@@ -1984,37 +1993,45 @@ namespace gfx {
         uint32_t imageIndex = swapchain_->currentImageIndex;
 
         auto src = std::static_pointer_cast<VulkanTexture>(texture->internalState);
+        VkImageAspectFlagBits imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        VkFilter filter = VK_FILTER_LINEAR;
+        VkImage dstImage = swapchain_->images[imageIndex];
+        VkPipelineStageFlagBits pipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        if (texture->desc.imageAspect == ImageAspect::Depth)
+        {
+            imageAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+            filter = VK_FILTER_NEAREST;
+            dstImage = swapchain_->depthImages[imageIndex].first;
+            pipelineStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        }
 
-        VkImageMemoryBarrier transferBarrier = CreateImageBarrier(swapchain_->images[imageIndex],
-            VK_IMAGE_ASPECT_COLOR_BIT,
+        VkImageMemoryBarrier transferBarrier = CreateImageBarrier(dstImage,
+            imageAspect,
             0, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &transferBarrier);
+        vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &transferBarrier);
 
         int levelWidth  = std::max(1u, texture->desc.width >> mipLevel);
         int levelHeight = std::max(1u, texture->desc.height >> mipLevel);
 
         VkImageBlit blitRegion = {};
-        blitRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blitRegion.srcSubresource.aspectMask = imageAspect;
         blitRegion.srcSubresource.mipLevel = mipLevel;
         blitRegion.srcSubresource.layerCount = 1;
 
-        blitRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blitRegion.dstSubresource.aspectMask = imageAspect;
         blitRegion.dstSubresource.layerCount = 1;
-        blitRegion.srcOffsets[0] = { 0, 0, 0 };
-        blitRegion.srcOffsets[1] = { levelWidth, levelHeight, 1 };
+        blitRegion.srcOffsets[0] = { 0, levelHeight, 0 };
+        blitRegion.srcOffsets[1] = { levelWidth, 0, 1 };
         blitRegion.dstOffsets[0] = { 0, 0, 0 };
         blitRegion.dstOffsets[1] = { swapchain_->desc.width, swapchain_->desc.height, 1 };
 
-        vkCmdBlitImage(cmd->commandBuffer, src->image, src->layout, swapchain_->images[imageIndex], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+        vkCmdBlitImage(cmd->commandBuffer, src->image, src->layout, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, filter);
 
         VkImageLayout swapchainImageLayout = _ConvertLayout(finalSwapchainImageLayout);
-        VkPipelineStageFlagBits pipelineStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        if (swapchainImageLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-            pipelineStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 
-        VkImageMemoryBarrier renderEndBarrier = CreateImageBarrier(swapchain_->images[imageIndex],
-            VK_IMAGE_ASPECT_COLOR_BIT,
+        VkImageMemoryBarrier renderEndBarrier = CreateImageBarrier(dstImage,
+            imageAspect,
             VK_ACCESS_TRANSFER_WRITE_BIT,
             0,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,

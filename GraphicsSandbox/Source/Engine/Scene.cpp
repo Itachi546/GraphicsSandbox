@@ -570,8 +570,7 @@ void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& verte
 		}
 	}
 
-	int size = subdivide;
-	meshComp->boundingBoxes.emplace_back(glm::vec3(-size, -0.1f, -size), glm::vec3(size, 0.1f, size));
+	meshComp->boundingBoxes.emplace_back(glm::vec3(-1.0f, -0.01f, -1.0f), glm::vec3(1.0f, 0.01f, 1.0f));
 }
 
 void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount)

@@ -19,7 +19,7 @@ vec3 ACESFilm(vec3 x)
 }
 void main()
 {
-    vec3 col = texture(uInputTexture, vec2(uv.x, 1.0 - uv.y)).rgb;
+    vec3 col = texture(uInputTexture, vec2(uv.x, uv.y)).rgb;
     col = ACESFilm(col * exposure);
     col = pow(col, vec3(0.4545));
     fragColor = vec4(col, 1.0f);

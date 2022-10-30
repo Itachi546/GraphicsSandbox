@@ -361,6 +361,7 @@ namespace gfx
 	{
 		uint32_t index;
 		GPUTextureDesc desc;
+		bool loadOp = false;
 	};
 
 

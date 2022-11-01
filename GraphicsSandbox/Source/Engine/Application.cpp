@@ -115,9 +115,6 @@ void Application::render_()
 	// Draw DebugData
 	auto camera = mScene.GetCamera();
 	glm::mat4 VP = camera->GetProjectionMatrix() * camera->GetViewMatrix();
-	DebugDraw::AddLine(glm::vec3(0.0f), glm::vec3(0.0f,  1.0f, 0.0f), 0x00ff00);
-	DebugDraw::AddLine(glm::vec3(0.0f), glm::vec3(1.0f, 0.0f,  0.0f), 0xff0000);
-	DebugDraw::AddLine(glm::vec3(0.0f), glm::vec3(0.0f,  0.0f,  1.0f), 0x0000ff);
 	DebugDraw::Draw(&commandList, VP);
 
 	RenderUI(&commandList);

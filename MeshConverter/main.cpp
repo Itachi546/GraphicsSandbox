@@ -13,7 +13,6 @@ int main(int argc, char** argv)
 	}
 
 	const char* filename = argv[1];
-	//const char* filename = "Model/scene.obj";
 	std::chrono::time_point end = std::chrono::steady_clock::now();
 
 	MeshConverter::Convert(filename, argv[2]);

@@ -164,6 +164,10 @@ void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 		}
 		else
 			transform->dirty = ImGui::DragFloat3("Scale", &transform->scale[0], 0.01f, -1000.0f, 1000.0f);
+
+		glm::vec3 localPosition = glm::vec3(transform->defaultMatrix[3]);
+
+		ImGui::Text("%.2f %.2f %.2f", localPosition.x, localPosition.y, localPosition.z);
 	}
 }
 

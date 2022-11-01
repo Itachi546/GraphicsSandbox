@@ -26,15 +26,21 @@
     <Filter Include="SOURCE\FX">
       <UniqueIdentifier>{8168d990-2c62-4743-bcd3-0f7c485087b1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="ImGui">
+    <Filter Include="TEST">
+      <UniqueIdentifier>{53d12f9d-2a10-4ae2-b34f-23ad70b08dff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IMGUI">
       <UniqueIdentifier>{e5f8327d-c66a-44b0-991e-141851066155}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EDITOR">
+      <UniqueIdentifier>{8d7e6dde-c9a4-4137-860d-3c78b4507056}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EDITOR\ANIMAITION">
+      <UniqueIdentifier>{ecd203a7-3fa6-4fb5-9772-a2551f85d2b1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\Application.h">
-      <Filter>SOURCE</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Engine\GlmIncludes.h">
       <Filter>SOURCE</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Logger.h">
@@ -76,9 +82,6 @@
     <ClInclude Include="Source\Engine\ECS.h">
       <Filter>SOURCE\ECS</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\GraphicsSandbox.h">
-      <Filter>SOURCE</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Scene.h">
       <Filter>SOURCE\ECS</Filter>
     </ClInclude>
@@ -97,8 +100,6 @@
     <ClInclude Include="Source\Engine\ImageLoader.h">
       <Filter>SOURCE\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Shared\MeshData.h" />
-    <ClInclude Include="Source\Shared\MathUtils.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h">
       <Filter>SOURCE\FX</Filter>
     </ClInclude>
@@ -108,27 +109,85 @@
     <ClInclude Include="Source\Engine\GraphicsUtils.h">
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Test\BloomTest.h" />
-    <ClInclude Include="Source\Editor\EditorApplication.h" />
-    <ClInclude Include="Source\Engine\Profiler.h" />
-    <ClInclude Include="Source\Editor\SceneHierarchy.h" />
-    <ClInclude Include="Source\Engine\TextureCache.h" />
-    <ClInclude Include="Source\Engine\DebugDraw.h" />
-    <ClInclude Include="Source\Engine\StringConstants.h" />
-    <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
-    <ClInclude Include="Source\Test\SponzaTest.h" />
-    <ClInclude Include="Source\Editor\FileDialog.h" />
-    <ClInclude Include="Source\Engine\Interpolator.h" />
-    <ClInclude Include="Source\Editor\ImGui\imconfig.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h" />
-    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h" />
-    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h" />
-    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h" />
-    <ClInclude Include="Source\Editor\ImPlot\implot.h" />
-    <ClInclude Include="Source\Editor\ImPlot\implot_internal.h" />
+    <ClInclude Include="Source\Engine\GlmIncludes.h">
+      <Filter>SOURCE\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imconfig.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imgui.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImPlot\implot.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImPlot\implot_internal.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Test\BloomTest.h">
+      <Filter>TEST</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\CascadedShadowMap.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\SceneHierarchy.h">
+      <Filter>EDITOR</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\EditorApplication.h">
+      <Filter>EDITOR</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\FileDialog.h">
+      <Filter>EDITOR</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Test\SponzaTest.h">
+      <Filter>TEST</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Editor\TransformGizmo.h">
+      <Filter>EDITOR</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\DebugDraw.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Interpolator.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Shared\MathUtils.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Shared\MeshData.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Profiler.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\StringConstants.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\TextureCache.h">
+      <Filter>SOURCE\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\GraphicsSandbox.h">
+      <Filter>SOURCE\Graphics</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\Engine\Animation\Animation.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -185,55 +244,61 @@
     <ClCompile Include="Source\Engine\Camera.cpp">
       <Filter>SOURCE\ECS</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\EditorApplication.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\Profiler.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Editor\SceneHierarchy.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\TextureCache.cpp">
-      <Filter>SOURCE</Filter>
+    <ClCompile Include="Source\Engine\CascadedShadowMap.cpp">
+      <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\DebugDraw.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Shared\MathUtils.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\CascadedShadowMap.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_demo.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_draw.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_impl_glfw.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImPlot\implot.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImPlot\implot_demo.cpp">
-      <Filter>SOURCE</Filter>
+      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\ImPlot\implot_items.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\EditorApplication.cpp">
+      <Filter>EDITOR</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Shared\MathUtils.cpp">
+      <Filter>SOURCE\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\SceneHierarchy.cpp">
+      <Filter>EDITOR</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\TextureCache.cpp">
+      <Filter>SOURCE\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Editor\TransformGizmo.cpp">
+      <Filter>EDITOR</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Profiler.cpp">
+      <Filter>SOURCE\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Animation\Animation.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>
@@ -277,12 +342,16 @@
     <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl" />
     <CustomBuild Include="..\Assets\Shaders\shadow.geom.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\shadow.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

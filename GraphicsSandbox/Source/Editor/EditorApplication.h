@@ -22,7 +22,6 @@ private:
 	void InitializeCSMScene();
 
 	std::shared_ptr<SceneHierarchy> mHierarchy;
-	std::vector<ecs::Entity> lights;
-
+	ecs::Entity character;
 	bool mShowUI = false;
 };

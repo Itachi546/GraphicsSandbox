@@ -9,6 +9,7 @@
 #include "ImGui/imgui_impl_vulkan.h"
 #include "ImPlot/implot.h"
 
+#include "TransformGizmo.h"
 #include "../Engine/Interpolator.h"
 #include <iomanip>
 #include <algorithm>
@@ -111,8 +112,8 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		{
 			static glm::dvec2 a(0.0f, 0.0f);
 			static glm::dvec2 b(1.0f, 1.0f);
-			static glm::dvec2 c1(0.0f, 0.4f);
-			static glm::dvec2 c2(1.0f, 0.6f);
+			static glm::dvec2 c1(1.0f, 0.0f);
+			static glm::dvec2 c2(1.0f, 0.0f);
 
 			std::vector<double> bezierX;
 			std::vector<double> bezierY;
@@ -156,6 +157,11 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mRenderer->SetDebugCascade(showCascade);
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
+
+	TransformGizmo::BeginFrame();
+	static glm::mat4 out;
+	TransformGizmo::Manipulate(mCamera->GetViewMatrix(), mCamera->GetProjectionMatrix(), TransformGizmo::Operation::Translate, out);
+
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
@@ -213,9 +219,9 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/animated_character.sbox");
-	if (scene)
-		compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(0.03f);
+	character = mScene.CreateMesh("Assets/Models/animated_character.sbox");
+	if (character)
+		compMgr->GetComponent<TransformComponent>(character)->scale = glm::vec3(0.03f);
 
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);

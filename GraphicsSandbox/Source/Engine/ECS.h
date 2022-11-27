@@ -115,6 +115,18 @@ namespace ecs
 			return ~0ull;
 		}
 
+		template<typename T>
+		uint32_t GetIndex(const T* val)
+		{
+			auto found = std::find_if(components.begin(), components.end(), [val](T& comp) {
+				return &comp == val;
+			});
+
+			if (found != components.end())
+				return (uint32_t)std::distance(components.begin(), found);
+			return -1;
+		}
+
 		std::size_t GetCount()
 		{
 			return components.size();

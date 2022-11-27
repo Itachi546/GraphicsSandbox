@@ -371,5 +371,6 @@
     <None Include="..\Assets\Shaders\shadow.glsl">
       <Filter>SHADERS</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

@@ -158,9 +158,9 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
 
-	TransformGizmo::BeginFrame();
-	static glm::mat4 out;
-	TransformGizmo::Manipulate(mCamera->GetViewMatrix(), mCamera->GetProjectionMatrix(), TransformGizmo::Operation::Translate, out);
+	//TransformGizmo::BeginFrame();
+	//static glm::mat4 out;
+	//TransformGizmo::Manipulate(mCamera->GetViewMatrix(), mCamera->GetProjectionMatrix(), TransformGizmo::Operation::Translate, out);
 
 
 	ImGui::Render();
@@ -221,7 +221,7 @@ void EditorApplication::InitializeScene()
 
 	character = mScene.CreateMesh("Assets/Models/animated_character.sbox");
 	if (character)
-		compMgr->GetComponent<TransformComponent>(character)->scale = glm::vec3(0.03f);
+		compMgr->GetComponent<TransformComponent>(character)->scale = glm::vec3(0.02f);
 
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);

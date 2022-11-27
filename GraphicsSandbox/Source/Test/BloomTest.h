@@ -17,7 +17,7 @@ public:
 
 	void PreUpdate(float dt) override {
 
-		float walkSpeed = 1.0f;
+		float walkSpeed = 0.5f;
 
 		if (Input::Down(Input::Key::KEY_LEFT_SHIFT))
 			walkSpeed *= 6.0f;
@@ -96,28 +96,34 @@ private:
 
 		{
 			ecs::Entity mesh = mScene.CreateMesh("Assets/Models/suzanne.sbox");
-			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
-			transform->scale = glm::vec3(1.0f);
-			transform->position.x += 5.0f;
-			transform->position.y -= 1.0f;
+			if (mesh != ecs::INVALID_ENTITY)
+			{
+				TransformComponent* transform = compMgr->GetComponent<TransformComponent>(mesh);
+				transform->scale = glm::vec3(1.0f);
+				transform->position.x += 5.0f;
+				transform->position.y -= 1.0f;
 
-			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
-			material.roughness = 0.5f;
-			material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
-			material.metallic = 1.0f;
-			material.ao = 0.3f;
+				MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(mesh);
+				material.roughness = 0.5f;
+				material.albedo = glm::vec4(0.944f, .776f, .373f, 1.0f);
+				material.metallic = 1.0f;
+				material.ao = 0.3f;
+			}
 		}
 		{
 			ecs::Entity bloom = mScene.CreateMesh("Assets/Models/bloom.sbox");
-			TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
-			transform->scale = glm::vec3(1.0f);
-			transform->position = glm::vec3(-6.0f, -0.5f, 0.0f);
+			if (bloom != ecs::INVALID_ENTITY)
+			{
+				TransformComponent* transform = compMgr->GetComponent<TransformComponent>(bloom);
+				transform->scale = glm::vec3(1.0f);
+				transform->position = glm::vec3(-6.0f, -0.5f, 0.0f);
 
-			MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(bloom);
-			material.roughness = 0.9f;
-			material.albedo = glm::vec4(0.37f, .26f, .95f, 1.0f);
-			material.metallic = 0.1f;
-			material.emissive = 20.0f;
+				MaterialComponent& material = compMgr->AddComponent<MaterialComponent>(bloom);
+				material.roughness = 0.9f;
+				material.albedo = glm::vec4(0.37f, .26f, .95f, 1.0f);
+				material.metallic = 0.1f;
+				material.emissive = 20.0f;
+			}
 		}
 
 

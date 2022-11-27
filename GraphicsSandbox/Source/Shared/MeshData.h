@@ -42,7 +42,6 @@ struct Node {
 	int nextSibling;
 	// Not like last but more like last added sibling
 	int lastSibling;
-	int meshId;
 	glm::mat4 localTransform;
 };
 
@@ -57,7 +56,10 @@ struct Mesh final
 	uint32_t indexCount = 0;
 
 	uint32_t materialIndex = 0;
+
 	char meshName[32];
+
+	uint32_t nodeIndex;
 };
 
 struct MeshFileHeader

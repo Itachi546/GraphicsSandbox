@@ -90,11 +90,14 @@ namespace TextureCache
 		int width, height, nChannel;
 		
 		uint8_t* pixels = Utils::ImageLoader::Load(filename.c_str(), width, height, nChannel);
-		assert(nChannel == 4);
 		if (pixels == nullptr)
+		{
+			Logger::Warn("Failed to load texture: " + filename);
 			return INVALID_TEXTURE;
-
+		}
+		assert(nChannel == 4);
 		gfx::GPUTexture texture;
+		texture.name = filename;
 		CreateTexture(&texture, pixels, width, height, nChannel, generateMipmap);
 
 		uint32_t nTexture = static_cast<uint32_t>(gAllTextures.size());

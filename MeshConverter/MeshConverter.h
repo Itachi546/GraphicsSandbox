@@ -88,7 +88,8 @@ namespace MeshConverter {
 
 	std::string ConvertTexture(const std::string& filename, const std::string& exportPath)
 	{
-		std::string outputImagePath = exportPath + TrimPathAndExtension(filename) + "_converted.png";
+		std::string newFileName = TrimPathAndExtension(filename) + "_converted.png";
+		std::string outputImagePath = exportPath +  '/' + newFileName;
 
 		int width, height, nChannel;
 		stbi_uc* pixels = stbi_load(filename.c_str(), &width, &height, &nChannel, STBI_rgb_alpha);
@@ -106,21 +107,22 @@ namespace MeshConverter {
 			fprintf(stdout, "Loaded [%s] %dx%d texture with %d channels\n", filename.c_str(), width, height, nChannel);
 		}
 
-		std::string newFilePath = ResizeAndExportTexture(pixels, width, height, EXPORT_TEXTURE_SIZE, EXPORT_TEXTURE_SIZE, nChannel, outputImagePath);
+		ResizeAndExportTexture(pixels, width, height, EXPORT_TEXTURE_SIZE, EXPORT_TEXTURE_SIZE, nChannel, outputImagePath);
 
 		stbi_image_free(pixels);
 
-		return newFilePath;
+		return newFileName;
 	}
 
 
-	void ProcessTexture(const aiScene* scene, std::vector<std::string>& textureFiles, const std::string& basePath, const std::string& exportPath)
+	void ProcessTexture(const aiScene* scene, std::vector<std::string>& textureFiles, const std::string& basePath, const std::string& exportPathBase, const std::string& textureFolder)
 	{
+		std::string exportPath = exportPathBase + '/' + textureFolder;
 		if (!std::filesystem::exists(exportPath))
 			std::filesystem::create_directory(exportPath);
 
-		auto converter = [&exportPath, &basePath, scene](const std::string& filename) {
-			return ConvertTexture(basePath + filename, exportPath);
+		auto converter = [&exportPath, &basePath, &textureFolder, scene](const std::string& filename) {
+			return textureFolder + "/" + ConvertTexture(basePath + filename, exportPath);
 		};
 
 		std::transform(std::execution::par, textureFiles.begin(), textureFiles.end(), textureFiles.begin(), converter);
@@ -201,8 +203,14 @@ namespace MeshConverter {
 			aiVector3D v = mesh->mVertices[i];
 			aiVector3D n = mesh->mNormals[i];
 			aiVector3D t = bTexCoords ? mesh->mTextureCoords[0][i] : aiVector3D();
-			aiVector3D tangent = mesh->mTangents[i];
-			aiVector3D bitangent = mesh->mBitangents[i];
+			aiVector3D tangent = aiVector3D(0.0f, 0.0f, 1.0f);
+			aiVector3D bitangent = aiVector3D(0.0f, 1.0f, 0.0f);
+			
+			if (mesh->mTangents)
+			{
+				tangent = mesh->mTangents[i];
+				bitangent = mesh->mBitangents[i];
+			}
 
 			Vertex vertex{ glm::vec3(v.x, v.y, v.z),
 				 glm::vec3(n.x, n.y, n.z),
@@ -241,11 +249,7 @@ namespace MeshConverter {
 
 	glm::mat4 AIMat4toGLM(const aiMatrix4x4& transform)
 	{
-		glm::mat4 result(1.0f);
-		for (int i = 0; i < 4; ++i)
-			for (int j = 0; j < 4; ++j)
-				result[i][j] = transform[i][j];
-		return result;
+		return glm::transpose(glm::make_mat4(&transform.a1));
 	}
 
 	void ParseAnimation(const aiScene* scene, uint32_t nAnimations, aiAnimation** animations)
@@ -258,7 +262,7 @@ namespace MeshConverter {
 		int currentNode = static_cast<int>(nodes_.size());
 		{
 			Node node = {};
-			assert(aiNode->mName.length <= 64);
+			//assert(aiNode->mName.length <= 64);
 			std::strcpy(node.name, aiNode->mName.C_Str());
 			node.parent = parent;
 			node.firstChild = -1;
@@ -298,17 +302,13 @@ namespace MeshConverter {
 		int currentNode = AddNode(aiNode, parent, out->nodes_);
 		if (aiNode->mNumMeshes > 0)
 		{
-			assert(aiNode->mNumMeshes <= 1);
 			const uint32_t nMeshes = aiNode->mNumMeshes;
 			for (uint32_t i = 0; i < nMeshes; ++i)
 			{
 				uint32_t meshId = aiNode->mMeshes[i];
 				out->meshes_[meshId] = ParseMesh(scene->mMeshes[meshId], scene, out->vertexData_, out->indexData_, out->boxes_[meshId]);
-				out->nodes_[currentNode].meshId = meshId;
+				out->meshes_[meshId].nodeIndex = currentNode;
 			}
-		}
-		else {
-			out->nodes_[currentNode].meshId = -1;
 		}
 
 		for (uint32_t i = 0; i < aiNode->mNumChildren; ++i)
@@ -336,7 +336,7 @@ namespace MeshConverter {
 		{
 			printf("----------------------------------------------\n");
 			printf("Processing Textures\n");
-			ProcessTexture(scene, textureFiles, basePath, exportPath + "/" + TrimPathAndExtension(filename) + "/");
+			ProcessTexture(scene, textureFiles, basePath, exportPath, TrimPathAndExtension(filename));
 			printf("----------------------------------------------\n");
 		}
 

@@ -74,9 +74,29 @@ private:
 	void UpdateTransform();
 	void UpdateHierarchy();
 
-	void updateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
-	ecs::Entity CreateMeshEntity(uint32_t meshComponentIndex, const Node& node, int materialIndex, const std::vector<MaterialComponent>& materials, const std::vector<std::string>& textures, ecs::Entity parent);
-	ecs::Entity TraverseNode(uint32_t root, ecs::Entity parent, uint32_t meshCompIndex, const std::vector<Node>&nodes, std::vector<Mesh>&meshes, std::vector<MaterialComponent>&materials, std::vector<std::string>&textures);
+	void UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
+	ecs::Entity CreateMeshEntity(uint32_t meshComponentIndex,
+		uint32_t nodeIndex,
+		const std::vector<Node>& nodes,
+		const std::vector<Mesh>& meshes,
+		const std::vector<MaterialComponent>& materials,
+		const std::vector<std::string>& textures,
+		ecs::Entity parent);
+
+	void UpdateObjectData(ecs::Entity entity,
+		uint32_t meshComponentIndex,
+		uint32_t nodeIndex,
+		const std::vector<Mesh>& meshes,
+		const std::vector<MaterialComponent>& materials,
+		const std::vector<std::string>& textures);
+
+	ecs::Entity TraverseNode(uint32_t root,
+		ecs::Entity parent,
+		uint32_t meshCompIndex,
+		const std::vector<Node>&nodes,
+		std::vector<Mesh>&meshes,
+		std::vector<MaterialComponent>&materials,
+		std::vector<std::string>&textures);
 
 	void InitializePrimitiveMesh();
 	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);

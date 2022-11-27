@@ -4,6 +4,7 @@
 
 #include "../Engine/Input.h"
 #include "../Engine/DebugDraw.h"
+#include "../Engine/TextureCache.h"
 
 SceneHierarchy::SceneHierarchy(Scene* scene, Platform::WindowType window) : mScene(scene),
     mSelected(ecs::INVALID_ENTITY),
@@ -133,7 +134,8 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 		if (ImGui::Button("Mesh"))
 		{
 			std::wstring file = FileDialog::Open(L"", mWindow, L"Model(*.sbox)\0*.sbox\0\0");
-			mSelected = mScene->CreateMesh(Platform::WStringToString(file).c_str());
+			if(file.size() > 0) 
+				mSelected = mScene->CreateMesh(Platform::WStringToString(file).c_str());
 		}
 		ImGui::EndTabItem();
 	}
@@ -180,6 +182,21 @@ void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 		ImGui::SliderFloat("Metallic", &material->metallic, 0.0f, 1.0f);
 		ImGui::SliderFloat("Emissive", &material->emissive, 0.0f, 100.0f);
 		ImGui::SliderFloat("AO", &material->ao, 0.0f, 1.0f);
+
+		auto ShowTexture = [](uint32_t index, std::string textureType) {
+			std::string filename = "No File";
+			if (index != INVALID_TEXTURE)
+				filename = TextureCache::GetByIndex(index)->name;
+			ImGui::Text("%s: %s\n", textureType.c_str(), filename.c_str());
+		};
+
+		ShowTexture(material->albedoMap, "Albedo");
+		ShowTexture(material->normalMap, "Normal");
+		ShowTexture(material->metallicMap, "Metallic");
+		ShowTexture(material->roughnessMap, "Roughness");
+		ShowTexture(material->emissiveMap, "Emissive");
+		ShowTexture(material->ambientOcclusionMap, "AO");
+		ShowTexture(material->opacityMap, "Opacity");
 	}
 }
 

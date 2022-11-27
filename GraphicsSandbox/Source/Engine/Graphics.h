@@ -382,6 +382,7 @@ namespace gfx
 
 	struct GPUTexture : public GPUResource
 	{
+		std::string name;
 		GPUTextureDesc desc;
 	};
 

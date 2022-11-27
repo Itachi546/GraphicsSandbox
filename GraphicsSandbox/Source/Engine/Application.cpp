@@ -51,7 +51,7 @@ void Application::Run()
 		mInitialized = true;
 	}
 
-	mDeltaTime = float(std::max(0.0, mTimer.elapsed()));
+	mDeltaTime = float(std::max(0.0, mTimer.elapsed())) * 0.001f;
 	mTimer.record();
 	const float dt = mLockFrameRate ? (1.0f / mTargetFrameRate) : mDeltaTime;
 	mElapsedTime += dt;
@@ -61,7 +61,7 @@ void Application::Run()
 	render_();
 
 	mWindowTitle << "CPU Time: " << timer.elapsedMilliseconds() << "ms ";
-	mWindowTitle << "FPS: " << 1.0f / dt << " FrameTime: " << dt * 1000.0f << "ms ";
+	mWindowTitle << "FPS: " << 1.0f / mDeltaTime << " FrameTime: " << mDeltaTime * 1000.0f << "ms ";
 	Platform::SetWindowTitle(mWindow, mWindowTitle.str().c_str());
 	mWindowTitle.str(std::string());
 	

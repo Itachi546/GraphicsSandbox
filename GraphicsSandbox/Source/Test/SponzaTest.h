@@ -21,7 +21,7 @@ class SponzaTest : public Application
 
 	void PreUpdate(float dt) {
 
-		float walkSpeed = 2.0f;
+		float walkSpeed = 0.5f;
 
 		if (Input::Down(Input::Key::KEY_LEFT_SHIFT))
 			walkSpeed *= 5.0f;
@@ -67,7 +67,6 @@ class SponzaTest : public Application
 		ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
 		ecs::Entity sphere = mScene.CreateSphere("Sphere00");
 
-		compMgr->GetComponent<TransformComponent>(scene)->scale = glm::vec3(1.0f);
 		compMgr->GetComponent<TransformComponent>(sphere)->scale = glm::vec3(0.4f);
 		compMgr->GetComponent<TransformComponent>(sphere)->position.y += 2.0f;
 		compMgr->GetComponent<MaterialComponent>(sphere)->albedo = glm::vec4(0.01f, 0.235f, 1.0f, 1.0f);

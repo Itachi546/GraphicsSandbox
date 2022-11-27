@@ -48,7 +48,7 @@ private:
 	std::unique_ptr<gfx::GPUBuffer> mBuffer;
 
 	const int kNumCascades = 5;
-	const int kShadowDims = 2048;
+	const int kShadowDims = 4096;
 
 	float kShadowDistance = 150.0f;
 	float kSplitLambda = 0.85f;

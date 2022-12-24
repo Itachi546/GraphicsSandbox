@@ -188,6 +188,7 @@
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
+    <ClInclude Include="Source\Engine\FX\SSAO.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -301,6 +302,9 @@
     <ClCompile Include="Source\Engine\Animation\Animation.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\FX\SSAO.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
@@ -354,6 +358,7 @@
     <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\ssao\ssao.comp.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">

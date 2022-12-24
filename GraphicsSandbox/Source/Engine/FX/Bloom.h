@@ -15,7 +15,9 @@ namespace fx
 			mHeight = height;
 		}
 
+		// Generate Bloom texture from brightTexture
 		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture, float blurRadius);
+		// Composite the Bloom texture on renderTarget
 		void Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture, float bloomStrength);
 		gfx::GPUTexture* GetTexture() { return &mDownSampleTexture; }
 

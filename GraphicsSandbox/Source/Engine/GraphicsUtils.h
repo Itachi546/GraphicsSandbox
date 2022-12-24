@@ -16,13 +16,15 @@ namespace gfx
 	{
 		uint32_t codeLen = 0;
 		char* code = Utils::ReadFile(filename, &codeLen);
-		gfx::ShaderDescription shaderDesc{ code, codeLen };
-		gfx::PipelineDesc pipelineDesc;
-		pipelineDesc.shaderCount = 1;
-		pipelineDesc.shaderDesc = &shaderDesc;
+		if (code)
+		{
+			gfx::ShaderDescription shaderDesc{ code, codeLen };
+			gfx::PipelineDesc pipelineDesc;
+			pipelineDesc.shaderCount = 1;
+			pipelineDesc.shaderDesc = &shaderDesc;
 
-		device->CreateComputePipeline(&pipelineDesc, out);
-		delete[] code;
+			device->CreateComputePipeline(&pipelineDesc, out);
+			delete[] code;
+		}
 	}
-
 }

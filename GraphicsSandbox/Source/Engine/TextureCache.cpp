@@ -41,29 +41,8 @@ namespace TextureCache
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 
 		device->CreateTexture(&desc, texture);
-		{
-			// Create Staging buffer to transfer image data
-			const uint32_t imageDataSize = width * height * nChannel * sizeof(uint8_t);
-			gfx::GPUBuffer stagingBuffer;
-			gfx::GPUBufferDesc bufferDesc;
-			bufferDesc.bindFlag = gfx::BindFlag::None;
-			bufferDesc.usage = gfx::Usage::Upload;
-			bufferDesc.size = imageDataSize;
-			device->CreateBuffer(&bufferDesc, &stagingBuffer);
-			std::memcpy(stagingBuffer.mappedDataPtr, pixels, imageDataSize);
-
-			// Copy from staging buffer to GPUTexture
-			gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
-			gfx::PipelineBarrierInfo transferBarrierInfo = {
-				&transferBarrier, 1,
-				gfx::PipelineStage::TransferBit,
-				gfx::PipelineStage::TransferBit
-			};
-			device->CopyTexture(texture, &stagingBuffer, &transferBarrierInfo, 0, 0);
-			// If miplevels is greater than  1 the mip are generated
-			// else the imagelayout is transitioned to shader attachment optimal
-			device->GenerateMipmap(texture, desc.mipLevels);
-		}
+		const uint32_t imageDataSize = width * height * nChannel * sizeof(uint8_t);
+		device->CopyTexture(texture, pixels, imageDataSize, 0, 0, true);
 	}
 
 	void CreateSolidRGBATexture(gfx::GPUTexture* out, uint32_t width, uint32_t height)

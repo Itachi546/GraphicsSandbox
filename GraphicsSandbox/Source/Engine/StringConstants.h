@@ -27,6 +27,9 @@ namespace StringConstants
 	constexpr const char* BLOOM_DOWNSAMPLE_COMP_PATH = "Assets/SPIRV/downsample.comp.spv";
 	constexpr const char* BLOOM_COMPOSITE_COMP_PATH = "Assets/SPIRV/bloom-final.comp.spv";
 
+	// SSAO
+	constexpr const char* SSAO_COMP_PATH = "Assets/SPIRV/ssao.comp.spv";
+
 	// HDRI
 	constexpr const char* HDRI_PATH = "Assets/EnvironmentMap/sunset.hdr";
 

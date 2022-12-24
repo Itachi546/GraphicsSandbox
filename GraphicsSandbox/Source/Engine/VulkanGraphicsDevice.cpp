@@ -407,6 +407,39 @@ namespace gfx {
         }
     }
 
+    uint32_t _FindSizeInByte(Format format)
+    {
+        switch (format)
+        {
+        case Format::R8G8B8A8_UNORM:
+            return 4;
+        case Format::R16G16_SFLOAT:
+            return 4;
+        case Format::R16B16G16_SFLOAT:
+            return 6;
+        case Format::R16B16G16A16_SFLOAT:
+            return 8;
+        case Format::R32B32G32A32_SFLOAT:
+            return 16;
+        case Format::R32G32_SFLOAT:
+            return 8;
+        case Format::B8G8R8A8_UNORM:
+            return 4;
+        case Format::D16_UNORM:
+            return 2;
+        case Format::D32_SFLOAT:
+            return 4;
+        case Format::D32_SFLOAT_S8_UINT:
+            return 5;
+        case Format::D24_UNORM_S8_UINT:
+            return 4;
+        default:
+            assert(!"Undefined Format");
+            return VK_FORMAT_R8G8B8A8_UNORM;
+        }
+    }
+
+
     VkImageLayout _ConvertLayout(ImageLayout layout)
     {
         switch (layout)
@@ -2166,6 +2199,34 @@ namespace gfx {
         submitInfo.pCommandBuffers = &stagingCmdBuffer_;
         VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
         vkDeviceWaitIdle(device_);
+    }
+
+    void VulkanGraphicsDevice::CopyTexture(GPUTexture* dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
+    {
+        GPUTextureDesc* desc = &dst->desc;
+        // Create Staging buffer to transfer image data
+        uint32_t sizePerPixel = _FindSizeInByte(desc->format);
+		const uint32_t imageDataSize = desc->width * desc->height * sizePerPixel;
+        gfx::GPUBuffer stagingBuffer;
+        gfx::GPUBufferDesc bufferDesc;
+        bufferDesc.bindFlag = gfx::BindFlag::None;
+        bufferDesc.usage = gfx::Usage::Upload;
+        bufferDesc.size = imageDataSize;
+        CreateBuffer(&bufferDesc, &stagingBuffer);
+        std::memcpy(stagingBuffer.mappedDataPtr, src, sizeInByte);
+
+        // Copy from staging buffer to GPUTexture
+        gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
+        gfx::PipelineBarrierInfo transferBarrierInfo = {
+            &transferBarrier, 1,
+            gfx::PipelineStage::TransferBit,
+            gfx::PipelineStage::TransferBit
+        };
+        CopyTexture(dst, &stagingBuffer, &transferBarrierInfo, 0, 0);
+        // If miplevels is greater than  1 the mip are generated
+        // else the imagelayout is transitioned to shader attachment optimal
+        if(generateMipMap)
+			GenerateMipmap(dst, desc->mipLevels);
     }
 
     void VulkanGraphicsDevice::GenerateMipmap(GPUTexture* src, uint32_t mipCount)

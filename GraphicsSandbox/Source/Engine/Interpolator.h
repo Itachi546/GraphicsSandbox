@@ -12,6 +12,13 @@ public:
 	}
 
 	template<typename T>
+	static T EaseIn(T a, T b, T t)
+	{
+		T t2 = t * t;
+		return a * (1.0f - t2) + t2 * b;
+	}
+
+	template<typename T>
 	static T BezierSpline(T p0, T p1, T c0, T c1, T t)
 	{
 		T t0 = 1 - t;

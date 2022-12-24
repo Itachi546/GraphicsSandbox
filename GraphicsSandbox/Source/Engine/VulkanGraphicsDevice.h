@@ -52,7 +52,8 @@ namespace gfx
 
 		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
 		void CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset = 0)                override;
-		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0);
+		void CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		void CopyTexture(GPUTexture* dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 
 		void GenerateMipmap(GPUTexture* src, uint32_t mipCount)                                override;

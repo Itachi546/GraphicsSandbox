@@ -185,6 +185,7 @@
     <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h" />
+    <ClInclude Include="Source\Engine\FX\SSAO.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
     <ClInclude Include="Source\Engine\ImageLoader.h" />
     <ClInclude Include="Source\Engine\ECS.h" />
@@ -236,6 +237,7 @@
     <ClCompile Include="Source\Engine\CascadedShadowMap.cpp" />
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
+    <ClCompile Include="Source\Engine\FX\SSAO.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
     <ClCompile Include="Source\Engine\ECS.cpp" />
     <ClCompile Include="Source\Engine\Components.cpp" />
@@ -320,6 +322,9 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="..\Assets\Shaders\shadow.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\ssao\ssao.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

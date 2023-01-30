@@ -128,7 +128,7 @@ ecs::Entity Scene::CreatePlane(std::string_view name)
 	}
 
 	mComponentManager->AddComponent<TransformComponent>(entity);
-	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
+	mComponentManager->AddComponent<MaterialComponent>(entity);
 
 	return entity;
 
@@ -150,47 +150,66 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 	}
 	return entity;
 }
-/*
-void Scene::UpdateObjectData(ecs::Entity parent,
-	uint32_t meshComponentIndex, 
+
+void Scene::UpdateEntity(ecs::Entity parent,
 	uint32_t nodeIndex,
-	const std::vector<Mesh>& meshes,
-	const std::vector<MaterialComponent>& materials,
-	const std::vector<std::string>& textures)
+	const StagingMeshData& stagingMeshData)
 {
 	std::vector<uint32_t> meshIds;
-	for (uint32_t i = 0; i < meshes.size(); ++i)
+	for (uint32_t i = 0; i < stagingMeshData.meshes.size(); ++i)
 	{
-		if (meshes[i].nodeIndex == nodeIndex)
+		if (stagingMeshData.meshes[i].nodeIndex == nodeIndex)
 			meshIds.push_back(i);
 	}
 
 	if (meshIds.size() > 0)
 	{
 		auto hierarchyCompArr = mComponentManager->GetComponentArray<HierarchyComponent>();
+
+		// if parent doesn't have hierarchyComponent add it
+		std::size_t parentIndex = hierarchyCompArr->GetIndex(parent);
+		if (parentIndex == ~0ull)
+		{
+			mComponentManager->AddComponent<HierarchyComponent>(parent);
+			parentIndex = hierarchyCompArr->GetIndex(parent);
+		}
+
 		for (auto meshId : meshIds)
 		{
-			auto mesh = meshes[meshId];
+			// For Each mesh create entity
+			const Mesh& mesh = stagingMeshData.meshes[meshId];
+
 			ecs::Entity meshEntity = ecs::CreateEntity();
 			mComponentManager->AddComponent<NameComponent>(meshEntity).name = std::string(mesh.meshName);
 			auto& transform = mComponentManager->AddComponent<TransformComponent>(meshEntity);
-			mComponentManager->AddComponent<HierarchyComponent>(meshEntity).parent = parent;
-			std::size_t parentIndex = hierarchyCompArr->GetIndex(parent);
-			if (parentIndex == ~0ull)
-				mComponentManager->AddComponent<HierarchyComponent>(parent).childrens.push_back(meshEntity);
-			else
-				hierarchyCompArr->components[parentIndex].childrens.push_back(meshEntity);
 
-			// Object Component
-			ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(meshEntity);
-			objectComp.meshComponentIndex = meshComponentIndex;
-			objectComp.meshId = meshId;
+			// Add parent entity 
+			mComponentManager->AddComponent<HierarchyComponent>(meshEntity).parent = parent;
+			hierarchyCompArr->components[parentIndex].childrens.push_back(meshEntity);
+
+			// Update MeshRenderer Component
+			auto& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(meshEntity);
+			meshRenderer.vertexBuffer.buffer = stagingMeshData.vertexBuffer;
+			meshRenderer.vertexBuffer.offset = mesh.vertexOffset;
+			meshRenderer.vertexBuffer.size = mesh.vertexCount;
+
+			meshRenderer.indexBuffer.buffer = stagingMeshData.indexBuffer;
+			meshRenderer.indexBuffer.offset = mesh.indexOffset;
+			meshRenderer.indexBuffer.size = mesh.indexCount;
+
+			meshRenderer.boundingBox = stagingMeshData.boundingBoxes[meshId];
+
+			// @TODO Seperate between Skinned and StaticMesh
+			meshRenderer.CopyVertices((void*)(stagingMeshData.vertices.data() + mesh.vertexOffset), mesh.vertexCount);
+			meshRenderer.CopyIndices((void*)(stagingMeshData.indices.data() + mesh.indexOffset), mesh.indexCount);
 
 			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(meshEntity);
 			uint32_t materialIndex = mesh.materialIndex;
-			if (materials.size() > 0 && materialIndex != -1)
+			if (stagingMeshData.materials.size() > 0 && materialIndex != -1)
 			{
-				material = materials[materialIndex];
+				const std::vector<std::string>& textures = stagingMeshData.textures;
+
+				material = stagingMeshData.materials[materialIndex];
 				// @TODO Maybe it is not correct to generate mipmap for normal map and 
 				// sample it like base mip level. But for now, I don't know any other 
 				// ways to remove the normal map aliasing artifacts other than using mipmap.
@@ -211,20 +230,13 @@ void Scene::UpdateObjectData(ecs::Entity parent,
 			}
 		}
 	}
-
-
 }
 
-ecs::Entity Scene::CreateMeshEntity(uint32_t meshComponentIndex,
-	uint32_t nodeIndex, 
-	const std::vector<Node>& nodes,
-	const std::vector<Mesh>& meshes,
-	const std::vector<MaterialComponent>& materials, 
-	const std::vector<std::string>& textures,
-	ecs::Entity parent)
+
+ecs::Entity Scene::CreateMeshEntity(uint32_t nodeIndex, ecs::Entity parent, const StagingMeshData& stagingMeshData)
 {
 	ecs::Entity entity = ecs::CreateEntity();
-	const Node& node = nodes[nodeIndex];
+	const Node& node = stagingMeshData.nodes[nodeIndex];
 
 	// Name Component
 	mComponentManager->AddComponent<NameComponent>(entity).name = node.name;
@@ -233,7 +245,7 @@ ecs::Entity Scene::CreateMeshEntity(uint32_t meshComponentIndex,
 	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(entity);
 	transform.defaultMatrix = node.localTransform;
 
-	UpdateObjectData(entity, meshComponentIndex, nodeIndex, meshes, materials, textures);
+	UpdateEntity(entity, nodeIndex, stagingMeshData);
 
 	if (parent != ecs::INVALID_ENTITY)
 	{
@@ -248,27 +260,27 @@ ecs::Entity Scene::CreateMeshEntity(uint32_t meshComponentIndex,
 
 	return entity;
 }
-*/
-/*
-ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, uint32_t meshCompIndex, const std::vector<Node>& nodes, std::vector<Mesh>& meshes, std::vector<MaterialComponent>& materials, std::vector<std::string>& textures)
+
+
+ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, const StagingMeshData& stagingData)
 {
 	if (root == -1)
 		return ecs::INVALID_ENTITY;
 
-	ecs::Entity entity = CreateMeshEntity(meshCompIndex, root, nodes, meshes, materials, textures, parent);
+	ecs::Entity entity = CreateMeshEntity(root, parent, stagingData);
 
 	// Add Child
-	const Node& node = nodes[root];
+	const Node& node = stagingData.nodes[root];
 	if(node.firstChild != -1)
-		TraverseNode(node.firstChild, entity, meshCompIndex, nodes, meshes, materials, textures);
+		TraverseNode(node.firstChild, entity, stagingData);
 
 	// Check sibling
 	if(node.nextSibling != -1)
-		TraverseNode(node.nextSibling, parent, meshCompIndex, nodes, meshes, materials, textures);
+		TraverseNode(node.nextSibling, parent, stagingData);
 
 	return entity;
 }
-/*
+
 ecs::Entity Scene::CreateMesh(const char* file)
 {
 	std::ifstream inFile(file, std::ios::binary);
@@ -290,26 +302,26 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	name = name.substr(lastPathSplit + 1, name.size() - 1);
 	name = name.substr(0, name.find_first_of('.'));
 
+	// Create a meshdata struct
+	StagingMeshData stagingMeshData;
 
 	// Read Nodes
 	uint32_t nNodes = header.nodeCount;
-	std::vector<Node> nodes(nNodes);
-	inFile.read(reinterpret_cast<char*>(nodes.data()), sizeof(Node) * nNodes);
+	stagingMeshData.nodes.resize(nNodes);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.nodes.data()), sizeof(Node) * nNodes);
 
 	// Read Meshes
-	MeshDataComponent meshData = {};
 	uint32_t nMeshes = header.meshCount;
-	std::vector<Mesh>& meshes = meshData.meshes;
-	meshes.resize(nMeshes);
-	inFile.read(reinterpret_cast<char*>(meshes.data()), sizeof(Mesh) * nMeshes);
+	stagingMeshData.meshes.resize(nMeshes);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.meshes.data()), sizeof(Mesh) * nMeshes);
 
 	// Read Materials
 	uint32_t nMaterial = header.materialCount;
-	std::vector<MaterialComponent> materials(nMaterial);
-	inFile.read(reinterpret_cast<char*>(materials.data()), sizeof(MaterialComponent) * nMaterial);
+	stagingMeshData.materials.resize(nMaterial);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.materials.data()), sizeof(MaterialComponent) * nMaterial);
 	
 	// Read Texture Path
-	std::vector<std::string> textureFiles(header.textureCount);
+	stagingMeshData.textures.resize(header.textureCount);
 	if (header.textureCount > 0)
 	{
 		for (uint32_t i = 0; i < header.textureCount; ++i)
@@ -317,55 +329,45 @@ ecs::Entity Scene::CreateMesh(const char* file)
 			uint32_t size = 0;
 			inFile.read(reinterpret_cast<char*>(&size), 4);
 
-			std::string& path = textureFiles[i];
+			std::string& path = stagingMeshData.textures[i];
 			path.resize(size);
 			inFile.read(path.data(), size);
 			path = folder + path;
 		}
 	}
+
 	// Read BoundingBox
-	meshData.boundingBoxes.resize(nMeshes);
-	inFile.read(reinterpret_cast<char*>(meshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
+	stagingMeshData.boundingBoxes.resize(nMeshes);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
 
 	//Read VertexData
 	uint32_t nVertices = header.vertexDataSize / (sizeof(Vertex));
 	uint32_t nIndices = header.indexDataSize / sizeof(uint32_t);
 
-	meshData.vertices.resize(nVertices);
+	stagingMeshData.vertices.resize(header.vertexDataSize);
+	stagingMeshData.indices.resize(header.indexDataSize);
 	inFile.seekg(header.dataBlockStartOffset, std::ios::beg);
-	inFile.read(reinterpret_cast<char*>(meshData.vertices.data()), header.vertexDataSize);
-
-	meshData.indices.resize(nIndices);
-	inFile.read(reinterpret_cast<char*>(meshData.indices.data()), header.indexDataSize);
+	inFile.read(stagingMeshData.vertices.data(), header.vertexDataSize);
+	inFile.read(stagingMeshData.indices.data(), header.indexDataSize);
 	inFile.close();
-
+	
 	// Allocate GPU Memory
 	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
 	gfx::GPUBufferDesc bufferDesc;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	bufferDesc.usage = gfx::Usage::Default;
 	bufferDesc.size = header.vertexDataSize;
-	gfx::GPUBuffer* vb = gpuAllocator->AllocateBuffer(&bufferDesc, &meshData.vbIndex);
+	stagingMeshData.vertexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, nullptr);
 
 	bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
 	bufferDesc.size = header.indexDataSize;
-	gfx::GPUBuffer* ib = gpuAllocator->AllocateBuffer(&bufferDesc, &meshData.ibIndex);
-	meshData.CopyDataToBuffer(gpuAllocator, vb, ib);
+	stagingMeshData.indexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, nullptr);
 
-	// Create Root Node
-	const Node& node = nodes[0];
-	ecs::Entity entity = ecs::CreateEntity();
-	mComponentManager->AddComponent<MeshDataComponent>(entity, meshData);
-	auto meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(entity);
-	mComponentManager->AddComponent<NameComponent>(entity).name = node.name;
-	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(entity);
-	transform.defaultMatrix = node.localTransform;
-	UpdateObjectData(entity, (uint32_t)meshComponentIndex, 0, meshes, materials, textureFiles);
-
-	TraverseNode(node.firstChild, entity, (uint32_t)meshComponentIndex, nodes, meshes, materials, textureFiles);
-	return entity;
+	gpuAllocator->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertices.data(), 0, header.vertexDataSize, nullptr);
+	gpuAllocator->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indices.data(), 0, header.indexDataSize, nullptr);
+	return TraverseNode(0, ecs::INVALID_ENTITY, stagingMeshData);
 }
-*/
+
 ecs::Entity Scene::CreateLight(std::string_view name)
 {
 	ecs::Entity entity = ecs::CreateEntity();
@@ -518,32 +520,31 @@ void Scene::InitializePrimitiveMeshes()
 		MeshRenderer* cubeMesh = mComponentManager->GetComponent<MeshRenderer>(mCube);
 		uint32_t vertexOffset = 0;
 		uint32_t vertexSize = static_cast<uint32_t>(cubeMesh->vertices->size() * sizeof(Vertex));
-		gpuAllocator->CopyToBuffer(&cubeMesh->vertexBuffer, vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize);
+		gpuAllocator->CopyToBuffer(vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize, &cubeMesh->vertexBuffer);
 		vertexOffset += vertexSize;
 
 		uint32_t indexOffset = 0;
 		uint32_t indexSize = static_cast<uint32_t>(cubeMesh->indices->size() * sizeof(uint32_t));
-		gpuAllocator->CopyToBuffer(&cubeMesh->indexBuffer, indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize);
+		gpuAllocator->CopyToBuffer(indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize, &cubeMesh->indexBuffer);
 		indexOffset += indexSize;
 
 		MeshRenderer* sphereMesh = mComponentManager->GetComponent<MeshRenderer>(mSphere);
 		vertexSize = static_cast<uint32_t>(sphereMesh->vertices->size() * sizeof(Vertex));
-		gpuAllocator->CopyToBuffer(&sphereMesh->vertexBuffer, vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize);
+		gpuAllocator->CopyToBuffer(vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize, &sphereMesh->vertexBuffer);
 		vertexOffset += vertexSize;
 
 		indexSize = static_cast<uint32_t>(sphereMesh->indices->size() * sizeof(uint32_t));
-		gpuAllocator->CopyToBuffer(&sphereMesh->indexBuffer, indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize);
+		gpuAllocator->CopyToBuffer(indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize, &sphereMesh->indexBuffer);
 		indexOffset += indexSize;
 
 
 		MeshRenderer* planeMesh = mComponentManager->GetComponent<MeshRenderer>(mPlane);
 		vertexSize = static_cast<uint32_t>(planeMesh->vertices->size() * sizeof(Vertex));
-		gpuAllocator->CopyToBuffer(&planeMesh->vertexBuffer, vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize);
+		gpuAllocator->CopyToBuffer(vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize, &planeMesh->vertexBuffer);
 
 		indexSize = static_cast<uint32_t>(planeMesh->indices->size() * sizeof(uint32_t));
-		gpuAllocator->CopyToBuffer(&planeMesh->indexBuffer, indexBuffer, planeMesh->indices->data(), indexOffset, indexSize);
+		gpuAllocator->CopyToBuffer(indexBuffer, planeMesh->indices->data(), indexOffset, indexSize, &planeMesh->indexBuffer);
 	}
-
 }
 
 void Scene::InitializeCubeMesh(MeshRenderer& meshRenderer)
@@ -611,10 +612,10 @@ void Scene::InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide)
 	float stepSize = 2.0f / float(subdivide);
 
 	std::shared_ptr<std::vector<Vertex>> vertices = meshRenderer.vertices;
-	for (uint32_t y = 0; y < subdivide; ++y)
+	for (uint32_t y = 0; y <= subdivide; ++y)
 	{
 		float yPos = y * stepSize - 1.0f;
-		for (uint32_t x = 0; x < subdivide; ++x)
+		for (uint32_t x = 0; x <= subdivide; ++x)
 		{
 			vertices->push_back(Vertex{ glm::vec3(x * stepSize - 1.0f, 0.0f, yPos),
 				glm::vec3(0.0f, 1.0f, 0.0f),
@@ -622,18 +623,18 @@ void Scene::InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide)
 		}
 	}
 
-	uint32_t totalGrid = (subdivide - 1) * (subdivide - 1);
+	uint32_t totalGrid = subdivide * subdivide;
 	uint32_t nIndices =  totalGrid * 6;
 
 	std::shared_ptr<std::vector<unsigned int>> indices = meshRenderer.indices;
 	indices->reserve(nIndices);
-	for (uint32_t y = 0; y < subdivide - 1; ++y)
+	for (uint32_t y = 0; y < subdivide; ++y)
 	{
-		for (uint32_t x = 0; x < subdivide - 1; ++x)
+		for (uint32_t x = 0; x < subdivide; ++x)
 		{
-			uint32_t i0 = y * subdivide + x;
+			uint32_t i0 = y * (subdivide + 1) + x;
 			uint32_t i1 = i0 + 1;
-			uint32_t i2 = i0 + subdivide;
+			uint32_t i2 = i0 + subdivide + 1;
 			uint32_t i3 = i2 + 1;
 
 			indices->push_back(i0);  indices->push_back(i2); indices->push_back(i1);

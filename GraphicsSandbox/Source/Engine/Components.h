@@ -215,6 +215,22 @@ struct MeshRenderer : public IMeshRenderer
 		return static_cast<uint32_t>(indices->size());
 	}
 
+	void CopyVertices(void* data, uint32_t count)
+	{
+		if (!vertices)
+			vertices = std::make_shared<std::vector<Vertex>>();
+		vertices->resize(count);
+		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(Vertex));
+	}
+
+	void CopyIndices(void* data, uint32_t count)
+	{
+		if (!indices)
+			indices = std::make_shared<std::vector<uint32_t>>();
+		indices->resize(count);
+		std::memcpy(reinterpret_cast<char*>(indices->data()), reinterpret_cast<char*>(data), count * sizeof(uint32_t));
+	}
+
 	void CopyToGPU(gfx::GpuMemoryAllocator* allocator, std::shared_ptr<gfx::GPUBuffer> vB, std::shared_ptr<gfx::GPUBuffer> iB, uint32_t vbOffset, uint32_t ibOffset) override;
 
 	virtual ~MeshRenderer() {

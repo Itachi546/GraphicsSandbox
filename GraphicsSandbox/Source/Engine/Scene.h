@@ -75,30 +75,35 @@ private:
 	void UpdateHierarchy();
 
 	void UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
-	/*
-	ecs::Entity CreateMeshEntity(uint32_t meshComponentIndex,
-		uint32_t nodeIndex,
-		const std::vector<Node>& nodes,
-		const std::vector<Mesh>& meshes,
-		const std::vector<MaterialComponent>& materials,
-		const std::vector<std::string>& textures,
-		ecs::Entity parent);
 
-	void UpdateObjectData(ecs::Entity entity,
-		uint32_t meshComponentIndex,
-		uint32_t nodeIndex,
-		const std::vector<Mesh>& meshes,
-		const std::vector<MaterialComponent>& materials,
-		const std::vector<std::string>& textures);
+	struct StagingMeshData
+	{
+		std::vector<Node> nodes;
+		std::vector<Mesh> meshes;
+		std::vector<BoundingBox> boundingBoxes;
+		std::vector<char> vertices;
+		std::vector<char> indices;
+		std::vector<MaterialComponent> materials;
+		std::vector<std::string> textures;
+		std::shared_ptr<gfx::GPUBuffer> vertexBuffer;
+		std::shared_ptr<gfx::GPUBuffer> indexBuffer;
+	};
 
-	ecs::Entity TraverseNode(uint32_t root,
+	ecs::Entity CreateMeshEntity(uint32_t nodeIndex,
 		ecs::Entity parent,
-		uint32_t meshCompIndex,
-		const std::vector<Node>&nodes,
-		std::vector<Mesh>&meshes,
-		std::vector<MaterialComponent>&materials,
-		std::vector<std::string>&textures);
-		*/
+		const StagingMeshData& stagingData);
+
+	void UpdateEntity(
+		ecs::Entity entity,
+		uint32_t nodeIndex,
+		const StagingMeshData& stagingMeshData
+	);
+
+	ecs::Entity TraverseNode(
+		uint32_t root,
+		ecs::Entity parent,
+		const StagingMeshData& stagingMeshData);
+
 	void InitializePrimitiveMeshes();
 	void InitializeCubeMesh(MeshRenderer& meshRenderer);
 	void InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide = 2);

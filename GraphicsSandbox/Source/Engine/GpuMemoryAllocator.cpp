@@ -18,7 +18,9 @@ namespace gfx
 		std::shared_ptr<GPUBuffer> buffer = std::make_shared<GPUBuffer>();
 		device->CreateBuffer(desc, buffer.get());
 
-		*bufferIndex = (uint32_t)mBuffers.size();
+		if(bufferIndex)
+			*bufferIndex = (uint32_t)mBuffers.size();
+
 		mBuffers.push_back(buffer);
 		return mBuffers.back();
 	}
@@ -58,7 +60,7 @@ namespace gfx
 	}
 	*/
 
-	void GpuMemoryAllocator::CopyToBuffer(BufferView* bufferView, std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size)
+	void GpuMemoryAllocator::CopyToBuffer(std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size, BufferView* bufferView)
 	{
 		if (data == nullptr)
 		{
@@ -94,9 +96,11 @@ namespace gfx
 			std::memcpy(stagingBuffer.mappedDataPtr, data, size);
 			device->CopyBuffer(buffer.get(), &stagingBuffer, offset);
 		}
-
-		bufferView->buffer = buffer;
-		bufferView->offset = offset;
-		bufferView->size = size;
+		if (bufferView)
+		{
+			bufferView->buffer = buffer;
+			bufferView->offset = offset;
+			bufferView->size = size;
+		}
 	}
 };

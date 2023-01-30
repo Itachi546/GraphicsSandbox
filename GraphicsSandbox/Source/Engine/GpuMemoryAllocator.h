@@ -30,7 +30,7 @@ namespace gfx
 
 		std::shared_ptr<GPUBuffer> AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex);
 
-		void CopyToBuffer(BufferView* bufferView, std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size);
+		void CopyToBuffer(std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size, BufferView* bufferView);
 		//void CopyToBuffer(GPUBuffer* buffer, void* data, uint32_t offset, uint32_t size);
 
 		GPUBuffer* GetBuffer(uint32_t index) const

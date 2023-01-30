@@ -12,7 +12,7 @@ namespace gfx
 		mStagingBufferDesc.usage = gfx::Usage::Upload;
 	}
 
-	GPUBuffer* GpuMemoryAllocator::AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex)
+	std::shared_ptr<GPUBuffer> GpuMemoryAllocator::AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex)
 	{
 		auto device = GetDevice();
 		std::shared_ptr<GPUBuffer> buffer = std::make_shared<GPUBuffer>();
@@ -20,9 +20,9 @@ namespace gfx
 
 		*bufferIndex = (uint32_t)mBuffers.size();
 		mBuffers.push_back(buffer);
-		return mBuffers.back().get();
+		return mBuffers.back();
 	}
-
+	/*
 	void GpuMemoryAllocator::CopyToBuffer(GPUBuffer* buffer, void* data, uint32_t offset, uint32_t size)
 	{
 		if (data == nullptr)
@@ -56,22 +56,34 @@ namespace gfx
 			device->CopyBuffer(buffer, &stagingBuffer, offset);
 		}
 	}
-	/*
-	void GpuMemoryAllocator::CopyToBuffer(BufferView* bufferView, BufferIndex bufferIndex, void* data, uint32_t size)
+	*/
+
+	void GpuMemoryAllocator::CopyToBuffer(BufferView* bufferView, std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size)
 	{
-		assert(data != nullptr);
-		assert(bufferIndex < mBuffers.size());
+		if (data == nullptr)
+		{
+			Logger::Error("Null data to copy to buffer");
+			return;
+		}
+
+		if (offset > buffer->desc.size)
+		{
+			Logger::Error("Invalid offset and size (offset > size)");
+			return;
+		}
+
+		if (size > buffer->desc.size)
+		{
+			Logger::Error("Copysize exceed the size of buffer");
+			return;
+		}
 
 		auto device = GetDevice();
-		BufferInfo& bufferInfo = mBuffers[bufferIndex];
-		uint32_t memorySize = bufferInfo.buffer->desc.size - bufferInfo.offset;
-		assert(memorySize > 0);
-		assert(memorySize >= size);
 
-		void* ptr = bufferInfo.buffer->mappedDataPtr;
-		if (bufferInfo.buffer->mappedDataPtr)
+		void* ptr = buffer->mappedDataPtr;
+		if (buffer->mappedDataPtr)
 		{
-			uint8_t* dstLoc = reinterpret_cast<uint8_t*>(ptr) + bufferInfo.offset;
+			uint8_t* dstLoc = reinterpret_cast<uint8_t*>(ptr) + offset;
 			std::memcpy(dstLoc, data, size);
 		}
 		else
@@ -80,15 +92,11 @@ namespace gfx
 			GPUBuffer stagingBuffer;
 			device->CreateBuffer(&mStagingBufferDesc, &stagingBuffer);
 			std::memcpy(stagingBuffer.mappedDataPtr, data, size);
-
-			device->CopyBuffer(bufferInfo.buffer.get(), &stagingBuffer, bufferInfo.offset);
+			device->CopyBuffer(buffer.get(), &stagingBuffer, offset);
 		}
-		
-		bufferView->index = bufferIndex;
-		bufferView->offset = bufferInfo.offset;
-		bufferView->size = size;
-		bufferInfo.offset += size;
 
+		bufferView->buffer = buffer;
+		bufferView->offset = offset;
+		bufferView->size = size;
 	}
-	*/
 };

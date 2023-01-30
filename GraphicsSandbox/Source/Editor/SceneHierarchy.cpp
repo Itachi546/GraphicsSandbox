@@ -134,8 +134,10 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 		if (ImGui::Button("Mesh"))
 		{
 			std::wstring file = FileDialog::Open(L"", mWindow, L"Model(*.sbox)\0*.sbox\0\0");
+			/*
 			if(file.size() > 0) 
 				mSelected = mScene->CreateMesh(Platform::WStringToString(file).c_str());
+				*/
 		}
 		ImGui::EndTabItem();
 	}

@@ -58,7 +58,7 @@ namespace ecs
 				return components[found->second];
 
 			lookup_[entity] = components.size();
-			components.push_back(T());
+			components.emplace_back();
 			entities.push_back(entity);
 
 			return components.back();

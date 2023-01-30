@@ -133,18 +133,18 @@ void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 		gfx::BufferView& vbView = batch.vertexBuffer;
 		gfx::BufferView& ibView = batch.indexBuffer;
 
-		auto vb = vbView.buffer;
-		auto ib = ibView.buffer;
+		std::shared_ptr<gfx::GPUBuffer> vb = vbView.buffer;
+		std::shared_ptr<gfx::GPUBuffer> ib = ibView.buffer;
 
 		gfx::DescriptorInfo descriptorInfos[3] = {};
-		descriptorInfos[0] = { vb, 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[0] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer};
 		descriptorInfos[1] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
 		descriptorInfos[2] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
 
 		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, pipeline);
 
-		mDevice->BindIndexBuffer(commandList, ib);
+		mDevice->BindIndexBuffer(commandList, ib.get());
 		mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
@@ -308,8 +308,7 @@ void Renderer::initializeBuffers()
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap)
 {
-	MeshDataComponent* meshData = mScene->mComponentManager->GetComponent<MeshDataComponent>(mScene->mPrimitives);
-	const Mesh* mesh = meshData->GetMesh(mScene->mCubeMeshId);
+	MeshRenderer* meshRenderer = mScene->mComponentManager->GetComponent<MeshRenderer>(mScene->mCube);
 
 	// TODO: Define static Descriptor beforehand
 	gfx::DescriptorInfo descriptorInfos[3] = {};
@@ -319,12 +318,12 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
 
 	gfx::GpuMemoryAllocator* allocator = gfx::GpuMemoryAllocator::GetInstance();
-	auto vb = meshData->vertexBuffer;
-	auto ib = meshData->indexBuffer;
+	auto& vb = meshRenderer->vertexBuffer;
+	auto& ib = meshRenderer->indexBuffer;
 
-	descriptorInfos[1].resource = vb;
-	descriptorInfos[1].offset = mesh->vertexOffset;
-	descriptorInfos[1].size = mesh->vertexCount * sizeof(Vertex);
+	descriptorInfos[1].resource = vb.buffer.get();
+	descriptorInfos[1].offset = vb.offset;
+	descriptorInfos[1].size = vb.size;
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
 	descriptorInfos[2].resource = cubemap;
@@ -333,8 +332,8 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 
 	mDevice->UpdateDescriptor(mCubemapPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mCubemapPipeline.get());
-	mDevice->BindIndexBuffer(commandList, ib);
-	mDevice->DrawIndexed(commandList, mesh->indexCount, 1, mesh->indexOffset / sizeof(uint32_t));
+	mDevice->BindIndexBuffer(commandList, ib.buffer.get());
+	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.offset / sizeof(uint32_t));
 }
 
 
@@ -353,7 +352,7 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 
 	descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 
-	descriptorInfos[1] = { vb, 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+	descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer};
 
 	descriptorInfos[2] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer};
 
@@ -378,7 +377,7 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mTrianglePipeline.get());
 
-	mDevice->BindIndexBuffer(commandList, ib);
+	mDevice->BindIndexBuffer(commandList, ib.get());
 	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 }
 
@@ -392,10 +391,10 @@ void Renderer::CreateBatch()
 
     // Sort the DrawData according to bufferIndex
 	std::sort(drawDatas.begin(), drawDatas.end(), [](const DrawData& lhs, const DrawData& rhs) {
-		return lhs.vertexBuffer.bufferIndex < rhs.vertexBuffer.bufferIndex;
+		return lhs.vertexBuffer.buffer < rhs.vertexBuffer.buffer;
 	});
 
-	uint32_t lastBufferIndex = ~0u;
+	gfx::GPUBuffer* lastBuffer = nullptr;
 	RenderBatch* activeBatch = nullptr;
 	if (drawDatas.size() > 0)
 	{
@@ -422,8 +421,8 @@ void Renderer::CreateBatch()
 			uint32_t texInBatch = activeBatch == nullptr ? 0 : activeBatch->textureCount;
 			uint32_t texInMat = drawData.material->GetTextureCount();
 
-			uint32_t vbIndex = drawData.vertexBuffer.bufferIndex;
-			if (vbIndex != lastBufferIndex || activeBatch == nullptr || (texInBatch + texInMat) > 64)
+			gfx::GPUBuffer* buffer = drawData.vertexBuffer.buffer.get();
+			if (buffer != lastBuffer || activeBatch == nullptr || (texInBatch + texInMat) > 64)
 			{
 				mRenderBatches.push_back(RenderBatch{});
 				activeBatch = &mRenderBatches.back();
@@ -431,7 +430,7 @@ void Renderer::CreateBatch()
 				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), *TextureCache::GetDefaultTexture());
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
 				activeBatch->indexBuffer = drawData.indexBuffer;
-				lastBufferIndex = vbIndex;
+				lastBuffer = buffer;
 			}
 
 			// Find texture and assign new index

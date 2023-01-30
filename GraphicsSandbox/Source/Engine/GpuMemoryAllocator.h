@@ -11,8 +11,7 @@ namespace gfx
 
 	struct BufferView
 	{
-		GPUBuffer* buffer;
-		uint32_t bufferIndex;
+		std::shared_ptr<GPUBuffer> buffer;
 		uint32_t offset;
 		uint32_t size;
 	};
@@ -29,10 +28,10 @@ namespace gfx
 		GpuMemoryAllocator(const GpuMemoryAllocator&) = delete;
 		void operator=(const GpuMemoryAllocator&) = delete;
 
-		GPUBuffer* AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex);
+		std::shared_ptr<GPUBuffer> AllocateBuffer(GPUBufferDesc* desc, uint32_t* bufferIndex);
 
-		//void CopyToBuffer(BufferView* bufferView, BufferIndex buffer, void* data, uint32_t size);
-		void CopyToBuffer(GPUBuffer* buffer, void* data, uint32_t offset, uint32_t size);
+		void CopyToBuffer(BufferView* bufferView, std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size);
+		//void CopyToBuffer(GPUBuffer* buffer, void* data, uint32_t offset, uint32_t size);
 
 		GPUBuffer* GetBuffer(uint32_t index) const
 		{

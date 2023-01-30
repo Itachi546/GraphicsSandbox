@@ -81,6 +81,7 @@ struct AABBComponent
 	}
 };
 
+/*
 struct MeshDataComponent
 {
 	enum Flags {
@@ -122,12 +123,15 @@ struct MeshDataComponent
 
 	~MeshDataComponent() = default;
 };
+*/
 
+/*
 struct ObjectComponent
 {
 	std::size_t meshComponentIndex;
 	uint32_t meshId;
 };
+*/
 
 enum class LightType
 {
@@ -158,4 +162,73 @@ struct HierarchyComponent
 		}
 		return false;
 	}
+};
+
+struct IMeshRenderer
+{
+	enum Flags {
+		Empty = 0,
+		Renderable = 1 << 0,
+		DoubleSided = 1 << 1,
+		Skinned = 1 << 2
+	};
+
+	uint32_t flags = Renderable;
+	gfx::BufferView vertexBuffer;
+	gfx::BufferView indexBuffer;
+	BoundingBox boundingBox;
+
+	void SetRenderable(bool value) {
+		if (value) flags |= Renderable; else flags &= ~Renderable;
+	}
+
+	void SetSkinned(bool value) { 
+		if (value) flags |= Skinned;
+		else flags &= ~Skinned;
+
+	}
+
+	void SetDoubleSided(bool value) {
+		if (value) flags |= DoubleSided; else flags &= ~DoubleSided;
+	}
+
+	bool IsRenderable() const { return flags & Renderable; }
+	bool IsDoubleSided() const { return flags & DoubleSided; }
+	bool IsSkinned() const { return flags & Skinned; }
+
+	virtual void CopyToGPU(gfx::GpuMemoryAllocator* allocator, std::shared_ptr<gfx::GPUBuffer> vB, std::shared_ptr<gfx::GPUBuffer> iB, uint32_t vbOffset, uint32_t ibOffset) = 0;
+
+	~IMeshRenderer() = default;
+};
+
+struct MeshRenderer : public IMeshRenderer
+{
+	std::shared_ptr<std::vector<Vertex>> vertices;
+	std::shared_ptr<std::vector<uint32_t>> indices;
+
+	MeshRenderer() = default;
+	uint32_t GetVertexOffset() const {
+		return sizeof(Vertex);
+	}
+
+	uint32_t GetIndexCount() const {
+		return static_cast<uint32_t>(indices->size());
+	}
+
+	void CopyToGPU(gfx::GpuMemoryAllocator* allocator, std::shared_ptr<gfx::GPUBuffer> vB, std::shared_ptr<gfx::GPUBuffer> iB, uint32_t vbOffset, uint32_t ibOffset) override;
+
+	virtual ~MeshRenderer() {
+	}
+};
+
+struct SkinnedMeshRenderer : public IMeshRenderer
+{
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+
+	uint32_t GetVertexOffset() const {
+		assert(0);
+	}
+
+	virtual ~SkinnedMeshRenderer() = default;
 };

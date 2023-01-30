@@ -57,11 +57,11 @@ public:
 
 
 private:
-	uint32_t mCubeMeshId = 0;
-	uint32_t mSphereMeshId = 0;
-	uint32_t mPlaneMeshId = 0;
+	// Default Entities
+	ecs::Entity mCube;
+	ecs::Entity mSphere;
+	ecs::Entity mPlane;
 
-	ecs::Entity mPrimitives;
 	ecs::Entity mSun;
 
 	Camera mCamera;
@@ -75,6 +75,7 @@ private:
 	void UpdateHierarchy();
 
 	void UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
+	/*
 	ecs::Entity CreateMeshEntity(uint32_t meshComponentIndex,
 		uint32_t nodeIndex,
 		const std::vector<Node>& nodes,
@@ -97,11 +98,12 @@ private:
 		std::vector<Mesh>&meshes,
 		std::vector<MaterialComponent>&materials,
 		std::vector<std::string>&textures);
+		*/
+	void InitializePrimitiveMeshes();
+	void InitializeCubeMesh(MeshRenderer& meshRenderer);
+	void InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide = 2);
+	void InitializeSphereMesh(MeshRenderer& meshRenderer);
 
-	void InitializePrimitiveMesh();
-	void InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);
-	void InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount, uint32_t subdivide = 2);
-	void InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount);
 	void DrawBoundingBox();
 	void InitializeLights();
 

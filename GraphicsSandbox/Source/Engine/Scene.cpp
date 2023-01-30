@@ -14,16 +14,15 @@
 void Scene::Initialize()
 {
 	mComponentManager = std::make_shared<ecs::ComponentManager>();
-
 	mComponentManager->RegisterComponent<TransformComponent>();
-	mComponentManager->RegisterComponent<MeshDataComponent>();
-	mComponentManager->RegisterComponent<ObjectComponent>();
+	mComponentManager->RegisterComponent<MeshRenderer>();
+	mComponentManager->RegisterComponent<SkinnedMeshRenderer>();
 	mComponentManager->RegisterComponent<NameComponent>();
 	mComponentManager->RegisterComponent<MaterialComponent>();
 	mComponentManager->RegisterComponent<LightComponent>();
 	mComponentManager->RegisterComponent<HierarchyComponent>();
 
-	InitializePrimitiveMesh();
+	InitializePrimitiveMeshes();
 	InitializeLights();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
@@ -35,20 +34,20 @@ void Scene::Initialize()
 
 void Scene::GenerateDrawData(std::vector<DrawData>& out)
 {
-	auto objectComponentArray = mComponentManager->GetComponentArray<ObjectComponent>();
-	auto meshDataComponentArray = mComponentManager->GetComponentArray<MeshDataComponent>();
+	auto meshRendererComponents = mComponentManager->GetComponentArray<MeshRenderer>();
+	auto& frustum = mCamera.mFrustum;
 
-	auto frustum = mCamera.mFrustum;
-	for (int i = 0; i < objectComponentArray->GetCount(); ++i)
+	for (int i = 0; i < meshRendererComponents->GetCount(); ++i)
 	{
-		const ecs::Entity& entity = objectComponentArray->entities[i];
-		auto& object = objectComponentArray->components[i];
-		auto& meshData = meshDataComponentArray->components[object.meshComponentIndex];
-		if (meshData.IsRenderable())
+		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
+		const ecs::Entity entity = meshRendererComponents->entities[i];
+
+		if (meshRenderer.IsRenderable())
 		{
 			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			uint32_t meshId = object.meshId;
-			BoundingBox aabb = meshData.boundingBoxes[meshId];
+			if (transform == nullptr) continue;
+
+			BoundingBox aabb = meshRenderer.boundingBox;
 			aabb.Transform(transform->worldMatrix);
 
 			bool isVisible = true;
@@ -61,17 +60,13 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 			if (isVisible)
 			{
 				DrawData drawData = {};
-				const Mesh* mesh = meshData.GetMesh(meshId);
-				drawData.vertexBuffer = gfx::BufferView{ meshData.vertexBuffer,
-					meshData.vbIndex,
-					mesh->vertexOffset,
-					static_cast<uint32_t>(mesh->vertexCount * sizeof(Vertex)) };
+				const gfx::BufferView& vertexBuffer = meshRenderer.vertexBuffer;
+				const gfx::BufferView& indexBuffer = meshRenderer.indexBuffer;
 
-				drawData.indexBuffer = gfx::BufferView{ meshData.indexBuffer,
-					meshData.ibIndex,
-					mesh->indexOffset,
-					static_cast<uint32_t>(mesh->indexCount * sizeof(uint32_t)) };
-				drawData.indexCount = mesh->indexCount;
+				drawData.vertexBuffer = vertexBuffer;
+				drawData.indexBuffer = indexBuffer;
+
+				drawData.indexCount = static_cast<uint32_t>(meshRenderer.GetIndexCount());
 				drawData.worldTransform = transform->worldMatrix;
 
 				auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
@@ -84,19 +79,17 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 
 void Scene::DrawBoundingBox()
 {
-	auto objectComponentArray = mComponentManager->GetComponentArray<ObjectComponent>();
-	auto meshDataComponentArray = mComponentManager->GetComponentArray<MeshDataComponent>();
-	for (int i = 0; i < objectComponentArray->GetCount(); ++i)
+	auto meshRendererCompArray = mComponentManager->GetComponentArray<MeshRenderer>();
+	for (int i = 0; i < meshRendererCompArray->GetCount(); ++i)
 	{
+		const ecs::Entity& entity = meshRendererCompArray->entities[i];
+		auto& meshRenderer = meshRendererCompArray->components[i];
 
-		const ecs::Entity& entity = objectComponentArray->entities[i];
-		auto& object = objectComponentArray->components[i];
-		auto& meshData = meshDataComponentArray->components[object.meshComponentIndex];
-
-		if (meshData.IsRenderable())
+		if (meshRenderer.IsRenderable())
 		{
 			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			BoundingBox aabb = meshData.boundingBoxes[object.meshId];
+			BoundingBox aabb = meshRenderer.boundingBox;
+
 			aabb.Transform(transform->worldMatrix);
 			DebugDraw::AddAABB(aabb.min, aabb.max);
 
@@ -107,10 +100,12 @@ void Scene::DrawBoundingBox()
 ecs::Entity Scene::CreateCube(std::string_view name)
 {
 	ecs::Entity entity = ecs::CreateEntity();
-
-	ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
-	objectComp.meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(mPrimitives);
-	objectComp.meshId = mCubeMeshId;
+	{
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
+		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mCube);
+		meshRenderer = *renderer;
+		meshRenderer.SetRenderable(true);
+	}
 
 	if (!name.empty())
 		mComponentManager->AddComponent<NameComponent>(entity).name = name;
@@ -125,12 +120,16 @@ ecs::Entity Scene::CreatePlane(std::string_view name)
 	ecs::Entity entity = ecs::CreateEntity();
 	if (!name.empty())
 		mComponentManager->AddComponent<NameComponent>(entity).name = name;
+	{
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
+		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mPlane);
+		meshRenderer = *renderer;
+		meshRenderer.SetRenderable(true);
+	}
 
 	mComponentManager->AddComponent<TransformComponent>(entity);
 	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
-	ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
-	objectComp.meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(mPrimitives);
-	objectComp.meshId = mPlaneMeshId;
+
 	return entity;
 
 }
@@ -143,13 +142,15 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 
 	mComponentManager->AddComponent<TransformComponent>(entity);
 	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
-
-	ObjectComponent& objectComp = mComponentManager->AddComponent<ObjectComponent>(entity);
-	objectComp.meshComponentIndex = mComponentManager->GetComponentArray<MeshDataComponent>()->GetIndex(mPrimitives);
-	objectComp.meshId = mSphereMeshId;
+	{
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
+		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mSphere);
+		meshRenderer = *renderer;
+		meshRenderer.SetRenderable(true);
+	}
 	return entity;
 }
-
+/*
 void Scene::UpdateObjectData(ecs::Entity parent,
 	uint32_t meshComponentIndex, 
 	uint32_t nodeIndex,
@@ -247,7 +248,8 @@ ecs::Entity Scene::CreateMeshEntity(uint32_t meshComponentIndex,
 
 	return entity;
 }
-
+*/
+/*
 ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, uint32_t meshCompIndex, const std::vector<Node>& nodes, std::vector<Mesh>& meshes, std::vector<MaterialComponent>& materials, std::vector<std::string>& textures)
 {
 	if (root == -1)
@@ -266,7 +268,7 @@ ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, uint32_t mesh
 
 	return entity;
 }
-
+/*
 ecs::Entity Scene::CreateMesh(const char* file)
 {
 	std::ifstream inFile(file, std::ios::binary);
@@ -363,7 +365,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	TraverseNode(node.firstChild, entity, (uint32_t)meshComponentIndex, nodes, meshes, materials, textureFiles);
 	return entity;
 }
-
+*/
 ecs::Entity Scene::CreateLight(std::string_view name)
 {
 	ecs::Entity entity = ecs::CreateEntity();
@@ -462,146 +464,169 @@ void Scene::UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform)
 
 }
 
-void Scene::InitializePrimitiveMesh()
+void Scene::InitializePrimitiveMeshes()
 {
 	// Careful create all entity and add component first and then upload the data
 	// to prevent the invalidation of refrence when container is resized
-	mPrimitives = ecs::CreateEntity();
-	mComponentManager->AddComponent<NameComponent>(mPrimitives).name = "primitives";
-	MeshDataComponent& meshComp = mComponentManager->AddComponent<MeshDataComponent>(mPrimitives);
-
-	unsigned int vertexOffset = 0;
-	unsigned int indexOffset = 0;
 	uint32_t vertexCount = 0;
 	uint32_t indexCount = 0;
 	{
-		InitializeCubeMesh(&meshComp, vertexCount, indexCount);
-		meshComp.meshes.push_back(Mesh{ vertexOffset,
-			indexOffset,
-			vertexCount,
-			indexCount,
-			0,
-			"Cube"});
-
-		vertexOffset += vertexCount * sizeof(Vertex);
-		indexOffset += indexCount * sizeof(uint32_t);
-		mCubeMeshId = 0;
+		mCube = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(mCube).name = "Cube";
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mCube);
+		meshRenderer.SetRenderable(false);
+		InitializeCubeMesh(meshRenderer);
+		vertexCount += (uint32_t)meshRenderer.vertices->size();
+		indexCount += (uint32_t)meshRenderer.indices->size();
 	}
+
 	{
-		vertexCount = 0;
-		indexCount = 0;
-		InitializePlaneMesh(&meshComp, vertexCount, indexCount, 32);
-		meshComp.meshes.push_back(Mesh{ vertexOffset,
-			indexOffset,
-			vertexCount,
-			indexCount,
-			0,
-			"Plane"});
-		vertexOffset += vertexCount * sizeof(Vertex);
-		indexOffset += indexCount * sizeof(uint32_t);
-		mPlaneMeshId = 1;
+		mSphere = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(mSphere).name = "Sphere";
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mSphere);
+		meshRenderer.SetRenderable(false);
+		InitializeSphereMesh(meshRenderer);
+		vertexCount += (uint32_t)meshRenderer.vertices->size();
+		indexCount += (uint32_t)meshRenderer.indices->size();
 	}
+
 	{
-		vertexCount = 0;
-		indexCount = 0;
-		InitializeSphereMesh(&meshComp, vertexCount, indexCount);
-		meshComp.meshes.push_back(Mesh{ vertexOffset,
-			indexOffset,
-			vertexCount,
-			indexCount,
-			0,
-			"Sphere" });
-		mSphereMeshId = 2;
-		vertexOffset += vertexCount * sizeof(Vertex);
-		indexOffset += indexCount * sizeof(uint32_t);
+		mPlane = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(mPlane).name = "Plane";
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mPlane);
+		meshRenderer.SetRenderable(false);
+		InitializePlaneMesh(meshRenderer);
+		vertexCount += (uint32_t)meshRenderer.vertices->size();
+		indexCount += (uint32_t)meshRenderer.indices->size();
 	}
 
-	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
+	{
+		// Allocate Vertex Buffer
+		gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
+		uint32_t vertexBufferIndex = 0;
+		gfx::GPUBufferDesc bufferDesc = { vertexCount * static_cast<uint32_t>(sizeof(Vertex)),
+			gfx::Usage::Default,
+			gfx::BindFlag::ShaderResource };
+		std::shared_ptr<gfx::GPUBuffer> vertexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, &vertexBufferIndex);
 
-	gfx::GPUBufferDesc bufferDesc = { vertexOffset, gfx::Usage::Default, gfx::BindFlag::ShaderResource };
-	gfx::GPUBuffer* vb = gpuAllocator->AllocateBuffer(&bufferDesc, &meshComp.vbIndex);
+		// Allocate Index Buffer
+		uint32_t indexBufferIndex = 0;
+		bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
+		bufferDesc.size = indexCount * static_cast<uint32_t>(sizeof(uint32_t));
+		std::shared_ptr<gfx::GPUBuffer> indexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, &indexBufferIndex);
 
-	uint32_t ibIndex = 0;
-	bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
-	bufferDesc.size = indexOffset;
-	gfx::GPUBuffer* ib = gpuAllocator->AllocateBuffer(&bufferDesc, &meshComp.ibIndex);
+		MeshRenderer* cubeMesh = mComponentManager->GetComponent<MeshRenderer>(mCube);
+		uint32_t vertexOffset = 0;
+		uint32_t vertexSize = static_cast<uint32_t>(cubeMesh->vertices->size() * sizeof(Vertex));
+		gpuAllocator->CopyToBuffer(&cubeMesh->vertexBuffer, vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize);
+		vertexOffset += vertexSize;
 
-	meshComp.CopyDataToBuffer(gpuAllocator, vb, ib);
+		uint32_t indexOffset = 0;
+		uint32_t indexSize = static_cast<uint32_t>(cubeMesh->indices->size() * sizeof(uint32_t));
+		gpuAllocator->CopyToBuffer(&cubeMesh->indexBuffer, indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize);
+		indexOffset += indexSize;
+
+		MeshRenderer* sphereMesh = mComponentManager->GetComponent<MeshRenderer>(mSphere);
+		vertexSize = static_cast<uint32_t>(sphereMesh->vertices->size() * sizeof(Vertex));
+		gpuAllocator->CopyToBuffer(&sphereMesh->vertexBuffer, vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize);
+		vertexOffset += vertexSize;
+
+		indexSize = static_cast<uint32_t>(sphereMesh->indices->size() * sizeof(uint32_t));
+		gpuAllocator->CopyToBuffer(&sphereMesh->indexBuffer, indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize);
+		indexOffset += indexSize;
+
+
+		MeshRenderer* planeMesh = mComponentManager->GetComponent<MeshRenderer>(mPlane);
+		vertexSize = static_cast<uint32_t>(planeMesh->vertices->size() * sizeof(Vertex));
+		gpuAllocator->CopyToBuffer(&planeMesh->vertexBuffer, vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize);
+
+		indexSize = static_cast<uint32_t>(planeMesh->indices->size() * sizeof(uint32_t));
+		gpuAllocator->CopyToBuffer(&planeMesh->indexBuffer, indexBuffer, planeMesh->indices->data(), indexOffset, indexSize);
+	}
+
 }
 
-void Scene::InitializeCubeMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount)
+void Scene::InitializeCubeMesh(MeshRenderer& meshRenderer)
 {
-	meshComp->vertices.insert(meshComp->vertices.end(), {
-					Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
+	if (!meshRenderer.vertices)
+		meshRenderer.vertices = std::make_shared<std::vector<Vertex>>();
+	if (!meshRenderer.indices)
+		meshRenderer.indices = std::make_shared<std::vector<uint32_t>>();
 
-					Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
+	*meshRenderer.vertices = {
+		Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
 
-					Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
 
-					Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
 
-					Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
 
-					Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
 
-					Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
 
-					Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-					Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-		});
+		Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
 
-	meshComp->indices.insert(meshComp->indices.end(), {
+		Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
+		Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
+	};
+
+	*meshRenderer.indices = {
 		0,   1,  2,  0,  2,  3, // Top
 		4,   5,  6,  4,  6,  7, // Front
 		8,   9, 10,  8, 10, 11, // Right
 		12, 13, 14, 12, 14, 15, // Left
 		16, 17, 18, 16, 18, 19, // Back
 		20, 22, 21, 20, 23, 22, // Bottom
-		});
+	};
 
-	vertexCount = 24;
-	indexCount = 36;
-	meshComp->boundingBoxes.emplace_back(glm::vec3(-1.0f), glm::vec3(1.0f));
+	meshRenderer.boundingBox.min = glm::vec3(-1.0f);
+	meshRenderer.boundingBox.max = glm::vec3(1.0f);
 }
 
-void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount, uint32_t subdivide)
+void Scene::InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide)
 {
+	if (!meshRenderer.vertices)
+		meshRenderer.vertices = std::make_shared<std::vector<Vertex>>();
+	if (!meshRenderer.indices)
+		meshRenderer.indices = std::make_shared<std::vector<uint32_t>>();
+
 	float dims = (float)subdivide;
 	float stepSize = 2.0f / float(subdivide);
-	std::vector<Vertex>& vertices = meshComp->vertices;
 
+	std::shared_ptr<std::vector<Vertex>> vertices = meshRenderer.vertices;
 	for (uint32_t y = 0; y < subdivide; ++y)
 	{
 		float yPos = y * stepSize - 1.0f;
 		for (uint32_t x = 0; x < subdivide; ++x)
 		{
-			vertices.push_back(Vertex{ glm::vec3(x * stepSize - 1.0f, 0.0f, yPos),
+			vertices->push_back(Vertex{ glm::vec3(x * stepSize - 1.0f, 0.0f, yPos),
 				glm::vec3(0.0f, 1.0f, 0.0f),
 				glm::vec2(x * stepSize, y * stepSize) });
-			vertexCount++;
 		}
 	}
 
 	uint32_t totalGrid = (subdivide - 1) * (subdivide - 1);
 	uint32_t nIndices =  totalGrid * 6;
 
-	std::vector<unsigned int>& indices = meshComp->indices;
-	meshComp->indices.reserve(nIndices);
+	std::shared_ptr<std::vector<unsigned int>> indices = meshRenderer.indices;
+	indices->reserve(nIndices);
 	for (uint32_t y = 0; y < subdivide - 1; ++y)
 	{
 		for (uint32_t x = 0; x < subdivide - 1; ++x)
@@ -611,17 +636,22 @@ void Scene::InitializePlaneMesh(MeshDataComponent* meshComp, unsigned int& verte
 			uint32_t i2 = i0 + subdivide;
 			uint32_t i3 = i2 + 1;
 
-			indices.push_back(i0);  indices.push_back(i2); indices.push_back(i1);
-			indices.push_back(i2);  indices.push_back(i3); indices.push_back(i1);
-			indexCount += 6;
+			indices->push_back(i0);  indices->push_back(i2); indices->push_back(i1);
+			indices->push_back(i2);  indices->push_back(i3); indices->push_back(i1);
 		}
 	}
 
-	meshComp->boundingBoxes.emplace_back(glm::vec3(-1.0f, -0.01f, -1.0f), glm::vec3(1.0f, 0.01f, 1.0f));
+	meshRenderer.boundingBox.min = glm::vec3(-1.0f, -0.01f, -1.0f);
+	meshRenderer.boundingBox.max = glm::vec3(1.0f, 0.01f, 1.0f);
 }
 
-void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vertexCount, unsigned int& indexCount)
+void Scene::InitializeSphereMesh(MeshRenderer& meshRenderer)
 {
+	if (!meshRenderer.vertices)
+		meshRenderer.vertices = std::make_shared<std::vector<Vertex>>();
+	if (!meshRenderer.indices)
+		meshRenderer.indices = std::make_shared<std::vector<uint32_t>>();
+
 	const int nSector = 32;
 	const int nRing = 32;
 
@@ -629,7 +659,7 @@ void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vert
 	// y = r * sinTheta * sinPhi
 	// z = r * cosTheta
 
-	auto& vertices = meshComp->vertices;
+	auto& vertices = meshRenderer.vertices;
 
 	constexpr float pi = glm::pi<float>();
 	constexpr float kdTheta = pi / float(nRing);
@@ -646,12 +676,11 @@ void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vert
 			float x = cosTheta * static_cast<float>(cos(phi));
 			float y = sinTheta;
 			float z = cosTheta * static_cast<float>(sin(phi)); 
-			vertices.push_back(Vertex{ glm::vec3(x, y, z), glm::vec3(x, y, z), glm::vec2(0.0f, 0.0f) });
-			vertexCount++;
+			vertices->push_back(Vertex{ glm::vec3(x, y, z), glm::vec3(x, y, z), glm::vec2(0.0f, 0.0f) });
 		}
 	}
 
-	auto& indices = meshComp->indices;
+	auto& indices = meshRenderer.indices;
 	uint32_t numIndices = (nSector + 1) * (nRing + 1) * 6;
 
 	for (unsigned int r = 0; r < nRing; ++r)
@@ -661,17 +690,17 @@ void Scene::InitializeSphereMesh(MeshDataComponent* meshComp, unsigned int& vert
 			unsigned int i0 = r * (nSector + 1) + s;
 			unsigned int i1 = i0 + (nSector + 1);
 
-			indices.push_back(i0);
-			indices.push_back(i0 + 1);
-			indices.push_back(i1);
+			indices->push_back(i0);
+			indices->push_back(i0 + 1);
+			indices->push_back(i1);
 
-			indices.push_back(i1);
-			indices.push_back(i0 + 1);
-			indices.push_back(i1 + 1);
-			indexCount+=6;
+			indices->push_back(i1);
+			indices->push_back(i0 + 1);
+			indices->push_back(i1 + 1);
 		}
 	}
-	meshComp->boundingBoxes.emplace_back(glm::vec3(-1.0f), glm::vec3(1.0f));
+	meshRenderer.boundingBox.min = glm::vec3(-1.0f);
+	meshRenderer.boundingBox.max = glm::vec3(1.0f);
 }
 
 void Scene::InitializeLights()

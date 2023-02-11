@@ -79,6 +79,7 @@ private:
 	struct StagingMeshData
 	{
 		std::vector<Node> nodes;
+		std::vector<SkeletonNode> skeletonNodes;
 		std::vector<Mesh> meshes;
 		std::vector<BoundingBox> boundingBoxes;
 		std::vector<char> vertices;

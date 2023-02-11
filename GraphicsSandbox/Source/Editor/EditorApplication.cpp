@@ -219,6 +219,7 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 
+	//character = mScene.CreateMesh("Assets/Models/character2.sbox");
 	character = mScene.CreateMesh("Assets/Models/ortiz.sbox");
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);

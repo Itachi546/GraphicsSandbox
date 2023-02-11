@@ -45,6 +45,10 @@ struct Node {
 	glm::mat4 localTransform;
 };
 
+struct SkeletonNode : public Node {
+	int boneIndex;
+};
+
 struct Mesh final
 {
 	uint32_t vertexOffset = 0;
@@ -60,6 +64,8 @@ struct Mesh final
 	char meshName[32];
 
 	uint32_t nodeIndex;
+
+	uint32_t skeletonIndex;
 };
 
 struct MeshFileHeader
@@ -68,6 +74,8 @@ struct MeshFileHeader
 	uint32_t magicNumber;
 
 	uint32_t nodeCount;
+
+	uint32_t skeletonNodeCount;
 
 	uint32_t meshCount;
 
@@ -144,6 +152,7 @@ struct MaterialComponent {
 struct MeshData
 {
 	std::vector<Node> nodes_;
+	std::vector<SkeletonNode> skeletonNodes_;
 	std::vector<Mesh> meshes_;
 	std::vector<MaterialComponent> materials_;
 	std::vector<std::string> textures_;

@@ -290,6 +290,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 		return ecs::INVALID_ENTITY;
 	}
 
+	// Read Header
 	MeshFileHeader header = {};
 	inFile.read(reinterpret_cast<char*>(&header), sizeof(MeshFileHeader));
 	assert(header.magicNumber == 0x12345678u);
@@ -309,6 +310,14 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	uint32_t nNodes = header.nodeCount;
 	stagingMeshData.nodes.resize(nNodes);
 	inFile.read(reinterpret_cast<char*>(stagingMeshData.nodes.data()), sizeof(Node) * nNodes);
+
+	// Read Skeleton Nodes
+	uint32_t nSkeletonNodes = header.skeletonNodeCount;
+	if (nSkeletonNodes > 0)
+	{
+		stagingMeshData.skeletonNodes.resize(nSkeletonNodes);
+		inFile.read(reinterpret_cast<char*>(stagingMeshData.skeletonNodes.data()), sizeof(SkeletonNode) * nSkeletonNodes);
+	}
 
 	// Read Meshes
 	uint32_t nMeshes = header.meshCount;

@@ -114,6 +114,51 @@ namespace MeshConverter {
 		return newFileName;
 	}
 
+	glm::mat4 AIMat4toGLM(const aiMatrix4x4& transform)
+	{
+		return glm::transpose(glm::make_mat4(&transform.a1));
+	}
+
+	template<typename T>
+	int AddNode(const aiNode* aiNode, int parent, std::vector<T>& nodes_)
+	{
+		int currentNode = static_cast<int>(nodes_.size());
+		{
+			T node = {};
+			//assert(aiNode->mName.length <= 64);
+			std::strcpy(node.name, aiNode->mName.C_Str());
+			node.parent = parent;
+			node.firstChild = -1;
+			node.nextSibling = -1;
+			node.lastSibling = -1;
+			node.localTransform = AIMat4toGLM(aiNode->mTransformation);
+			nodes_.push_back(std::move(node));
+		}
+
+		if (parent > -1)
+		{
+			int firstSibling = nodes_[parent].firstChild;
+			// if first sibling is not present we add current child as 
+			// first child as well as last child
+			if (firstSibling == -1)
+			{
+				nodes_[parent].firstChild = currentNode;
+				// Cache the first child so that when we try to 
+				// add the next sibling we can refer to the lastest one 
+				// from the lastSibling
+				nodes_[parent].lastSibling = currentNode;
+			}
+			else {
+				int dest = nodes_[parent].lastSibling;
+				for (dest = firstSibling;
+					nodes_[dest].nextSibling != -1;
+					dest = nodes_[dest].nextSibling);
+				nodes_[dest].nextSibling = currentNode;
+				nodes_[dest].lastSibling = currentNode;
+			}
+		}
+		return currentNode;
+	}
 
 	void ProcessTexture(const aiScene* scene, std::vector<std::string>& textureFiles, const std::string& basePath, const std::string& exportPathBase, const std::string& textureFolder)
 	{
@@ -182,7 +227,55 @@ namespace MeshConverter {
 			*/
 	}
 
-	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb)
+	// Root bone is the bone that doesn't have any other bone as parent 
+	aiNode* FindRootBone(aiNode* parent, std::vector<std::string>& bones)
+	{
+		std::string nodeName = parent->mName.C_Str();
+		auto found = std::find_if(bones.begin(), bones.end(), [&nodeName](const std::string& bone) {
+			return bone == nodeName;
+			});
+
+		if (found != bones.end())
+			return parent;
+		else
+		{
+			for (uint32_t i = 0; i < parent->mNumChildren; ++i)
+			{
+				aiNode* result = FindRootBone(parent->mChildren[i], bones);
+				if (result != nullptr)
+					return result;
+			}
+		}
+
+		return nullptr;
+	}
+
+	uint32_t ParseSkeletonNode(aiNode* bone, uint32_t parent, std::vector<std::string>& bones, std::vector<SkeletonNode>& skeletonNodes)
+	{
+		fprintf(stdout, "Bone: %s\n", bone->mName.C_Str());
+		uint32_t node = AddNode<SkeletonNode>(bone, parent, skeletonNodes);
+		auto found = std::find(bones.begin(), bones.end(), std::string(bone->mName.C_Str()));
+		if (found == bones.end())
+		{
+			bones.push_back(bone->mName.C_Str());
+			skeletonNodes[node].boneIndex = static_cast<uint32_t>(bones.size() - 1);
+			fprintf(stdout, "Failed to find the boneIndex for %s", bone->mName.C_Str());
+		}
+		else 
+			skeletonNodes[node].boneIndex = (uint32_t)std::distance(bones.begin(), found);
+		for (uint32_t i = 0; i < bone->mNumChildren; ++i)
+			ParseSkeletonNode(bone->mChildren[i], node, bones, skeletonNodes);
+
+		return node;
+	}
+
+	uint32_t CreateSkeletonHierarchy(const aiScene* scene, std::vector<std::string>& bones, std::vector<SkeletonNode>& skeletonNodes)
+	{
+		aiNode* rootBone = FindRootBone(scene->mRootNode, bones);
+		return ParseSkeletonNode(rootBone, -1, bones, skeletonNodes);
+	}
+
+	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, std::vector<SkeletonNode>& skeletonNodes, std::vector<std::string>& bones)
 	{
 		uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
 		uint32_t indexOffset = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
@@ -234,22 +327,34 @@ namespace MeshConverter {
 		aabb.min = glm::vec3(mesh->mAABB.mMin.x, mesh->mAABB.mMin.y, mesh->mAABB.mMin.z);
 		aabb.max = glm::vec3(mesh->mAABB.mMax.x, mesh->mAABB.mMax.y, mesh->mAABB.mMax.z);
 
-		Mesh result = {
-			vertexOffset,
-			indexOffset,
-			nVertices,
-			nFaces * 3,
-			mesh->mMaterialIndex
-		};
+		// Process bones
+		uint32_t skeletonIndex = -1;
+		if (mesh->HasBones())
+		{
+			aiBone** aiBones = mesh->mBones;
+			std::vector<std::string> currentBones;
+			for (uint32_t i = 0; i < mesh->mNumBones; ++i)
+			{
+				aiString boneName = aiBones[i]->mName;
+				currentBones.push_back(boneName.C_Str());
+			}
 
+			// Create Skeleton Hierarchy
+			skeletonIndex = CreateSkeletonHierarchy(scene, currentBones, skeletonNodes);
+
+			bones.insert(bones.end(), currentBones.begin(), currentBones.end());
+		}
+
+		Mesh result = {};
+		result.vertexOffset = vertexOffset;
+		result.indexOffset = indexOffset;
+		result.vertexCount = nVertices;
+		result.indexCount = nFaces * 3;
+		result.materialIndex = mesh->mMaterialIndex;
+		result.skeletonIndex = skeletonIndex;
 		uint32_t length = std::min(32u, name.length);
 		std::memcpy(result.meshName, name.C_Str(), length);
 		return result;
-	}
-
-	glm::mat4 AIMat4toGLM(const aiMatrix4x4& transform)
-	{
-		return glm::transpose(glm::make_mat4(&transform.a1));
 	}
 
 	void ParseAnimation(const aiScene* scene, uint32_t nAnimations, aiAnimation** animations)
@@ -257,62 +362,28 @@ namespace MeshConverter {
 
 	}
 
-	int AddNode(const aiNode* aiNode, int parent, std::vector<Node>& nodes_)
+	void ParseSceneNode(const aiScene* scene, const aiNode* aiNode, MeshData* out, std::vector<std::string>& bones, int parent = -1)
 	{
-		int currentNode = static_cast<int>(nodes_.size());
-		{
-			Node node = {};
-			//assert(aiNode->mName.length <= 64);
-			std::strcpy(node.name, aiNode->mName.C_Str());
-			node.parent = parent;
-			node.firstChild = -1;
-			node.nextSibling = -1;
-			node.lastSibling = -1;
-			node.localTransform = AIMat4toGLM(aiNode->mTransformation);
-			nodes_.push_back(std::move(node));
-		}
+		std::string nodeName = aiNode->mName.C_Str();
+		auto found = std::find(bones.begin(), bones.end(), nodeName);
+		if (found != bones.end())
+			return;
 
-		if (parent > -1)
-		{
-			int firstSibling = nodes_[parent].firstChild;
-			// if first sibling is not present we add current child as 
-			// first child as well as last child
-			if (firstSibling == -1)
-			{
-				nodes_[parent].firstChild = currentNode;
-				// Cache the first child so that when we try to 
-				// add the next sibling we can refer to the lastest one 
-				// from the lastSibling
-				nodes_[parent].lastSibling = currentNode;
-			}
-			else {
-				int dest = nodes_[parent].lastSibling;
-				for (dest = firstSibling;
-					nodes_[dest].nextSibling != -1;
-					dest = nodes_[dest].nextSibling);
-				nodes_[dest].nextSibling = currentNode;
-				nodes_[dest].lastSibling = currentNode;
-			}
-		}
-		return currentNode;
-	}
-
-	void ParseNode(const aiScene* scene, const aiNode* aiNode, MeshData* out, int parent = -1)
-	{
-		int currentNode = AddNode(aiNode, parent, out->nodes_);
+		int currentNode = AddNode<Node>(aiNode, parent, out->nodes_);
 		if (aiNode->mNumMeshes > 0)
 		{
 			const uint32_t nMeshes = aiNode->mNumMeshes;
 			for (uint32_t i = 0; i < nMeshes; ++i)
 			{
+				aiMesh* mesh = scene->mMeshes[i];
 				uint32_t meshId = aiNode->mMeshes[i];
-				out->meshes_[meshId] = ParseMesh(scene->mMeshes[meshId], scene, out->vertexData_, out->indexData_, out->boxes_[meshId]);
+				//out->meshes_[meshId] = ParseMesh(scene->mMeshes[meshId], scene, out->vertexData_, out->indexData_, out->boxes_[meshId]);
 				out->meshes_[meshId].nodeIndex = currentNode;
 			}
 		}
 
 		for (uint32_t i = 0; i < aiNode->mNumChildren; ++i)
-			ParseNode(scene, aiNode->mChildren[i], out, currentNode);
+			ParseSceneNode(scene, aiNode->mChildren[i], out, bones, currentNode);
 	}
 
 	void ParseScene(const aiScene* scene, const std::string& basePath, const std::string& exportPath, const std::string& filename, MeshData* out)
@@ -322,8 +393,16 @@ namespace MeshConverter {
 		out->meshes_.resize(nMeshes);
 		out->boxes_.resize(nMeshes);
 		out->materials_.resize(nMaterials);
+
+		std::vector<std::string> bones;
+		for (uint32_t i = 0; i < nMeshes; ++i)
+			out->meshes_[i] = ParseMesh(scene->mMeshes[i], scene, out->vertexData_, out->indexData_, out->boxes_[i], out->skeletonNodes_, bones);
+
 		if (scene->mRootNode)
-			ParseNode(scene, scene->mRootNode, out);
+			ParseSceneNode(scene, scene->mRootNode, out, bones);
+
+		//if (scene->mRootNode)
+		//ParseNode(scene, scene->mRootNode, out);
 
 		std::vector<std::string>& textureFiles = out->textures_;
 		printf("----------------------------------------------\n");
@@ -383,6 +462,7 @@ namespace MeshConverter {
 	void SaveMeshData(const std::string& filename, MeshData* meshData)
 	{
 		uint32_t nNodes = (uint32_t)meshData->nodes_.size();
+		uint32_t nSkeletonNodes = (uint32_t)meshData->skeletonNodes_.size();
 		uint32_t nMeshes = (uint32_t)meshData->meshes_.size();
 		uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size() * sizeof(Vertex));
 		uint32_t indexDataSize = (uint32_t)(meshData->indexData_.size() * sizeof(uint32_t));
@@ -395,9 +475,14 @@ namespace MeshConverter {
 		uint32_t texStrDataSize = CalculateStringListSize(meshData->textures_) + sizeof(uint32_t) * nTextures;
 		MeshFileHeader header = {
 			0x12345678u,
-			nNodes,	nMeshes,nMaterial,nTextures,
+			nNodes,
+			nSkeletonNodes,
+			nMeshes,
+			nMaterial,
+			nTextures,
 			sizeof(MeshFileHeader) +
 			sizeof(Mesh) * nMeshes +
+			sizeof(SkeletonNode) * nSkeletonNodes +
 			sizeof(MaterialComponent) * nMaterial +
 			texStrDataSize +
 			sizeof(BoundingBox) * nMeshes + 
@@ -412,6 +497,10 @@ namespace MeshConverter {
 
 		// Write Nodes
 		outFile.write(reinterpret_cast<const char*>(meshData->nodes_.data()), sizeof(Node) * nNodes);
+
+		// Write SkeletonNodes
+		if(meshData->skeletonNodes_.size() > 0)
+			outFile.write(reinterpret_cast<const char*>(meshData->skeletonNodes_.data()), sizeof(SkeletonNode) * nSkeletonNodes);
 
 		// Write MeshData
 		outFile.write(reinterpret_cast<const char*>(meshData->meshes_.data()), sizeof(Mesh) * nMeshes);

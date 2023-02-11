@@ -8,6 +8,7 @@
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_vulkan.h"
 #include "ImPlot/implot.h"
+#include "ImGui/IconsFontAwesome5.h"
 
 #include "TransformGizmo.h"
 #include "../Engine/Interpolator.h"
@@ -20,7 +21,19 @@ void EditorApplication::Initialize()
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImPlot::CreateContext();
+
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+	io.Fonts->AddFontDefault();
+	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
+	ImFontConfig iconConfig; 
+	iconConfig.MergeMode = true;
+	iconConfig.PixelSnapH = true;
+	iconConfig.GlyphMinAdvanceX = 13.0f;
+	std::string filename = "Assets/Fonts/" + std::string(FONT_ICON_FILE_NAME_FAS);
+	io.Fonts->AddFontFromFileTTF(filename.c_str(), 13.0f, &iconConfig, icons_ranges);
+	// use FONT_ICON_FILE_NAME_FAR if you want regular instead of solid
+
 	ImGui_ImplGlfw_InitForVulkan(mWindow, true);
 
 	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);

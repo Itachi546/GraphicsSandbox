@@ -66,6 +66,8 @@ struct Mesh final
 	uint32_t nodeIndex;
 
 	uint32_t skeletonIndex;
+
+	uint32_t boneCount;
 };
 
 struct MeshFileHeader

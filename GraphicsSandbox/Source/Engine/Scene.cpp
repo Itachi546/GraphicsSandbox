@@ -151,6 +151,39 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 	return entity;
 }
 
+void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector<SkeletonNode>& skeletonNodes, Skeleton& skeleton)
+{
+	if (root == -1)
+		return;
+
+	const SkeletonNode& node = skeletonNodes[root];
+	skeleton.GetBindPose().SetParent(node.boneIndex, parent);
+	skeleton.GetRestPose().SetParent(node.boneIndex, parent);
+	skeleton.GetJointArray()[node.boneIndex] = node.name;
+
+	if (node.firstChild != -1)
+		TraverseSkeletonHierarchy(node.firstChild, root, skeletonNodes, skeleton);
+
+	// Check sibling
+	if (node.nextSibling != -1)
+		TraverseSkeletonHierarchy(node.nextSibling, parent, skeletonNodes, skeleton);
+}
+
+
+void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vector<SkeletonNode>& skeletonNodes)
+{
+	Pose& restPose = skeleton.GetRestPose();
+	restPose.Resize(mesh.boneCount);
+
+	Pose& bindPose = skeleton.GetBindPose();
+	bindPose.Resize(mesh.boneCount);
+
+	auto& jointNames = skeleton.GetJointArray();
+	jointNames.resize(mesh.boneCount);
+
+	TraverseSkeletonHierarchy(mesh.skeletonIndex, -1, skeletonNodes, skeleton);
+}
+
 void Scene::UpdateEntity(ecs::Entity parent,
 	uint32_t nodeIndex,
 	const StagingMeshData& stagingMeshData)
@@ -188,20 +221,29 @@ void Scene::UpdateEntity(ecs::Entity parent,
 			hierarchyCompArr->components[parentIndex].childrens.push_back(meshEntity);
 
 			// Update MeshRenderer Component
-			auto& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(meshEntity);
-			meshRenderer.vertexBuffer.buffer = stagingMeshData.vertexBuffer;
-			meshRenderer.vertexBuffer.offset = mesh.vertexOffset;
-			meshRenderer.vertexBuffer.size = mesh.vertexCount;
+			IMeshRenderer* meshRenderer = nullptr;
+			if (mesh.skeletonIndex == -1)
+			{
+				meshRenderer = &mComponentManager->AddComponent<MeshRenderer>(meshEntity);
+			}
+			else {
+				meshRenderer = &mComponentManager->AddComponent<SkinnedMeshRenderer>(meshEntity);
+				// Parse Skeleton
+				ParseSkeleton(mesh, reinterpret_cast<SkinnedMeshRenderer*>(meshRenderer)->skeleton, stagingMeshData.skeletonNodes);
+			}
+			meshRenderer->vertexBuffer.buffer = stagingMeshData.vertexBuffer;
+			meshRenderer->vertexBuffer.offset = mesh.vertexOffset;
+			meshRenderer->vertexBuffer.size = mesh.vertexCount;
 
-			meshRenderer.indexBuffer.buffer = stagingMeshData.indexBuffer;
-			meshRenderer.indexBuffer.offset = mesh.indexOffset;
-			meshRenderer.indexBuffer.size = mesh.indexCount;
+			meshRenderer->indexBuffer.buffer = stagingMeshData.indexBuffer;
+			meshRenderer->indexBuffer.offset = mesh.indexOffset;
+			meshRenderer->indexBuffer.size = mesh.indexCount;
 
-			meshRenderer.boundingBox = stagingMeshData.boundingBoxes[meshId];
+			meshRenderer->boundingBox = stagingMeshData.boundingBoxes[meshId];
 
 			// @TODO Seperate between Skinned and StaticMesh
-			meshRenderer.CopyVertices((void*)(stagingMeshData.vertices.data() + mesh.vertexOffset), mesh.vertexCount);
-			meshRenderer.CopyIndices((void*)(stagingMeshData.indices.data() + mesh.indexOffset), mesh.indexCount);
+			meshRenderer->CopyVertices((void*)(stagingMeshData.vertices.data() + mesh.vertexOffset), mesh.vertexCount);
+			meshRenderer->CopyIndices((void*)(stagingMeshData.indices.data() + mesh.indexOffset), mesh.indexCount);
 
 			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(meshEntity);
 			uint32_t materialIndex = mesh.materialIndex;

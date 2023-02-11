@@ -329,6 +329,7 @@ namespace MeshConverter {
 
 		// Process bones
 		uint32_t skeletonIndex = -1;
+		uint32_t boneCount = 0;
 		if (mesh->HasBones())
 		{
 			aiBone** aiBones = mesh->mBones;
@@ -341,6 +342,7 @@ namespace MeshConverter {
 
 			// Create Skeleton Hierarchy
 			skeletonIndex = CreateSkeletonHierarchy(scene, currentBones, skeletonNodes);
+			boneCount = (uint32_t)currentBones.size();
 
 			bones.insert(bones.end(), currentBones.begin(), currentBones.end());
 		}
@@ -352,6 +354,8 @@ namespace MeshConverter {
 		result.indexCount = nFaces * 3;
 		result.materialIndex = mesh->mMaterialIndex;
 		result.skeletonIndex = skeletonIndex;
+		result.boneCount = boneCount;
+
 		uint32_t length = std::min(32u, name.length);
 		std::memcpy(result.meshName, name.C_Str(), length);
 		return result;

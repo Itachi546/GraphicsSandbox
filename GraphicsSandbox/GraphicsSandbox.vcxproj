@@ -168,6 +168,7 @@
   <ItemGroup>
     <ClInclude Include="Source\Editor\EditorApplication.h" />
     <ClInclude Include="Source\Editor\FileDialog.h" />
+    <ClInclude Include="Source\Editor\ImGui\IconsFontAwesome5.h" />
     <ClInclude Include="Source\Editor\ImGui\imconfig.h" />
     <ClInclude Include="Source\Editor\ImGui\imgui.h" />
     <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h" />
@@ -210,6 +211,7 @@
     <ClInclude Include="Source\Engine\TextureCache.h" />
     <ClInclude Include="Source\Engine\Timer.h" />
     <ClInclude Include="Source\Engine\Components.h" />
+    <ClInclude Include="Source\Engine\TransformComponent.h" />
     <ClInclude Include="Source\Engine\Utils.h" />
     <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h" />
     <ClInclude Include="Source\Engine\spirv_reflect.h" />

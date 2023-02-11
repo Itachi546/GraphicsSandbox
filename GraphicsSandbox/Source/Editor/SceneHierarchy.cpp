@@ -1,6 +1,7 @@
 #include "SceneHierarchy.h"
 #include "FileDialog.h"
 #include "ImGui/imgui.h"
+#include "ImGui/IconsFontAwesome5.h"
 
 #include "../Engine/Input.h"
 #include "../Engine/DebugDraw.h"
@@ -123,13 +124,13 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 {
 	if (ImGui::BeginTabItem("Create Objects"))
 	{
-		if (ImGui::Button("Sphere"))
+		if (ImGui::Button(ICON_FA_CIRCLE " Sphere"))
 			mSelected = mScene->CreateSphere("Sphere");
-		if(ImGui::Button("Cube"))
+		if(ImGui::Button(ICON_FA_CUBE " Cube"))
 			mSelected = mScene->CreateCube("Cube");
-		if(ImGui::Button("Plane"))
+		if(ImGui::Button(ICON_FA_SQUARE_FULL " Plane"))
 			mSelected = mScene->CreatePlane("Plane");
-		if (ImGui::Button("Light"))
+		if (ImGui::Button(ICON_FA_LIGHTBULB " Light"))
 			mSelected = mScene->CreateLight("Light");
 		if (ImGui::Button("Mesh"))
 		{

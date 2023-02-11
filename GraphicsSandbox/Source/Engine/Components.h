@@ -7,7 +7,10 @@
 #include <vector>
 
 #include "../Shared/MeshData.h"
+#include "TransformComponent.h"
 #include "GpuMemoryAllocator.h"
+#include "Animation/animation.h"
+
 #include "ECS.h"
 
 struct PerObjectData
@@ -25,35 +28,6 @@ struct DrawData
 
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
-};
-
-struct TransformComponent
-{
-	glm::vec3 position{ 0.0f, 0.0f, 0.0f };
-	glm::quat rotation{ 1.0f, 0.0f, 0.0f, 0.0f};
-	glm::vec3 scale{ 1.0f, 1.0f, 1.0f };
-
-	glm::mat4 defaultMatrix{ 1.0f };
-	glm::mat4 localMatrix{1.0f};
-	glm::mat4 worldMatrix{ 1.0f };
-
-	bool dirty = true;
-	void CalculateWorldMatrix()
-	{
-		if (dirty)
-		{
-			localMatrix = glm::translate(glm::mat4(1.0f), position) *
-				          glm::toMat4(rotation) *
-				          glm::scale(glm::mat4(1.0f), scale) * defaultMatrix;
-			worldMatrix = localMatrix;
-			dirty = false;
-		}
-	}
-
-	glm::mat4 GetRotationMatrix()
-	{
-		return glm::toMat4(rotation);
-	}
 };
 
 struct NameComponent
@@ -80,58 +54,6 @@ struct AABBComponent
 	{
 	}
 };
-
-/*
-struct MeshDataComponent
-{
-	enum Flags {
-		Empty = 0,
-		Renderable = 1 << 0,
-		DoubleSided = 1 << 1,
-	};
-	uint32_t flags = Renderable;
-
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
-
-	uint32_t ibIndex = 0;
-	gfx::GPUBuffer* vertexBuffer;
-
-	uint32_t vbIndex = 0;
-	gfx::GPUBuffer* indexBuffer;
-
-	std::vector<Mesh> meshes;
-	std::vector<BoundingBox> boundingBoxes;
-
-	void SetRenderable(bool value) {
-		if (value) flags |= Renderable; else flags &= ~Renderable;
-	}
-
-	void SetDoubleSided(bool value) {
-		if (value) flags |= DoubleSided; else flags &= ~DoubleSided;
-	}
-
-	bool IsRenderable() const { return flags & Renderable; }
-	bool IsDoubleSided() const { return flags & DoubleSided; }
-
-	void CopyDataToBuffer(gfx::GpuMemoryAllocator* allocator, gfx::GPUBuffer* vB, gfx::GPUBuffer* iB, uint32_t vbIndex = 0, uint32_t ibIndex = 0);
-
-	const Mesh* GetMesh(uint32_t meshId) const
-	{
-		return &meshes[meshId];
-	}
-
-	~MeshDataComponent() = default;
-};
-*/
-
-/*
-struct ObjectComponent
-{
-	std::size_t meshComponentIndex;
-	uint32_t meshId;
-};
-*/
 
 enum class LightType
 {
@@ -196,7 +118,8 @@ struct IMeshRenderer
 	bool IsDoubleSided() const { return flags & DoubleSided; }
 	bool IsSkinned() const { return flags & Skinned; }
 
-	virtual void CopyToGPU(gfx::GpuMemoryAllocator* allocator, std::shared_ptr<gfx::GPUBuffer> vB, std::shared_ptr<gfx::GPUBuffer> iB, uint32_t vbOffset, uint32_t ibOffset) = 0;
+	virtual void CopyVertices(void* data, uint32_t count) = 0;
+	virtual void CopyIndices(void* data, uint32_t count) = 0;
 
 	~IMeshRenderer() = default;
 };
@@ -215,7 +138,7 @@ struct MeshRenderer : public IMeshRenderer
 		return static_cast<uint32_t>(indices->size());
 	}
 
-	void CopyVertices(void* data, uint32_t count)
+	void CopyVertices(void* data, uint32_t count) override
 	{
 		if (!vertices)
 			vertices = std::make_shared<std::vector<Vertex>>();
@@ -223,7 +146,7 @@ struct MeshRenderer : public IMeshRenderer
 		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(Vertex));
 	}
 
-	void CopyIndices(void* data, uint32_t count)
+	void CopyIndices(void* data, uint32_t count) override
 	{
 		if (!indices)
 			indices = std::make_shared<std::vector<uint32_t>>();
@@ -231,19 +154,35 @@ struct MeshRenderer : public IMeshRenderer
 		std::memcpy(reinterpret_cast<char*>(indices->data()), reinterpret_cast<char*>(data), count * sizeof(uint32_t));
 	}
 
-	void CopyToGPU(gfx::GpuMemoryAllocator* allocator, std::shared_ptr<gfx::GPUBuffer> vB, std::shared_ptr<gfx::GPUBuffer> iB, uint32_t vbOffset, uint32_t ibOffset) override;
-
 	virtual ~MeshRenderer() {
 	}
 };
 
 struct SkinnedMeshRenderer : public IMeshRenderer
 {
-	std::vector<Vertex> vertices;
-	std::vector<uint32_t> indices;
+	std::shared_ptr<std::vector<Vertex>> vertices;
+	std::shared_ptr<std::vector<uint32_t>> indices;
+
+	Skeleton skeleton;
 
 	uint32_t GetVertexOffset() const {
 		assert(0);
+	}
+
+	void CopyVertices(void* data, uint32_t count) override
+	{
+		if (!vertices)
+			vertices = std::make_shared<std::vector<Vertex>>();
+		vertices->resize(count);
+		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(Vertex));
+	}
+
+	void CopyIndices(void* data, uint32_t count) override
+	{
+		if (!indices)
+			indices = std::make_shared<std::vector<uint32_t>>();
+		indices->resize(count);
+		std::memcpy(reinterpret_cast<char*>(indices->data()), reinterpret_cast<char*>(data), count * sizeof(uint32_t));
 	}
 
 	virtual ~SkinnedMeshRenderer() = default;

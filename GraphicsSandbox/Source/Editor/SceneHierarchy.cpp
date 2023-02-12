@@ -40,6 +40,10 @@ void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::Com
 	if (compMgr->HasComponent<NameComponent>(entity))
 		name = compMgr->GetComponent<NameComponent>(entity)->name;
 
+	SkinnedMeshRenderer* meshRenderer = compMgr->GetComponent<SkinnedMeshRenderer>(entity);
+	if (meshRenderer)
+		CreateSkeletonHierarchy(meshRenderer);
+
 	HierarchyComponent* hierarchyComponent = compMgr->GetComponent<HierarchyComponent>(entity);
 
 	if (hierarchyComponent && hierarchyComponent->childrens.size() > 0)
@@ -65,6 +69,36 @@ void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::Com
 		ImGui::Unindent();
 	}
 	ImGui::PopID();
+}
+
+void SceneHierarchy::CreateSkeletonNode(uint32_t parent, Skeleton& skeleton)
+{
+	ImGui::PushID(parent);
+	std::string name = std::string(ICON_FA_BONE) + " " + skeleton.GetJointName(parent);
+
+	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(parent);
+	if (childrens.size() > 0)
+	{
+		bool nodeOpen = ImGui::TreeNodeEx(name.c_str());
+		if (nodeOpen) {
+			for (uint32_t child : childrens)
+				CreateSkeletonNode(child, skeleton);
+			ImGui::TreePop();
+		}
+	}
+	else
+	{
+		ImGui::Indent();
+		ImGui::Selectable(name.c_str());
+		ImGui::Unindent();
+	}
+	ImGui::PopID();
+
+}
+
+void SceneHierarchy::CreateSkeletonHierarchy(SkinnedMeshRenderer* meshRenderer)
+{
+	CreateSkeletonNode(0, meshRenderer->skeleton);
 }
 
 void SceneHierarchy::CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> componentManager)
@@ -101,6 +135,12 @@ void SceneHierarchy::CreateComponentTab(std::shared_ptr<ecs::ComponentManager> c
 			// TransformComponent
 			TransformComponent* transform = componentManager->GetComponent<TransformComponent>(mSelected);
 			DrawTransformComponent(transform);
+
+			IMeshRenderer* meshRenderer = componentManager->GetComponent<MeshRenderer>(mSelected);
+			if(meshRenderer == nullptr)
+				meshRenderer = componentManager->GetComponent<SkinnedMeshRenderer>(mSelected);
+			if(meshRenderer)
+				DrawMeshRendererComponent(meshRenderer);
 
 			// MaterialCompoenent
 			MaterialComponent* material = componentManager->GetComponent<MaterialComponent>(mSelected);
@@ -169,8 +209,8 @@ void SceneHierarchy::DrawTransformComponent(TransformComponent* transform)
 			transform->dirty = ImGui::DragFloat3("Scale", &transform->scale[0], 0.01f, -1000.0f, 1000.0f);
 
 		glm::vec3 localPosition = glm::vec3(transform->defaultMatrix[3]);
-
-		ImGui::Text("%.2f %.2f %.2f", localPosition.x, localPosition.y, localPosition.z);
+		ImGui::Text("LocalPosition: %.2f %.2f %.2f", localPosition.x, localPosition.y, localPosition.z);
+		ImGui::Separator();
 	}
 }
 
@@ -198,6 +238,7 @@ void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 		ShowTexture(material->emissiveMap, "Emissive");
 		ShowTexture(material->ambientOcclusionMap, "AO");
 		ShowTexture(material->opacityMap, "Opacity");
+		ImGui::Separator();
 	}
 }
 
@@ -218,6 +259,23 @@ void SceneHierarchy::DrawLightComponent(LightComponent* light)
 		{
 			light->type = (LightType)(currentItem);
 		}
+		ImGui::Separator();
+	}
+}
+
+void SceneHierarchy::DrawMeshRendererComponent(IMeshRenderer* meshRenderer)
+{
+	const std::string title = meshRenderer->IsSkinned() ? "SkinnedMeshRenderer" : "MeshRenderer";
+	if (ImGui::CollapsingHeader(title.c_str()))
+	{
+		static bool isVisible = meshRenderer->IsRenderable();
+		ImGui::Checkbox("Visible", &isVisible);
+		meshRenderer->SetRenderable(isVisible);
+
+		ImGui::Text("Bounding Box");
+		ImGui::DragFloat3("min", &meshRenderer->boundingBox.min[0]);
+		ImGui::DragFloat3("max", &meshRenderer->boundingBox.max[0]);
+		ImGui::Separator();
 	}
 }
 

@@ -18,6 +18,10 @@ private:
 
 	void CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> mgr);
 
+	void CreateSkeletonNode(uint32_t parent, Skeleton& skeleton);
+
+	void CreateSkeletonHierarchy(SkinnedMeshRenderer* meshRenderer);
+
 	void CreateComponentTab(std::shared_ptr<ecs::ComponentManager> mgr);
 
 	void CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr);
@@ -27,4 +31,6 @@ private:
 	void DrawMaterialComponent(MaterialComponent* material);
 
 	void DrawLightComponent(LightComponent* light);
+
+	void DrawMeshRendererComponent(IMeshRenderer* meshRenderer);
 };

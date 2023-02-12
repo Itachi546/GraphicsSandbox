@@ -160,6 +160,10 @@ struct MeshRenderer : public IMeshRenderer
 
 struct SkinnedMeshRenderer : public IMeshRenderer
 {
+	SkinnedMeshRenderer() {
+		SetSkinned(true);
+	}
+
 	std::shared_ptr<std::vector<Vertex>> vertices;
 	std::shared_ptr<std::vector<uint32_t>> indices;
 

@@ -38,6 +38,17 @@ public:
 		mParents[index] = parent;
 	}
 
+	std::vector<uint32_t> FindChildren(uint32_t parent)
+	{
+		std::vector<uint32_t> childrens;
+		for (auto it = mParents.begin(); it != mParents.end(); it++) {
+			if (*it == parent) {
+				childrens.push_back((uint32_t)std::distance(mParents.begin(), it));
+			}
+		}
+		return childrens;
+	}
+
 	unsigned int GetParent(uint32_t index)
 	{
 		return mParents[index];
@@ -58,11 +69,27 @@ public:
 	Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
 	void Set(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
 
+	void Resize(uint32_t size)
+	{
+		mInvBindPose.resize(size);
+		mJointNames.resize(size);
+	}
+
 	Pose& GetBindPose() { return mBindPose; }
 	Pose& GetRestPose() { return mRestPose; }
 
 	std::string& GetJointName(unsigned int index) {
 		return mJointNames[index];
+	}
+
+	void SetJointName(uint32_t index, std::string_view name)
+	{
+		mJointNames[index] = name;
+	}
+
+	void SetInvBindPose(uint32_t index, const glm::mat4& invBindPose)
+	{
+		mInvBindPose[index] = invBindPose;
 	}
 
 	std::vector<std::string>& GetJointArray() {

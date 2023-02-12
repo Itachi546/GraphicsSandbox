@@ -153,13 +153,31 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 
 void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector<SkeletonNode>& skeletonNodes, Skeleton& skeleton)
 {
+	/*
+	* BoneIndex
+	* Parent
+	* Root
+	* mJointNames => BoneIndex
+	*/
+
 	if (root == -1)
 		return;
 
 	const SkeletonNode& node = skeletonNodes[root];
-	skeleton.GetBindPose().SetParent(node.boneIndex, parent);
-	skeleton.GetRestPose().SetParent(node.boneIndex, parent);
-	skeleton.GetJointArray()[node.boneIndex] = node.name;
+	uint32_t parentIndex = -1;
+	if(parent != -1)
+		parentIndex = skeletonNodes[parent].boneIndex;
+
+	// @NOTE we use boneIndex to store the parent child relationship instead of
+	// nodeIndex as it can be used later to index into the matrix without any 
+	// additional information. The shader access the matrix pallete based on the
+	// bone index defined by weight matrix.
+	// Node index is used to traverse the hierarchy whereas all the data regarding
+	// bones are stored by using boneIndex.
+	skeleton.GetBindPose().SetParent(node.boneIndex, parentIndex);
+	skeleton.GetRestPose().SetParent(node.boneIndex, parentIndex);
+	skeleton.SetJointName(node.boneIndex, node.name);
+	skeleton.SetInvBindPose(node.boneIndex, node.localTransform);
 
 	if (node.firstChild != -1)
 		TraverseSkeletonHierarchy(node.firstChild, root, skeletonNodes, skeleton);
@@ -172,16 +190,15 @@ void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector
 
 void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vector<SkeletonNode>& skeletonNodes)
 {
+	skeleton.Resize(mesh.boneCount);
+
 	Pose& restPose = skeleton.GetRestPose();
 	restPose.Resize(mesh.boneCount);
 
 	Pose& bindPose = skeleton.GetBindPose();
 	bindPose.Resize(mesh.boneCount);
 
-	auto& jointNames = skeleton.GetJointArray();
-	jointNames.resize(mesh.boneCount);
-
-	TraverseSkeletonHierarchy(mesh.skeletonIndex, -1, skeletonNodes, skeleton);
+	TraverseSkeletonHierarchy(0, ~0u, skeletonNodes, skeleton);
 }
 
 void Scene::UpdateEntity(ecs::Entity parent,
@@ -225,9 +242,11 @@ void Scene::UpdateEntity(ecs::Entity parent,
 			if (mesh.skeletonIndex == -1)
 			{
 				meshRenderer = &mComponentManager->AddComponent<MeshRenderer>(meshEntity);
+				meshRenderer->SetSkinned(false);
 			}
 			else {
 				meshRenderer = &mComponentManager->AddComponent<SkinnedMeshRenderer>(meshEntity);
+				meshRenderer->SetSkinned(true);
 				// Parse Skeleton
 				ParseSkeleton(mesh, reinterpret_cast<SkinnedMeshRenderer*>(meshRenderer)->skeleton, stagingMeshData.skeletonNodes);
 			}

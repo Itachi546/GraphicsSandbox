@@ -250,29 +250,35 @@ namespace MeshConverter {
 		return nullptr;
 	}
 
-	uint32_t ParseSkeletonNode(aiNode* bone, uint32_t parent, std::vector<std::string>& bones, std::vector<SkeletonNode>& skeletonNodes)
+	uint32_t ParseSkeletonNode(aiNode* bone, uint32_t parent, std::vector<std::string>& bones, std::vector<glm::mat4>& offsetMatrix, std::vector<SkeletonNode>& skeletonNodes)
 	{
 		fprintf(stdout, "Bone: %s\n", bone->mName.C_Str());
 		uint32_t node = AddNode<SkeletonNode>(bone, parent, skeletonNodes);
 		auto found = std::find(bones.begin(), bones.end(), std::string(bone->mName.C_Str()));
+		uint32_t index = 0;
 		if (found == bones.end())
 		{
 			bones.push_back(bone->mName.C_Str());
-			skeletonNodes[node].boneIndex = static_cast<uint32_t>(bones.size() - 1);
+			offsetMatrix.push_back(glm::mat4(1.0f));
+			index = static_cast<uint32_t>(bones.size() - 1);
 			fprintf(stdout, "Failed to find the boneIndex for %s", bone->mName.C_Str());
 		}
-		else 
-			skeletonNodes[node].boneIndex = (uint32_t)std::distance(bones.begin(), found);
+		else
+			index = (uint32_t)std::distance(bones.begin(), found);
+
+		skeletonNodes[node].boneIndex = index;
+		skeletonNodes[node].offsetMatrix = offsetMatrix[index];
+
 		for (uint32_t i = 0; i < bone->mNumChildren; ++i)
-			ParseSkeletonNode(bone->mChildren[i], node, bones, skeletonNodes);
+			ParseSkeletonNode(bone->mChildren[i], node, bones, offsetMatrix, skeletonNodes);
 
 		return node;
 	}
 
-	uint32_t CreateSkeletonHierarchy(const aiScene* scene, std::vector<std::string>& bones, std::vector<SkeletonNode>& skeletonNodes)
+	uint32_t CreateSkeletonHierarchy(const aiScene* scene, std::vector<std::string>& bones, std::vector<glm::mat4>& offsetMatrix, std::vector<SkeletonNode>& skeletonNodes)
 	{
 		aiNode* rootBone = FindRootBone(scene->mRootNode, bones);
-		return ParseSkeletonNode(rootBone, -1, bones, skeletonNodes);
+		return ParseSkeletonNode(rootBone, -1, bones, offsetMatrix, skeletonNodes);
 	}
 
 	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, std::vector<SkeletonNode>& skeletonNodes, std::vector<std::string>& bones)
@@ -334,16 +340,18 @@ namespace MeshConverter {
 		{
 			aiBone** aiBones = mesh->mBones;
 			std::vector<std::string> currentBones;
+			std::vector<glm::mat4> offsetMatrix;
+
 			for (uint32_t i = 0; i < mesh->mNumBones; ++i)
 			{
 				aiString boneName = aiBones[i]->mName;
 				currentBones.push_back(boneName.C_Str());
+				offsetMatrix.push_back(AIMat4toGLM(aiBones[i]->mOffsetMatrix));
 			}
 
 			// Create Skeleton Hierarchy
-			skeletonIndex = CreateSkeletonHierarchy(scene, currentBones, skeletonNodes);
+			skeletonIndex = CreateSkeletonHierarchy(scene, currentBones, offsetMatrix, skeletonNodes);
 			boneCount = (uint32_t)currentBones.size();
-
 			bones.insert(bones.end(), currentBones.begin(), currentBones.end());
 		}
 

@@ -23,6 +23,8 @@ void EditorApplication::Initialize()
 	ImPlot::CreateContext();
 
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	mWidth = io.DisplaySize.x;
+	mHeight = io.DisplaySize.y;
 
 	io.Fonts->AddFontDefault();
 	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
@@ -102,10 +104,11 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	{
 		ImGui::Begin("Render Settings");
 		ImGui::Checkbox("Show BoundingBox", &showBoundingBox);
+		ImGui::Checkbox("Show Skeleton", &mShowSkeleton);
+		ImGui::Checkbox("Show Cascade", &showCascade);
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
 		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
 		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
-		ImGui::Checkbox("Show Cascade", &showCascade);
 		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
 
 		if (ImGui::CollapsingHeader("Bloom"))
@@ -170,6 +173,11 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mRenderer->SetDebugCascade(showCascade);
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
+
+	if (mShowSkeleton)
+	{
+		DrawSkeleton();
+	}
 
 	//TransformGizmo::BeginFrame();
 	//static glm::mat4 out;
@@ -261,6 +269,68 @@ void EditorApplication::InitializeCSMScene()
 	ecs::Entity plane = mScene.CreatePlane("Plane");
 	TransformComponent* comp = compMgr->GetComponent<TransformComponent>(plane);
 	comp->scale = glm::vec3(40.0f);
+}
+
+void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, const glm::mat4& parentTransform, uint32_t current, uint32_t parent, ImDrawList* drawList)
+{
+	Pose& restPose = skeleton.GetRestPose();
+
+	// Local Transform
+	glm::mat4 invBindPose = skeleton.GetInvBindPose(current);
+	glm::mat4 currentTransform = parentTransform * skeleton.mLocalTransform[current];
+	glm::vec3 currentPosition = currentTransform * skeleton.GetInvBindPose(current) * glm::vec4(0.0, 0.0, 0.0, 1.0);
+	static const uint32_t color = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
+	if (parent != ~0u)
+	{
+		invBindPose = skeleton.GetInvBindPose(parent);
+		glm::vec3 parentPosition = parentTransform * skeleton.GetInvBindPose(parent) * glm::vec4(0.0, 0.0, 0.0, 1.0);
+
+		auto camera = mScene.GetCamera();
+		glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition);
+		glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition);
+		drawList->AddLine(ImVec2(p0.x * mWidth, p0.y * mHeight), ImVec2(p1.x * mWidth, p1.y * mHeight), color, 2.0f);
+	}
+
+	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(current);
+	if (childrens.size() > 0)
+	{
+		for (auto child : childrens)
+			DrawSkeletonHierarchy(skeleton, currentTransform, child, current, drawList);
+	}
+}
+
+void EditorApplication::DrawSkeleton()
+{
+	auto compMgr = mScene.GetComponentManager();
+	auto skinnedMeshRenderers = compMgr->GetComponentArray<SkinnedMeshRenderer>();
+
+	const ImU32 flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
+
+	ImGuiIO& io = ImGui::GetIO();
+	mWidth = io.DisplaySize.x;
+	mHeight = io.DisplaySize.y;
+
+	ImGui::SetWindowSize(io.DisplaySize);
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
+	ImGui::PushStyleColor(ImGuiCol_Border, 0);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+
+	ImGui::Begin("Skeleton", NULL, flags);
+	ImDrawList* drawList = ImGui::GetWindowDrawList();
+	ImGui::End();
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor(2);
+
+
+	for (uint32_t i = 0; i < skinnedMeshRenderers->GetCount(); ++i)
+	{
+		const ecs::Entity entity = skinnedMeshRenderers->entities[i];
+		auto transform = compMgr->GetComponent<TransformComponent>(entity);
+		SkinnedMeshRenderer& meshRenderer = skinnedMeshRenderers->components[i];
+		DrawSkeletonHierarchy(meshRenderer.skeleton, transform->worldMatrix, 0, ~0u, drawList);
+	}
 }
 
 EditorApplication::~EditorApplication()

@@ -47,6 +47,7 @@ struct Node {
 
 struct SkeletonNode : public Node {
 	int boneIndex;
+	glm::mat4 offsetMatrix;
 };
 
 struct Mesh final

@@ -120,6 +120,7 @@ struct IMeshRenderer
 
 	virtual void CopyVertices(void* data, uint32_t count) = 0;
 	virtual void CopyIndices(void* data, uint32_t count) = 0;
+	virtual uint32_t GetIndexCount() const = 0;
 
 	~IMeshRenderer() = default;
 };
@@ -134,7 +135,7 @@ struct MeshRenderer : public IMeshRenderer
 		return sizeof(Vertex);
 	}
 
-	uint32_t GetIndexCount() const {
+	uint32_t GetIndexCount() const override {
 		return static_cast<uint32_t>(indices->size());
 	}
 
@@ -188,6 +189,11 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 		indices->resize(count);
 		std::memcpy(reinterpret_cast<char*>(indices->data()), reinterpret_cast<char*>(data), count * sizeof(uint32_t));
 	}
+
+	uint32_t GetIndexCount() const override {
+		return static_cast<uint32_t>(indices->size());
+	}
+
 
 	virtual ~SkinnedMeshRenderer() = default;
 };

@@ -37,17 +37,13 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 	auto meshRendererComponents = mComponentManager->GetComponentArray<MeshRenderer>();
 	auto& frustum = mCamera.mFrustum;
 
-	for (int i = 0; i < meshRendererComponents->GetCount(); ++i)
-	{
-		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
-		const ecs::Entity entity = meshRendererComponents->entities[i];
-
-		if (meshRenderer.IsRenderable())
+	auto generateMeshData = [&out, &frustum, this](ecs::Entity entity, const IMeshRenderer* meshRenderer) {
+		if (meshRenderer->IsRenderable())
 		{
 			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			if (transform == nullptr) continue;
+			if (transform == nullptr) return;
 
-			BoundingBox aabb = meshRenderer.boundingBox;
+			BoundingBox aabb = meshRenderer->boundingBox;
 			aabb.Transform(transform->worldMatrix);
 
 			bool isVisible = true;
@@ -60,13 +56,13 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 			if (isVisible)
 			{
 				DrawData drawData = {};
-				const gfx::BufferView& vertexBuffer = meshRenderer.vertexBuffer;
-				const gfx::BufferView& indexBuffer = meshRenderer.indexBuffer;
+				const gfx::BufferView& vertexBuffer = meshRenderer->vertexBuffer;
+				const gfx::BufferView& indexBuffer = meshRenderer->indexBuffer;
 
 				drawData.vertexBuffer = vertexBuffer;
 				drawData.indexBuffer = indexBuffer;
 
-				drawData.indexCount = static_cast<uint32_t>(meshRenderer.GetIndexCount());
+				drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
 				drawData.worldTransform = transform->worldMatrix;
 
 				auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
@@ -74,6 +70,22 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 				out.push_back(std::move(drawData));
 			}
 		}
+	};
+
+	for (int i = 0; i < meshRendererComponents->GetCount(); ++i)
+	{
+		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
+		const ecs::Entity entity = meshRendererComponents->entities[i];
+		generateMeshData(entity, &meshRenderer);
+	}
+
+	// @TODO : Temporary only to visualize bones
+	auto skinnedMeshRendererComponents = mComponentManager->GetComponentArray<SkinnedMeshRenderer>();
+	for (int i = 0; i < skinnedMeshRendererComponents->GetCount(); ++i)
+	{
+		const SkinnedMeshRenderer& meshRenderer = skinnedMeshRendererComponents->components[i];
+		const ecs::Entity entity = skinnedMeshRendererComponents->entities[i];
+		generateMeshData(entity, &meshRenderer);
 	}
 }
 
@@ -174,10 +186,20 @@ void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector
 	// bone index defined by weight matrix.
 	// Node index is used to traverse the hierarchy whereas all the data regarding
 	// bones are stored by using boneIndex.
+	/*
+	TransformComponent transform;
+	glm::vec3 skew;
+	glm::vec4 perspective;
+	glm::decompose(node.localTransform, transform.scale, transform.rotation, transform.position, skew, perspective);
+	transform.rotation = glm::conjugate(transform.rotation);
+	*/
 	skeleton.GetBindPose().SetParent(node.boneIndex, parentIndex);
 	skeleton.GetRestPose().SetParent(node.boneIndex, parentIndex);
+	skeleton.SetInvBindPose(node.boneIndex, node.offsetMatrix);
+	skeleton.mLocalTransform[node.boneIndex] = node.localTransform;
+
+	//skeleton.GetRestPose().SetLocalTransform(node.boneIndex, transform);
 	skeleton.SetJointName(node.boneIndex, node.name);
-	skeleton.SetInvBindPose(node.boneIndex, node.localTransform);
 
 	if (node.firstChild != -1)
 		TraverseSkeletonHierarchy(node.firstChild, root, skeletonNodes, skeleton);

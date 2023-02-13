@@ -21,7 +21,7 @@ public:
 
 	uint32_t GetSize() { return (uint32_t)mJoints.size(); }
 
-	TransformComponent GetLocalTransform(uint32_t index) {
+	TransformComponent& GetLocalTransform(uint32_t index) {
 		return mJoints[index];
 	}
 
@@ -65,6 +65,7 @@ protected:
 	std::vector<std::string> mJointNames;
 
 public:
+	std::vector<glm::mat4> mLocalTransform;
 	Skeleton();
 	Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
 	void Set(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
@@ -73,6 +74,7 @@ public:
 	{
 		mInvBindPose.resize(size);
 		mJointNames.resize(size);
+		mLocalTransform.resize(size);
 	}
 
 	Pose& GetBindPose() { return mBindPose; }
@@ -80,6 +82,10 @@ public:
 
 	std::string& GetJointName(unsigned int index) {
 		return mJointNames[index];
+	}
+
+	glm::mat4& GetInvBindPose(uint32_t index) {
+		return mInvBindPose[index];
 	}
 
 	void SetJointName(uint32_t index, std::string_view name)

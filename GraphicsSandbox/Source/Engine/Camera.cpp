@@ -35,6 +35,19 @@ void Camera::Update(float dt)
 	DebugDraw::AddFrustum(mFrustumPoints, 8, 0xff0000);
 }
 
+glm::vec2 Camera::ComputeNDCCoordinate(const glm::vec3& p)
+{
+	// Calculate NDC Coordinate
+	glm::vec4 ndc = mProjection * mView * glm::vec4(p, 1.0f);
+	ndc /= ndc.w;
+
+	// Convert in range 0-1
+	ndc = ndc * 0.5f + 0.5f;
+	// Invert Y-Axis
+	ndc.y = 1.0f - ndc.y;
+	return glm::vec2(ndc.x, ndc.y);
+}
+
 void Camera::CalculateProjection()
 {
 	mProjection = glm::perspective(mFov, mAspect, mNearPlane, mFarPlane);

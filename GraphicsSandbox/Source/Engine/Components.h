@@ -165,7 +165,7 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 		SetSkinned(true);
 	}
 
-	std::shared_ptr<std::vector<Vertex>> vertices;
+	std::shared_ptr<std::vector<AnimatedVertex>> vertices;
 	std::shared_ptr<std::vector<uint32_t>> indices;
 
 	Skeleton skeleton;
@@ -177,9 +177,9 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 	void CopyVertices(void* data, uint32_t count) override
 	{
 		if (!vertices)
-			vertices = std::make_shared<std::vector<Vertex>>();
+			vertices = std::make_shared<std::vector<AnimatedVertex>>();
 		vertices->resize(count);
-		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(Vertex));
+		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(AnimatedVertex));
 	}
 
 	void CopyIndices(void* data, uint32_t count) override

@@ -56,7 +56,8 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mHdrFramebuffer = std::make_shared<gfx::Framebuffer>();
 	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get(), 1);
 
-	mTrianglePipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
+	mMeshPipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
+	mSkinnedMeshPipeline = loadHDRPipeline(StringConstants::SKINNED_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
 	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
 
 	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
@@ -196,12 +197,16 @@ void Renderer::Render(gfx::CommandList* commandList)
 		uint32_t offset = 0;
 		for (auto& batch : mRenderBatches)
 		{
-			DrawBatch(commandList, batch, offset);
+			DrawBatch(commandList, batch, offset, mMeshPipeline.get());
 			// NOTE: for now the size of DrawCommand, Transform and Material is same
 			// We need to create offset within the batch later if we decide to share
 			// materials
 			offset += (uint32_t)batch.drawCommands.size();
 		}
+
+		// Draw Skinned Mesh
+		DrawSkinnedMesh(commandList);
+
 		mDevice->EndDebugMarker(commandList);
 
 		// Draw Cubemap
@@ -336,8 +341,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.offset / sizeof(uint32_t));
 }
 
-
-void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset)
+void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::Pipeline* pipeline)
 {
 	gfx::BufferView& vbView = batch.vertexBuffer;
 	gfx::BufferView& ibView = batch.indexBuffer;
@@ -374,11 +378,24 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	imageArrInfo.type = gfx::DescriptorType::ImageArray;
 	descriptorInfos[9] = imageArrInfo;
 
-	mDevice->UpdateDescriptor(mTrianglePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-	mDevice->BindPipeline(commandList, mTrianglePipeline.get());
+	mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	mDevice->BindPipeline(commandList, pipeline);
 
 	mDevice->BindIndexBuffer(commandList, ib.get());
 	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
+}
+
+void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
+{
+	std::vector<DrawData> drawData;
+	mScene->GenerateSkinnedMeshDrawData(drawData);
+	CreateBatch();
+	uint32_t offset = 0;
+	for (auto& batch : mRenderBatches)
+	{
+		DrawBatch(commandList, batch, offset, mSkinnedMeshPipeline.get());
+		offset += (uint32_t)batch.drawCommands.size();
+	}
 }
 
 void Renderer::CreateBatch()

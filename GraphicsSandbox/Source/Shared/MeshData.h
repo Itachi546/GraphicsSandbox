@@ -35,6 +35,41 @@ struct Vertex
 	}
 };
 
+#define NUM_BONE_PER_VERTEX 4
+struct AnimatedVertex : public Vertex
+{
+	AnimatedVertex() = default;
+	AnimatedVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 uv, glm::vec3 tangent = glm::vec3(0.0f), glm::vec3 bitangent = glm::vec3(0.0f)) :
+		Vertex(position, normal, uv, tangent, bitangent)
+	{
+		for (uint32_t i = 0; i < NUM_BONE_PER_VERTEX; ++i)
+		{
+			ids[i] = 255;
+			weights[i] = 0.0f;
+		}
+	}
+
+	void setVertexWeight(uint32_t boneId, float weight)
+	{
+		for (uint32_t i = 0; i < NUM_BONE_PER_VERTEX; ++i)
+		{
+			if (ids[i] == 255)
+			{
+				ids[i] = boneId;
+				weights[i] = weight;
+				return;
+			}
+		}
+		fprintf(stderr, "Vertex has influence of more than 4 bones");
+	}
+
+	// BoneId
+	uint8_t ids[NUM_BONE_PER_VERTEX];
+
+	// Bone Weight/Influence
+	float weights[NUM_BONE_PER_VERTEX];
+};
+
 struct Node {
 	char name[64];
 	int parent;
@@ -160,7 +195,7 @@ struct MeshData
 	std::vector<MaterialComponent> materials_;
 	std::vector<std::string> textures_;
 	std::vector<BoundingBox> boxes_;
-	std::vector<Vertex> vertexData_;
+	std::vector<uint8_t> vertexData_;
 	std::vector<uint32_t> indexData_;
 };
 

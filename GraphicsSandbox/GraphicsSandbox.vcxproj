@@ -270,6 +270,9 @@
     <CustomBuild Include="..\Assets\Shaders\main.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\animated.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="..\Assets\Shaders\bindings.glsl" />
     <CustomBuild Include="..\Assets\Shaders\cubemap.frag.glsl">
       <FileType>Document</FileType>

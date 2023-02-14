@@ -25,10 +25,13 @@ layout(binding = 0) uniform readonly Globals
 } globals;
 
 #ifdef VERTEX_SHADER
-
 layout(binding = 1) readonly buffer Vertices 
 {
+#ifdef SKINNED
+   AnimatedVertex aVertices[];
+#else
    Vertex aVertices[];
+#endif
 };
 
 layout(binding = 2) readonly buffer TransformData

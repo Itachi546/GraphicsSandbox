@@ -281,9 +281,19 @@ namespace MeshConverter {
 		return ParseSkeletonNode(rootBone, -1, bones, offsetMatrix, skeletonNodes);
 	}
 
-	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, std::vector<SkeletonNode>& skeletonNodes, std::vector<std::string>& bones)
+    #define VERTEX_SIZE sizeof(Vertex)
+    #define ANIMATED_VERTEX_SIZE sizeof(AnimatedVertex)
+	template<typename T, uint32_t size>
+	void AppendToStream(std::vector<uint8_t>& stream, const T& vertex)
 	{
-		uint32_t vertexOffset = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
+		const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&vertex);
+		for (uint32_t i = 0; i < size; ++i)
+			stream.push_back(*(ptr + i));
+	}
+
+	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<uint8_t>& out_vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, std::vector<SkeletonNode>& skeletonNodes, std::vector<std::string>& bones)
+	{
+		uint32_t vertexOffset = static_cast<uint32_t>(out_vertices.size());
 		uint32_t indexOffset = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
 
 		aiString name = mesh->mName;
@@ -297,6 +307,9 @@ namespace MeshConverter {
 		printf("----------------------------------------------\n");
 
 		bool bTexCoords = mesh->HasTextureCoords(0);
+		bool bIsAnimated = mesh->HasBones();
+
+		std::vector<AnimatedVertex> vertices;
 		for (uint32_t i = 0; i < nVertices; ++i)
 		{
 			aiVector3D v = mesh->mVertices[i];
@@ -304,20 +317,22 @@ namespace MeshConverter {
 			aiVector3D t = bTexCoords ? mesh->mTextureCoords[0][i] : aiVector3D();
 			aiVector3D tangent = aiVector3D(0.0f, 0.0f, 1.0f);
 			aiVector3D bitangent = aiVector3D(0.0f, 1.0f, 0.0f);
-			
+
 			if (mesh->mTangents)
 			{
 				tangent = mesh->mTangents[i];
 				bitangent = mesh->mBitangents[i];
 			}
 
-			Vertex vertex{ glm::vec3(v.x, v.y, v.z),
-				 glm::vec3(n.x, n.y, n.z),
-				glm::vec2(t.x, t.y),
-				glm::vec3(tangent.x, tangent.y, tangent.z),
-				glm::vec3(bitangent.x, bitangent.y, bitangent.z),
-			};
-			vertices.push_back(vertex);
+			glm::vec3 gv = glm::vec3(v.x, v.y, v.z);
+			glm::vec3 gn = glm::vec3(n.x, n.y, n.z);
+			glm::vec2 guv = glm::vec2(t.x, t.y);
+			glm::vec3 gt = glm::vec3(tangent.x, tangent.y, tangent.z);
+			glm::vec3 gbt = glm::vec3(bitangent.x, bitangent.y, bitangent.z);
+			if (bIsAnimated)
+				vertices.emplace_back(gv, gn, guv, gt, gbt);
+			else
+				AppendToStream<Vertex, VERTEX_SIZE>(out_vertices, Vertex{ gv, gn, guv, gt, gbt });
 		}
 
 		for (uint32_t i = 0; i < nFaces; ++i)
@@ -347,7 +362,18 @@ namespace MeshConverter {
 				aiString boneName = aiBones[i]->mName;
 				currentBones.push_back(boneName.C_Str());
 				offsetMatrix.push_back(AIMat4toGLM(aiBones[i]->mOffsetMatrix));
+
+				uint32_t numWeight = aiBones[i]->mNumWeights;
+				for (uint32_t n = 0; n < numWeight; ++n)
+				{
+					aiVertexWeight& weight = aiBones[i]->mWeights[n];
+					vertices[weight.mVertexId].setVertexWeight(i, weight.mWeight);
+				}
 			}
+
+			// Write the data to stream
+			for (auto& vertex : vertices)
+				AppendToStream<AnimatedVertex, ANIMATED_VERTEX_SIZE>(out_vertices, vertex);
 
 			// Create Skeleton Hierarchy
 			skeletonIndex = CreateSkeletonHierarchy(scene, currentBones, offsetMatrix, skeletonNodes);
@@ -413,9 +439,6 @@ namespace MeshConverter {
 		if (scene->mRootNode)
 			ParseSceneNode(scene, scene->mRootNode, out, bones);
 
-		//if (scene->mRootNode)
-		//ParseNode(scene, scene->mRootNode, out);
-
 		std::vector<std::string>& textureFiles = out->textures_;
 		printf("----------------------------------------------\n");
 		printf("Parsing Material\n");
@@ -476,7 +499,7 @@ namespace MeshConverter {
 		uint32_t nNodes = (uint32_t)meshData->nodes_.size();
 		uint32_t nSkeletonNodes = (uint32_t)meshData->skeletonNodes_.size();
 		uint32_t nMeshes = (uint32_t)meshData->meshes_.size();
-		uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size() * sizeof(Vertex));
+		uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size());
 		uint32_t indexDataSize = (uint32_t)(meshData->indexData_.size() * sizeof(uint32_t));
 		uint32_t nMaterial = (uint32_t)meshData->materials_.size();
 		uint32_t nTextures = (uint32_t)meshData->textures_.size();

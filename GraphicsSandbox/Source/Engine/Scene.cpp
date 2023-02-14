@@ -32,60 +32,64 @@ void Scene::Initialize()
 	mEnvMap->CalculateBRDFLUT();
 }
 
+void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out)
+{
+	if (meshRenderer->IsRenderable())
+	{
+		TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
+		if (transform == nullptr) return;
+
+		BoundingBox aabb = meshRenderer->boundingBox;
+		aabb.Transform(transform->worldMatrix);
+
+		bool isVisible = true;
+		if (mEnableFrustumCulling)
+		{
+			if (!mCamera.mFrustum->Intersect(aabb))
+				isVisible = false;
+		}
+
+		if (isVisible)
+		{
+			DrawData drawData = {};
+			const gfx::BufferView& vertexBuffer = meshRenderer->vertexBuffer;
+			const gfx::BufferView& indexBuffer = meshRenderer->indexBuffer;
+
+			drawData.vertexBuffer = vertexBuffer;
+			drawData.indexBuffer = indexBuffer;
+
+			drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
+			drawData.worldTransform = transform->worldMatrix;
+
+			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
+			drawData.material = material;
+			out.push_back(std::move(drawData));
+		}
+	}
+}
+
 void Scene::GenerateDrawData(std::vector<DrawData>& out)
 {
 	auto meshRendererComponents = mComponentManager->GetComponentArray<MeshRenderer>();
 	auto& frustum = mCamera.mFrustum;
 
-	auto generateMeshData = [&out, &frustum, this](ecs::Entity entity, const IMeshRenderer* meshRenderer) {
-		if (meshRenderer->IsRenderable())
-		{
-			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			if (transform == nullptr) return;
-
-			BoundingBox aabb = meshRenderer->boundingBox;
-			aabb.Transform(transform->worldMatrix);
-
-			bool isVisible = true;
-			if (mEnableFrustumCulling)
-			{
-				if (!frustum->Intersect(aabb))
-					isVisible = false;
-			}
-
-			if (isVisible)
-			{
-				DrawData drawData = {};
-				const gfx::BufferView& vertexBuffer = meshRenderer->vertexBuffer;
-				const gfx::BufferView& indexBuffer = meshRenderer->indexBuffer;
-
-				drawData.vertexBuffer = vertexBuffer;
-				drawData.indexBuffer = indexBuffer;
-
-				drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
-				drawData.worldTransform = transform->worldMatrix;
-
-				auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
-				drawData.material = material;
-				out.push_back(std::move(drawData));
-			}
-		}
-	};
-
 	for (int i = 0; i < meshRendererComponents->GetCount(); ++i)
 	{
 		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
 		const ecs::Entity entity = meshRendererComponents->entities[i];
-		generateMeshData(entity, &meshRenderer);
+		GenerateMeshData(entity, &meshRenderer, out);
 	}
+}
 
+void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& out)
+{
 	// @TODO : Temporary only to visualize bones
 	auto skinnedMeshRendererComponents = mComponentManager->GetComponentArray<SkinnedMeshRenderer>();
 	for (int i = 0; i < skinnedMeshRendererComponents->GetCount(); ++i)
 	{
 		const SkinnedMeshRenderer& meshRenderer = skinnedMeshRendererComponents->components[i];
 		const ecs::Entity entity = skinnedMeshRendererComponents->entities[i];
-		generateMeshData(entity, &meshRenderer);
+		GenerateMeshData(entity, &meshRenderer, out);
 	}
 }
 
@@ -433,9 +437,6 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	inFile.read(reinterpret_cast<char*>(stagingMeshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
 
 	//Read VertexData
-	uint32_t nVertices = header.vertexDataSize / (sizeof(Vertex));
-	uint32_t nIndices = header.indexDataSize / sizeof(uint32_t);
-
 	stagingMeshData.vertices.resize(header.vertexDataSize);
 	stagingMeshData.indices.resize(header.indexDataSize);
 	inFile.seekg(header.dataBlockStartOffset, std::ios::beg);
@@ -818,3 +819,4 @@ void Scene::RemoveChild(ecs::Entity parent, ecs::Entity child)
 	else
 		Logger::Warn("No Children of Id: " + std::to_string(child));
 }
+

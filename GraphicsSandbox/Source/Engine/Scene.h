@@ -35,6 +35,7 @@ public:
 	void Update(float dt);
 
 	void GenerateDrawData(std::vector<DrawData>& out);
+	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& out);
 
 	void SetSize(int width, int height);
 
@@ -116,6 +117,8 @@ private:
 	void InitializeLights();
 
 	void RemoveChild(ecs::Entity parent, ecs::Entity child);
+
+	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out);
 
 	friend class Renderer;
 };

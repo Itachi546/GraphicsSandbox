@@ -240,8 +240,8 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 
-	//character = mScene.CreateMesh("Assets/Models/character2.sbox");
-	character = mScene.CreateMesh("Assets/Models/ortiz.sbox");
+	character = mScene.CreateMesh("Assets/Models/character2.sbox");
+	//character = mScene.CreateMesh("Assets/Models/ortiz.sbox");
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
 }
@@ -273,18 +273,14 @@ void EditorApplication::InitializeCSMScene()
 
 void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, const glm::mat4& parentTransform, uint32_t current, uint32_t parent, ImDrawList* drawList)
 {
-	Pose& restPose = skeleton.GetRestPose();
-
 	// Local Transform
-	glm::mat4 invBindPose = skeleton.GetInvBindPose(current);
+	//glm::mat4 invBindPose = skeleton.GetInvBindPose(current);
 	glm::mat4 currentTransform = parentTransform * skeleton.mLocalTransform[current];
-	glm::vec3 currentPosition = currentTransform * skeleton.GetInvBindPose(current) * glm::vec4(0.0, 0.0, 0.0, 1.0);
+	glm::vec3 currentPosition = currentTransform * glm::vec4(0.0, 0.0, 0.0, 1.0);
 	static const uint32_t color = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
 	if (parent != ~0u)
 	{
-		invBindPose = skeleton.GetInvBindPose(parent);
-		glm::vec3 parentPosition = parentTransform * skeleton.GetInvBindPose(parent) * glm::vec4(0.0, 0.0, 0.0, 1.0);
-
+		glm::vec3 parentPosition = parentTransform * glm::vec4(0.0, 0.0, 0.0, 1.0);
 		auto camera = mScene.GetCamera();
 		glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition);
 		glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition);

@@ -20,6 +20,17 @@ struct Vertex
 	uint8_t bx, by, bz;
 };
 
+struct AnimatedVertex
+{
+	float px, py, pz;
+	uint8_t nx, ny, nz;
+	float tu, tv;
+	uint8_t tx, ty, tz;
+	uint8_t bx, by, bz;
+	uint8_t boneId[4];
+	float boneWeight[4];
+};
+
 struct PerObjectData
 {
 	uint transformIndex;

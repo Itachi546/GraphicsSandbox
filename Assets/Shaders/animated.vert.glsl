@@ -32,7 +32,7 @@ void main()
    vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
    mat4 worldMatrix = aTransformData[gl_DrawIDARB];
 
-   vec4 wP = worldMatrix * vec4(position, 1.0);
+   vec4 wP = worldMatrix * vertex.boneWeight[0] * vec4(position, 1.0);
    gl_Position = globals.VP * wP;
 
    // Calculate normal matrix

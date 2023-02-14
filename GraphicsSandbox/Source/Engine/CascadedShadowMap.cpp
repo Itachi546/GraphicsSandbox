@@ -63,6 +63,13 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		mPipeline = std::make_unique<gfx::Pipeline>();
 		mDevice->CreateGraphicsPipeline(&pipelineDesc, mPipeline.get());
 
+		{
+			char* code = Utils::ReadFile(StringConstants::SHADOW_SKINNED_VERT_PATH, &size);
+			shaders[0] = { code, size };
+		}
+		mSkinnedPipeline = std::make_unique<gfx::Pipeline>();
+		mDevice->CreateGraphicsPipeline(&pipelineDesc, mSkinnedPipeline.get());
+
 		for (uint32_t i = 0; i < std::size(shaders); ++i)
 			delete[] shaders[i].code;
 	}

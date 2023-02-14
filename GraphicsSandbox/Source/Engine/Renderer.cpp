@@ -72,7 +72,9 @@ void Renderer::Update(float dt)
 {
 	if (mUpdateBatches)
 	{
-		CreateBatch();
+		std::vector<DrawData> drawDatas;
+		mScene->GenerateDrawData(drawDatas);
+		CreateBatch(drawDatas, mRenderBatches);
 		mUpdateBatches = false;
 	}
 
@@ -120,6 +122,27 @@ void Renderer::Update(float dt)
 	std::memcpy(mGlobalUniformBuffer->mappedDataPtr, &mGlobalUniformData, sizeof(GlobalUniformData));
 }
 
+void Renderer::DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& batch, gfx::Pipeline* pipeline, uint32_t lastOffset)
+{
+	auto cascadeInfoBuffer = mShadowMap->mBuffer.get();
+	gfx::BufferView& vbView = batch.vertexBuffer;
+	gfx::BufferView& ibView = batch.indexBuffer;
+
+	std::shared_ptr<gfx::GPUBuffer> vb = vbView.buffer;
+	std::shared_ptr<gfx::GPUBuffer> ib = ibView.buffer;
+
+	gfx::DescriptorInfo descriptorInfos[3] = {};
+	descriptorInfos[0] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+	descriptorInfos[1] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
+	descriptorInfos[2] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+
+	mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	mDevice->BindPipeline(commandList, pipeline);
+
+	mDevice->BindIndexBuffer(commandList, ib.get());
+	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
+}
+
 void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 {
 	// BeginShadow Pass
@@ -128,27 +151,25 @@ void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 
 	uint32_t lastOffset = 0;
 	auto pipeline = mShadowMap->mPipeline.get();
-	auto cascadeInfoBuffer = mShadowMap->mBuffer.get();
 	for (auto& batch : mRenderBatches)
 	{
-		gfx::BufferView& vbView = batch.vertexBuffer;
-		gfx::BufferView& ibView = batch.indexBuffer;
-
-		std::shared_ptr<gfx::GPUBuffer> vb = vbView.buffer;
-		std::shared_ptr<gfx::GPUBuffer> ib = ibView.buffer;
-
-		gfx::DescriptorInfo descriptorInfos[3] = {};
-		descriptorInfos[0] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer};
-		descriptorInfos[1] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
-		descriptorInfos[2] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
-
-		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-		mDevice->BindPipeline(commandList, pipeline);
-
-		mDevice->BindIndexBuffer(commandList, ib.get());
-		mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
+		DrawShadowBatch(commandList, batch, pipeline, lastOffset);
 		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
+
+	std::vector<DrawData> drawData;
+	mScene->GenerateSkinnedMeshDrawData(drawData);
+
+	std::vector<RenderBatch> renderBatches;
+	CreateBatch(drawData, renderBatches);
+
+	lastOffset = 0;
+	for (auto& batch : renderBatches)
+	{
+		DrawShadowBatch(commandList, batch, mShadowMap->mSkinnedPipeline.get(), lastOffset);
+		lastOffset += (uint32_t)batch.drawCommands.size();
+	}
+
 	mShadowMap->EndRender(commandList);
 	Profiler::EndRangeGPU(commandList, rangeId);
 }
@@ -389,22 +410,20 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
 {
 	std::vector<DrawData> drawData;
 	mScene->GenerateSkinnedMeshDrawData(drawData);
-	CreateBatch();
+	std::vector<RenderBatch> renderBatches;
+	CreateBatch(drawData, renderBatches);
 	uint32_t offset = 0;
-	for (auto& batch : mRenderBatches)
+	for (auto& batch : renderBatches)
 	{
 		DrawBatch(commandList, batch, offset, mSkinnedMeshPipeline.get());
 		offset += (uint32_t)batch.drawCommands.size();
 	}
 }
 
-void Renderer::CreateBatch()
+void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch)
 {
 	// Clear previous batch
-	mRenderBatches.clear();
-
-	std::vector<DrawData> drawDatas;
-	mScene->GenerateDrawData(drawDatas);
+	renderBatch.clear();
 
     // Sort the DrawData according to bufferIndex
 	std::sort(drawDatas.begin(), drawDatas.end(), [](const DrawData& lhs, const DrawData& rhs) {
@@ -441,8 +460,8 @@ void Renderer::CreateBatch()
 			gfx::GPUBuffer* buffer = drawData.vertexBuffer.buffer.get();
 			if (buffer != lastBuffer || activeBatch == nullptr || (texInBatch + texInMat) > 64)
 			{
-				mRenderBatches.push_back(RenderBatch{});
-				activeBatch = &mRenderBatches.back();
+				renderBatch.push_back(RenderBatch{});
+				activeBatch = &renderBatch.back();
 				// Initialize by default texture
 				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), *TextureCache::GetDefaultTexture());
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
@@ -477,7 +496,7 @@ void Renderer::CreateBatch()
 		// Copy PerObjectDrawData to the buffer
         //PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
 		uint32_t lastOffset = 0;
-		for (auto& batch : mRenderBatches)
+		for (auto& batch : renderBatch)
 		{
 			glm::mat4* transformPtr = static_cast<glm::mat4*>(mTransformBuffer->mappedDataPtr) + lastOffset;
 			MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr) + lastOffset;

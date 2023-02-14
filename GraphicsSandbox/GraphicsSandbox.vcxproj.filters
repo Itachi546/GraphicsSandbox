@@ -362,6 +362,7 @@
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\ssao\ssao.comp.glsl" />
     <CustomBuild Include="..\Assets\Shaders\animated.vert.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\shadow-skinned.vert.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">

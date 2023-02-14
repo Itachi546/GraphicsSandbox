@@ -43,6 +43,7 @@ public:
 
 private:
 	std::unique_ptr<gfx::Pipeline> mPipeline;
+	std::unique_ptr<gfx::Pipeline> mSkinnedPipeline;
 	std::unique_ptr<gfx::RenderPass> mRenderPass;
 	std::unique_ptr<gfx::Framebuffer> mFramebuffer;
 	std::unique_ptr<gfx::GPUBuffer> mBuffer;

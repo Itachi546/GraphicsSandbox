@@ -89,7 +89,7 @@
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Console</SubSystem>
+      <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>volk.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -324,6 +324,9 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\shadow.geom.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\shadow-skinned.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="..\Assets\Shaders\shadow.glsl" />

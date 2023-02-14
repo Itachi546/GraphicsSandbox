@@ -14,6 +14,7 @@ namespace StringConstants
 	constexpr const char* COPY_FRAG_PATH = "Assets/SPIRV/copy.frag.spv";
 
 	constexpr const char* SHADOW_VERT_PATH = "Assets/SPIRV/shadow.vert.spv";
+	constexpr const char* SHADOW_SKINNED_VERT_PATH = "Assets/SPIRV/shadow-skinned.vert.spv";
 	constexpr const char* SHADOW_GEOM_PATH = "Assets/SPIRV/shadow.geom.spv";
 	constexpr const char* SHADOW_FRAG_PATH = "Assets/SPIRV/shadow.frag.spv";
 

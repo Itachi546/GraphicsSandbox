@@ -89,7 +89,7 @@
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <SubSystem>Windows</SubSystem>
+      <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)/Lib/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>volk.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -271,6 +271,9 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="..\Assets\Shaders\animated.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\animated.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="..\Assets\Shaders\bindings.glsl" />

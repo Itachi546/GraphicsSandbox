@@ -118,6 +118,8 @@ private:
 	void DrawShadowMap(gfx::CommandList* commandList);
 	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::Pipeline* pipeline);
 	void DrawSkinnedMesh(gfx::CommandList* commandList);
+	void DrawSkinnedShadow(gfx::CommandList* commandList);
+
 	void CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch);
 	void DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& renderBatch, gfx::Pipeline* pipeline, uint32_t lastOffset);
 

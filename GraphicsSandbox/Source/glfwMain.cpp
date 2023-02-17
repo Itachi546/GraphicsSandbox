@@ -3,7 +3,7 @@
 #include "Editor/EditorApplication.h"
 #include <GLFW/glfw3.h>
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+int main(int argc, char** argv)
 {
 	Timer timer;
 	Application* application = new EditorApplication();

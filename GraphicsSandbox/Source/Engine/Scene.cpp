@@ -60,6 +60,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 
 			drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
 			drawData.worldTransform = transform->worldMatrix;
+			drawData.elmSize = meshRenderer->IsSkinned() ? sizeof(AnimatedVertex) : sizeof(Vertex);
 
 			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
@@ -119,7 +120,7 @@ ecs::Entity Scene::CreateCube(std::string_view name)
 	{
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
 		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mCube);
-		meshRenderer = *renderer;
+		meshRenderer.Copy(renderer);
 		meshRenderer.SetRenderable(true);
 	}
 
@@ -139,7 +140,7 @@ ecs::Entity Scene::CreatePlane(std::string_view name)
 	{
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
 		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mPlane);
-		meshRenderer = *renderer;
+		meshRenderer.Copy(renderer);
 		meshRenderer.SetRenderable(true);
 	}
 
@@ -161,7 +162,7 @@ ecs::Entity Scene::CreateSphere(std::string_view name)
 	{
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
 		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mSphere);
-		meshRenderer = *renderer;
+		meshRenderer.Copy(renderer);
 		meshRenderer.SetRenderable(true);
 	}
 	return entity;

@@ -5,19 +5,17 @@
 
 #include "mesh.glsl"
 
-layout(binding = 0) readonly buffer Vertices 
+layout(binding = 1) readonly buffer Vertices 
 {
    AnimatedVertex aVertices[];
 };
 
-layout(binding = 1) readonly buffer TransformData
-{
-   mat4 aTransformData[];
+layout(push_constant) uniform PushConstants {
+  mat4 modelMatrix;
 };
 
 void main()
 {
    AnimatedVertex vertex = aVertices[gl_VertexIndex]; 
-   mat4 worldMatrix = aTransformData[gl_DrawIDARB];
-   gl_Position = worldMatrix * vec4(vertex.px, vertex.py, vertex.pz, 1.0f);
+   gl_Position = modelMatrix * vec4(vertex.px, vertex.py, vertex.pz, 1.0f);
 }

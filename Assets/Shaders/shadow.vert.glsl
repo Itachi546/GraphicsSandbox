@@ -5,12 +5,12 @@
 
 #include "mesh.glsl"
 
-layout(binding = 0) readonly buffer Vertices 
+layout(binding = 1) readonly buffer Vertices 
 {
    Vertex aVertices[];
 };
 
-layout(binding = 1) readonly buffer TransformData
+layout(binding = 2) readonly buffer TransformData
 {
    mat4 aTransformData[];
 };

@@ -28,6 +28,7 @@ struct DrawData
 
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
+	uint32_t elmSize;
 };
 
 struct NameComponent
@@ -122,7 +123,7 @@ struct IMeshRenderer
 	virtual void CopyIndices(void* data, uint32_t count) = 0;
 	virtual uint32_t GetIndexCount() const = 0;
 
-	~IMeshRenderer() = default;
+	virtual ~IMeshRenderer() = default;
 };
 
 struct MeshRenderer : public IMeshRenderer
@@ -130,9 +131,28 @@ struct MeshRenderer : public IMeshRenderer
 	std::shared_ptr<std::vector<Vertex>> vertices;
 	std::shared_ptr<std::vector<uint32_t>> indices;
 
-	MeshRenderer() = default;
+	MeshRenderer() {
+	}
 	uint32_t GetVertexOffset() const {
 		return sizeof(Vertex);
+	}
+
+	void Copy(MeshRenderer* meshRenderer)
+	{
+		this->boundingBox = meshRenderer->boundingBox;
+		this->flags = meshRenderer->flags;
+		this->indexBuffer = meshRenderer->indexBuffer;
+		this->vertexBuffer = meshRenderer->vertexBuffer;
+
+		this->vertices = std::make_shared<std::vector<Vertex>>();
+		uint32_t vertexSize = static_cast<uint32_t>(meshRenderer->vertices->size());
+		this->vertices->resize(vertexSize);
+		std::memcpy(this->vertices->data(), meshRenderer->vertices->data(), vertexSize);
+
+		this->indices = std::make_shared<std::vector<uint32_t>>();
+		uint32_t indexSize = static_cast<uint32_t>(meshRenderer->indices->size());
+		this->indices->resize(indexSize);
+		std::memcpy(this->indices->data(), meshRenderer->indices->data(), indexSize);
 	}
 
 	uint32_t GetIndexCount() const override {

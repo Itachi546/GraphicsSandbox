@@ -57,7 +57,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mDevice->CreateFramebuffer(mHdrRenderPass.get(), mHdrFramebuffer.get(), 1);
 
 	mMeshPipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
-	mSkinnedMeshPipeline = loadHDRPipeline(StringConstants::SKINNED_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
+	mSkinnedMeshPipeline = loadHDRPipeline(StringConstants::SKINNED_VERT_PATH, StringConstants::SKINNED_FRAG_PATH);
 	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
 
 	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
@@ -132,9 +132,9 @@ void Renderer::DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& batch
 	std::shared_ptr<gfx::GPUBuffer> ib = ibView.buffer;
 
 	gfx::DescriptorInfo descriptorInfos[3] = {};
-	descriptorInfos[0] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
-	descriptorInfos[1] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
-	descriptorInfos[2] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+	descriptorInfos[0] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+	descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+	descriptorInfos[2] = { mTransformBuffer.get(), (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
 
 	mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, pipeline);
@@ -142,6 +142,37 @@ void Renderer::DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& batch
 	mDevice->BindIndexBuffer(commandList, ib.get());
 	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 }
+
+void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
+{
+	std::vector<DrawData> drawDatas;
+	mScene->GenerateSkinnedMeshDrawData(drawDatas);
+
+	gfx::Pipeline* pipeline = mShadowMap->mSkinnedPipeline.get();
+	auto cascadeInfoBuffer = mShadowMap->mBuffer.get();
+	for (auto& drawData : drawDatas)
+	{
+		gfx::BufferView& vbView = drawData.vertexBuffer;
+		gfx::BufferView& ibView = drawData.indexBuffer;
+
+		auto& vb = vbView.buffer;
+		auto& ib = ibView.buffer;
+
+		// TODO: Define static Descriptor beforehand
+		gfx::DescriptorInfo descriptorInfos[3] = {};
+
+		descriptorInfos[0] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+		descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+
+		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(commandList, pipeline);
+		mDevice->PushConstants(commandList, pipeline, gfx::ShaderStage::Vertex, &drawData.worldTransform[0], sizeof(glm::mat4), 0);
+
+		mDevice->BindIndexBuffer(commandList, ib.get());
+		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
+	}
+}
+
 
 void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 {
@@ -157,18 +188,7 @@ void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
 
-	std::vector<DrawData> drawData;
-	mScene->GenerateSkinnedMeshDrawData(drawData);
-
-	std::vector<RenderBatch> renderBatches;
-	CreateBatch(drawData, renderBatches);
-
-	lastOffset = 0;
-	for (auto& batch : renderBatches)
-	{
-		DrawShadowBatch(commandList, batch, mShadowMap->mSkinnedPipeline.get(), lastOffset);
-		lastOffset += (uint32_t)batch.drawCommands.size();
-	}
+	DrawSkinnedShadow(commandList);
 
 	mShadowMap->EndRender(commandList);
 	Profiler::EndRangeGPU(commandList, rangeId);
@@ -179,6 +199,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 	{
 		// Draw Shadow Map
 		DrawShadowMap(commandList);
+
 		gfx::ImageBarrierInfo shadowBarrier = {
 				gfx::ImageBarrierInfo{gfx::AccessFlag::DepthStencilWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, &mShadowMap->mFramebuffer->attachments[0]},
 		};
@@ -408,15 +429,30 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 
 void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
 {
-	std::vector<DrawData> drawData;
-	mScene->GenerateSkinnedMeshDrawData(drawData);
-	std::vector<RenderBatch> renderBatches;
-	CreateBatch(drawData, renderBatches);
-	uint32_t offset = 0;
-	for (auto& batch : renderBatches)
+	std::vector<DrawData> drawDatas;
+	mScene->GenerateSkinnedMeshDrawData(drawDatas);
+
+	gfx::Pipeline* pipeline = mSkinnedMeshPipeline.get();
+	for (auto& drawData : drawDatas)
 	{
-		DrawBatch(commandList, batch, offset, mSkinnedMeshPipeline.get());
-		offset += (uint32_t)batch.drawCommands.size();
+		gfx::BufferView& vbView = drawData.vertexBuffer;
+		gfx::BufferView& ibView = drawData.indexBuffer;
+
+		auto& vb = vbView.buffer;
+		auto& ib = ibView.buffer;
+
+		// TODO: Define static Descriptor beforehand
+		gfx::DescriptorInfo descriptorInfos[10] = {};
+
+		descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+		descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
+
+		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(commandList, pipeline);
+		mDevice->PushConstants(commandList, pipeline, gfx::ShaderStage::Vertex, &drawData.worldTransform[0], sizeof(glm::mat4), 0);
+
+		mDevice->BindIndexBuffer(commandList, ib.get());
+		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
 	}
 }
 
@@ -486,7 +522,7 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 			drawCommand.firstIndex = drawData.indexBuffer.offset / sizeof(uint32_t);
 			drawCommand.indexCount = drawData.indexCount;
 			drawCommand.instanceCount = 1;
-			drawCommand.vertexOffset = drawData.vertexBuffer.offset / sizeof(Vertex);
+			drawCommand.vertexOffset = drawData.vertexBuffer.offset / drawData.elmSize;
 			activeBatch->drawCommands.push_back(std::move(drawCommand));
 
 			assert(activeBatch->transforms.size() == activeBatch->drawCommands.size());

@@ -6,7 +6,7 @@ layout(triangle_strip, max_vertices = 3) out;
 #extension GL_GOOGLE_include_directive : require
 #include "shadow.glsl"
 
-layout(binding = 2, std140) uniform CascadeInfo
+layout(binding = 0, std140) uniform CascadeInfo
 {
    Cascade cascades[5];
    vec4 shadowDims;

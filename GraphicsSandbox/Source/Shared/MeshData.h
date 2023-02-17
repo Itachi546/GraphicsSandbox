@@ -35,7 +35,7 @@ struct Vertex
 	}
 };
 
-#define NUM_BONE_PER_VERTEX 4
+constexpr int NUM_BONE_PER_VERTEX = 4;
 struct AnimatedVertex : public Vertex
 {
 	AnimatedVertex() = default;

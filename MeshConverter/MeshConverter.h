@@ -395,9 +395,68 @@ namespace MeshConverter {
 		return result;
 	}
 
-	void ParseAnimation(const aiScene* scene, uint32_t nAnimations, aiAnimation** animations)
-	{
+	void ParseAnimation(const aiScene* scene, MeshData* out, const std::vector<std::string>& bones)
+	{ 
+		std::vector<Vector3Track>& v3Track = out->vector3Tracks_;
+		std::vector<QuaternionTrack>& rotationTrack = out->quaternionTracks_;
+		std::vector<Animation>& animations = out->animations_;
+		std::vector<Channel>& channels = out->channels_;
 
+		uint32_t nAnimations = scene->mNumAnimations;
+		aiAnimation** aiAnimations = scene->mAnimations;
+
+		for (uint32_t i = 0; i < nAnimations; ++i)
+		{
+			aiAnimation* aiAnimation = aiAnimations[i];
+			Animation currentAnimation = {
+				(float)aiAnimation->mTicksPerSecond,
+				(float)aiAnimation->mDuration,
+				(uint32_t)channels.size() - 1,
+				aiAnimation->mNumChannels
+			};
+			animations.push_back(currentAnimation);
+
+			for (uint32_t channel = 0; channel < aiAnimation->mNumChannels; ++channel)
+			{
+				aiNodeAnim* animNode = aiAnimation->mChannels[channel];
+				std::string name = animNode->mNodeName.C_Str();
+				auto found = std::find(bones.begin(), bones.end(), name);
+				if (found == bones.end())
+				{
+					fprintf(stderr, "No bone found, Invalid\n");
+					exit(0);
+				}
+				
+				Channel currentChannel = {};
+				currentChannel.boneId = (uint32_t)std::distance(bones.begin(), found);
+				currentChannel.translationTrack = (uint32_t)v3Track.size() - 1;
+				currentChannel.traslationCount = animNode->mNumPositionKeys;
+
+				for (uint32_t t = 0; t < animNode->mNumPositionKeys; ++t)
+				{
+					aiVectorKey key = animNode->mPositionKeys[t];
+					v3Track.push_back(Vector3Track{glm::vec3(key.mValue[0], key.mValue[1], key.mValue[2]), (float)key.mTime});
+				}
+
+				currentChannel.rotationTrack = (uint32_t)rotationTrack.size() - 1;
+				currentChannel.rotationCount = animNode->mNumRotationKeys;
+				for (uint32_t t = 0; t < animNode->mNumRotationKeys; ++t)
+				{
+					aiQuatKey key = animNode->mRotationKeys[t];
+					rotationTrack.push_back(QuaternionTrack{glm::fquat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z), (float)key.mTime});
+				}
+
+				currentChannel.scalingTrack = (uint32_t)v3Track.size() - 1;
+				currentChannel.scalingCount = animNode->mNumScalingKeys;
+				for (uint32_t t = 0; t < animNode->mNumScalingKeys; ++t)
+				{
+					aiVectorKey key = animNode->mScalingKeys[t];
+					v3Track.push_back(Vector3Track{ glm::vec3(key.mValue[0], key.mValue[1], key.mValue[2]), (float)key.mTime });
+				}
+
+				channels.push_back(currentChannel);
+			}
+		}
 	}
 
 	void ParseSceneNode(const aiScene* scene, const aiNode* aiNode, MeshData* out, std::vector<std::string>& bones, int parent = -1)
@@ -458,7 +517,7 @@ namespace MeshConverter {
 		{
 			printf("----------------------------------------------\n");
 			printf("Processing Animation\n");
-			ParseAnimation(scene, scene->mNumAnimations, scene->mAnimations);
+			ParseAnimation(scene, out, bones);
 		}
 	}
 
@@ -497,12 +556,18 @@ namespace MeshConverter {
 	void SaveMeshData(const std::string& filename, MeshData* meshData)
 	{
 		uint32_t nNodes = (uint32_t)meshData->nodes_.size();
-		uint32_t nSkeletonNodes = (uint32_t)meshData->skeletonNodes_.size();
 		uint32_t nMeshes = (uint32_t)meshData->meshes_.size();
 		uint32_t vertexDataSize = (uint32_t)(meshData->vertexData_.size());
 		uint32_t indexDataSize = (uint32_t)(meshData->indexData_.size() * sizeof(uint32_t));
 		uint32_t nMaterial = (uint32_t)meshData->materials_.size();
 		uint32_t nTextures = (uint32_t)meshData->textures_.size();
+
+		uint32_t nSkeletonNodes = (uint32_t)meshData->skeletonNodes_.size();
+		uint32_t nAnimation = (uint32_t)meshData->animations_.size();
+		uint32_t nChannel = (uint32_t)meshData->channels_.size();
+		uint32_t nv3Track = (uint32_t)meshData->vector3Tracks_.size();
+		uint32_t nQuatTrack = (uint32_t)meshData->quaternionTracks_.size();
+
 
 		// Texture string data size
 		// first the size of string is written to file and then the original string is 
@@ -511,18 +576,21 @@ namespace MeshConverter {
 		MeshFileHeader header = {
 			0x12345678u,
 			nNodes,
-			nSkeletonNodes,
 			nMeshes,
 			nMaterial,
 			nTextures,
 			sizeof(MeshFileHeader) +
 			sizeof(Mesh) * nMeshes +
-			sizeof(SkeletonNode) * nSkeletonNodes +
 			sizeof(MaterialComponent) * nMaterial +
 			texStrDataSize +
 			sizeof(BoundingBox) * nMeshes + 
 			sizeof(Node) * nNodes,
-			vertexDataSize,indexDataSize
+			vertexDataSize,indexDataSize,
+			nSkeletonNodes,
+			nAnimation,
+			nChannel,
+			nv3Track,
+			nQuatTrack
 		};
 
 		std::ofstream outFile(filename, std::ios::binary);
@@ -532,10 +600,6 @@ namespace MeshConverter {
 
 		// Write Nodes
 		outFile.write(reinterpret_cast<const char*>(meshData->nodes_.data()), sizeof(Node) * nNodes);
-
-		// Write SkeletonNodes
-		if(meshData->skeletonNodes_.size() > 0)
-			outFile.write(reinterpret_cast<const char*>(meshData->skeletonNodes_.data()), sizeof(SkeletonNode) * nSkeletonNodes);
 
 		// Write MeshData
 		outFile.write(reinterpret_cast<const char*>(meshData->meshes_.data()), sizeof(Mesh) * nMeshes);
@@ -555,6 +619,28 @@ namespace MeshConverter {
 
 		// Write Indices
 		outFile.write(reinterpret_cast<const char*>(meshData->indexData_.data()), indexDataSize);
+
+		// Write Animation data
+		if (meshData->skeletonNodes_.size() > 0)
+		{
+			// Write SkeletonNodes
+			outFile.write(reinterpret_cast<const char*>(meshData->skeletonNodes_.data()), sizeof(SkeletonNode) * nSkeletonNodes);
+
+			// Write Animations
+			outFile.write(reinterpret_cast<const char*>(meshData->animations_.data()), sizeof(Animation) * nAnimation);
+
+			// Write Channel
+			outFile.write(reinterpret_cast<const char*>(meshData->channels_.data()), sizeof(Channel) * nChannel);
+
+			// Write v3Track
+			outFile.write(reinterpret_cast<const char*>(meshData->vector3Tracks_.data()), sizeof(Vector3Track) * nv3Track);
+
+			// Write Quaternion Tracks
+			outFile.write(reinterpret_cast<const char*>(meshData->quaternionTracks_.data()), sizeof(QuaternionTrack) * nQuatTrack);
+
+		}
+
+
 
 		outFile.close();
 

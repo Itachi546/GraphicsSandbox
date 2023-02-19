@@ -104,6 +104,7 @@ struct Mesh final
 	uint32_t skeletonIndex;
 
 	uint32_t boneCount;
+
 };
 
 struct MeshFileHeader
@@ -112,8 +113,6 @@ struct MeshFileHeader
 	uint32_t magicNumber;
 
 	uint32_t nodeCount;
-
-	uint32_t skeletonNodeCount;
 
 	uint32_t meshCount;
 
@@ -127,6 +126,15 @@ struct MeshFileHeader
 	
 	uint32_t indexDataSize;
 
+	uint32_t skeletonNodeCount;
+
+	uint32_t animationCount;
+
+	uint32_t animationChannelCount;
+
+	uint32_t v3TrackCount;
+
+	uint32_t quatTrackCount;
 };
 
 constexpr const uint32_t INVALID_TEXTURE = 0xFFFFFFFF;
@@ -187,16 +195,52 @@ struct MaterialComponent {
 	}
 };
 
+template<typename T>
+struct Track{
+	T value;
+	float time;
+};
+
+using Vector3Track = Track<glm::vec3>;
+using QuaternionTrack = Track<glm::fquat>;
+
+struct Channel
+{
+	uint32_t boneId;
+	uint32_t translationTrack;
+	uint32_t traslationCount;
+	uint32_t rotationTrack;
+	uint32_t rotationCount;
+	uint32_t scalingTrack;
+	uint32_t scalingCount;
+};
+
+struct Animation
+{
+	float framePerSecond;
+	float duration;
+	uint32_t channelStart;
+	uint32_t channelEnd;
+};
+
 struct MeshData
 {
 	std::vector<Node> nodes_;
-	std::vector<SkeletonNode> skeletonNodes_;
 	std::vector<Mesh> meshes_;
 	std::vector<MaterialComponent> materials_;
 	std::vector<std::string> textures_;
 	std::vector<BoundingBox> boxes_;
 	std::vector<uint8_t> vertexData_;
 	std::vector<uint32_t> indexData_;
+
+	// Animation Data
+	std::vector<SkeletonNode> skeletonNodes_;
+	std::vector<Animation> animations_;
+	std::vector<Channel> channels_;
+	std::vector<Vector3Track> vector3Tracks_;
+	std::vector<QuaternionTrack> quaternionTracks_;
+
+
 };
 
 static_assert(sizeof(MaterialComponent) % 16 == 0);

@@ -104,7 +104,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	{
 		ImGui::Begin("Render Settings");
 		ImGui::Checkbox("Show BoundingBox", &showBoundingBox);
-		ImGui::Checkbox("Show Skeleton", &mShowSkeleton);
+		//ImGui::Checkbox("Show Skeleton", &mShowSkeleton);
 		ImGui::Checkbox("Show Cascade", &showCascade);
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
 		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
@@ -174,11 +174,10 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
 
+	/*
 	if (mShowSkeleton)
-	{
 		DrawSkeleton();
-	}
-
+	*/
 	//TransformGizmo::BeginFrame();
 	//static glm::mat4 out;
 	//TransformGizmo::Manipulate(mCamera->GetViewMatrix(), mCamera->GetProjectionMatrix(), TransformGizmo::Operation::Translate, out);
@@ -186,6 +185,30 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
+}
+
+glm::mat4 CalculateCurrentTransform(uint32_t node, const TransformTrack& track, float time)
+{
+	return track.CalculateTransform(time);
+}
+
+void EditorApplication::UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform)
+{
+	// Local Transform
+	glm::mat4 invBindPose = skeleton.GetInvBindPose(node);
+	glm::mat4 boneTransform = skeleton.mLocalTransform[node];
+	if (node < animationClip.transformTracks.size())
+		boneTransform = CalculateCurrentTransform(node, animationClip.transformTracks[node], animationClip.currentTime);
+
+	glm::mat4 currentTransform = parentTransform * boneTransform;
+	skeleton.mFinalTransform[node] = currentTransform * invBindPose;
+
+	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(node);
+	if (childrens.size() > 0)
+	{
+		for (auto child : childrens)
+			UpdateSkeletonTransform(skeleton, animationClip, child, currentTransform);
+	}
 }
 
 void EditorApplication::PreUpdate(float dt) {
@@ -224,6 +247,22 @@ void EditorApplication::PreUpdate(float dt) {
 		mShowUI = !mShowUI;
 
 	mHierarchy->Update(dt);
+	auto compMgr = mScene.GetComponentManager();
+	auto skinnedMeshRenderers = compMgr->GetComponentArray<SkinnedMeshRenderer>();
+	for (uint32_t i = 0; i < skinnedMeshRenderers->GetCount(); ++i)
+	{
+		const ecs::Entity entity = skinnedMeshRenderers->entities[i];
+		SkinnedMeshRenderer& meshRenderer = skinnedMeshRenderers->components[i];
+		std::vector<AnimationClip> animationClips = meshRenderer.animationClips;
+		TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(entity);
+
+		AnimationClip& animationClip = meshRenderer.animationClips[0];
+		animationClip.currentTime += dt * animationClip.animation.framePerSecond;
+		animationClip.currentTime = fmod(animationClip.currentTime, animationClip.animation.duration);
+		UpdateSkeletonTransform(meshRenderer.skeleton, animationClip, 0, transform->worldMatrix);
+	}
+
+
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -271,27 +310,24 @@ void EditorApplication::InitializeCSMScene()
 	comp->scale = glm::vec3(40.0f);
 }
 
-void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, const glm::mat4& parentTransform, uint32_t current, uint32_t parent, ImDrawList* drawList)
+void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, uint32_t current, uint32_t parent, ImDrawList* drawList)
 {
-	// Local Transform
-	//glm::mat4 invBindPose = skeleton.GetInvBindPose(current);
-	glm::mat4 currentTransform = parentTransform * skeleton.mLocalTransform[current];
-	glm::vec3 currentPosition = currentTransform * glm::vec4(0.0, 0.0, 0.0, 1.0);
+	glm::vec3 currentPosition = skeleton.mLocalTransform[current] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	static const uint32_t color = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
 	if (parent != ~0u)
 	{
-		glm::vec3 parentPosition = parentTransform * glm::vec4(0.0, 0.0, 0.0, 1.0);
+		glm::vec3 parentPosition = skeleton.mLocalTransform[parent] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 		auto camera = mScene.GetCamera();
-		glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition);
-		glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition);
-		drawList->AddLine(ImVec2(p0.x * mWidth, p0.y * mHeight), ImVec2(p1.x * mWidth, p1.y * mHeight), color, 2.0f);
+		glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition) * glm::vec2(mWidth, mHeight);
+		glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition) * glm::vec2(mWidth, mHeight);
+		drawList->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), color, 2.0f);
 	}
 
 	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(current);
 	if (childrens.size() > 0)
 	{
 		for (auto child : childrens)
-			DrawSkeletonHierarchy(skeleton, currentTransform, child, current, drawList);
+			DrawSkeletonHierarchy(skeleton, child, current, drawList);
 	}
 }
 
@@ -319,13 +355,11 @@ void EditorApplication::DrawSkeleton()
 	ImGui::PopStyleVar();
 	ImGui::PopStyleColor(2);
 
-
 	for (uint32_t i = 0; i < skinnedMeshRenderers->GetCount(); ++i)
 	{
 		const ecs::Entity entity = skinnedMeshRenderers->entities[i];
-		auto transform = compMgr->GetComponent<TransformComponent>(entity);
 		SkinnedMeshRenderer& meshRenderer = skinnedMeshRenderers->components[i];
-		DrawSkeletonHierarchy(meshRenderer.skeleton, transform->worldMatrix, 0, ~0u, drawList);
+		DrawSkeletonHierarchy(meshRenderer.skeleton, 0, ~0u, drawList);
 	}
 }
 

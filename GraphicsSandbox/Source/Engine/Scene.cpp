@@ -57,7 +57,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 
 			drawData.vertexBuffer = vertexBuffer;
 			drawData.indexBuffer = indexBuffer;
-
+			drawData.entity = entity;
 			drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
 			drawData.worldTransform = transform->worldMatrix;
 			drawData.elmSize = meshRenderer->IsSkinned() ? sizeof(AnimatedVertex) : sizeof(Vertex);
@@ -228,14 +228,52 @@ void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vecto
 	TraverseSkeletonHierarchy(0, ~0u, skeletonNodes, skeleton);
 }
 
+void Scene::ParseAnimation(const StagingMeshData& meshData, std::vector<AnimationClip>& animationClips)
+{
+	for (auto& animation : meshData.animations_)
+	{
+		AnimationClip animationClip = {};
+		animationClip.animation = animation;
+
+		uint32_t start = animation.channelStart;
+		uint32_t count = animation.channelCount;
+		animationClip.transformTracks.resize(meshData.skeletonNodes_.size());
+		for (uint32_t i = start; i < start + count; ++i)
+		{
+			const Channel& channel = meshData.channels_[i];
+
+			uint32_t tS = channel.translationTrack;
+			uint32_t tC = channel.traslationCount;
+			std::vector<Vector3Track> translations(tC);
+			std::copy(meshData.vector3Tracks_.begin() + tS, meshData.vector3Tracks_.begin() + tS + tC, translations.begin());
+
+			uint32_t rS = channel.rotationTrack;
+			uint32_t rC = channel.rotationCount;
+			std::vector<QuaternionTrack> rotations(rC);
+			std::copy(meshData.quaternionTracks_.begin() + rS, meshData.quaternionTracks_.begin() + rS + rC, rotations.begin());
+
+			uint32_t sS = channel.scalingTrack;
+			uint32_t sC = channel.scalingCount;
+			std::vector<Vector3Track> scaling(sC);
+			std::copy(meshData.vector3Tracks_.begin() + sS, meshData.vector3Tracks_.begin() + sS + sC, scaling.begin());
+
+			animationClip.transformTracks[channel.boneId].AddPositions(translations);
+			animationClip.transformTracks[channel.boneId].AddRotations(rotations);
+			animationClip.transformTracks[channel.boneId].AddScale(scaling);
+		}
+		animationClips.push_back(std::move(animationClip));
+	}
+
+}
+
 void Scene::UpdateEntity(ecs::Entity parent,
 	uint32_t nodeIndex,
 	const StagingMeshData& stagingMeshData)
 {
 	std::vector<uint32_t> meshIds;
-	for (uint32_t i = 0; i < stagingMeshData.meshes.size(); ++i)
+	for (uint32_t i = 0; i < stagingMeshData.meshes_.size(); ++i)
 	{
-		if (stagingMeshData.meshes[i].nodeIndex == nodeIndex)
+		if (stagingMeshData.meshes_[i].nodeIndex == nodeIndex)
 			meshIds.push_back(i);
 	}
 
@@ -254,7 +292,7 @@ void Scene::UpdateEntity(ecs::Entity parent,
 		for (auto meshId : meshIds)
 		{
 			// For Each mesh create entity
-			const Mesh& mesh = stagingMeshData.meshes[meshId];
+			const Mesh& mesh = stagingMeshData.meshes_[meshId];
 
 			ecs::Entity meshEntity = ecs::CreateEntity();
 			mComponentManager->AddComponent<NameComponent>(meshEntity).name = std::string(mesh.meshName);
@@ -274,8 +312,10 @@ void Scene::UpdateEntity(ecs::Entity parent,
 			else {
 				meshRenderer = &mComponentManager->AddComponent<SkinnedMeshRenderer>(meshEntity);
 				meshRenderer->SetSkinned(true);
+				SkinnedMeshRenderer* skinnedMeshRenderer = reinterpret_cast<SkinnedMeshRenderer*>(meshRenderer);
 				// Parse Skeleton
-				ParseSkeleton(mesh, reinterpret_cast<SkinnedMeshRenderer*>(meshRenderer)->skeleton, stagingMeshData.skeletonNodes);
+				ParseSkeleton(mesh, skinnedMeshRenderer->skeleton, stagingMeshData.skeletonNodes_);
+				ParseAnimation(stagingMeshData, skinnedMeshRenderer->animationClips);
 			}
 			meshRenderer->vertexBuffer.buffer = stagingMeshData.vertexBuffer;
 			meshRenderer->vertexBuffer.offset = mesh.vertexOffset;
@@ -285,19 +325,19 @@ void Scene::UpdateEntity(ecs::Entity parent,
 			meshRenderer->indexBuffer.offset = mesh.indexOffset;
 			meshRenderer->indexBuffer.size = mesh.indexCount;
 
-			meshRenderer->boundingBox = stagingMeshData.boundingBoxes[meshId];
+			meshRenderer->boundingBox = stagingMeshData.boxes_[meshId];
 
 			// @TODO Seperate between Skinned and StaticMesh
-			meshRenderer->CopyVertices((void*)(stagingMeshData.vertices.data() + mesh.vertexOffset), mesh.vertexCount);
-			meshRenderer->CopyIndices((void*)(stagingMeshData.indices.data() + mesh.indexOffset), mesh.indexCount);
+			meshRenderer->CopyVertices((void*)(stagingMeshData.vertexData_.data() + mesh.vertexOffset), mesh.vertexCount);
+			meshRenderer->CopyIndices((void*)(stagingMeshData.indexData_.data() + mesh.indexOffset), mesh.indexCount);
 
 			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(meshEntity);
 			uint32_t materialIndex = mesh.materialIndex;
-			if (stagingMeshData.materials.size() > 0 && materialIndex != -1)
+			if (stagingMeshData.materials_.size() > 0 && materialIndex != -1)
 			{
-				const std::vector<std::string>& textures = stagingMeshData.textures;
+				const std::vector<std::string>& textures = stagingMeshData.textures_;
 
-				material = stagingMeshData.materials[materialIndex];
+				material = stagingMeshData.materials_[materialIndex];
 				// @TODO Maybe it is not correct to generate mipmap for normal map and 
 				// sample it like base mip level. But for now, I don't know any other 
 				// ways to remove the normal map aliasing artifacts other than using mipmap.
@@ -324,7 +364,7 @@ void Scene::UpdateEntity(ecs::Entity parent,
 ecs::Entity Scene::CreateMeshEntity(uint32_t nodeIndex, ecs::Entity parent, const StagingMeshData& stagingMeshData)
 {
 	ecs::Entity entity = ecs::CreateEntity();
-	const Node& node = stagingMeshData.nodes[nodeIndex];
+	const Node& node = stagingMeshData.nodes_[nodeIndex];
 
 	// Name Component
 	mComponentManager->AddComponent<NameComponent>(entity).name = node.name;
@@ -358,7 +398,7 @@ ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, const Staging
 	ecs::Entity entity = CreateMeshEntity(root, parent, stagingData);
 
 	// Add Child
-	const Node& node = stagingData.nodes[root];
+	const Node& node = stagingData.nodes_[root];
 	if(node.firstChild != -1)
 		TraverseNode(node.firstChild, entity, stagingData);
 
@@ -384,7 +424,6 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	assert(header.magicNumber == 0x12345678u);
 
 	std::string name = file;
-
 	std::size_t lastPathSplit = name.find_last_of("/\\");
 	std::string folder = name.substr(0, lastPathSplit + 1);
 
@@ -396,29 +435,21 @@ ecs::Entity Scene::CreateMesh(const char* file)
 
 	// Read Nodes
 	uint32_t nNodes = header.nodeCount;
-	stagingMeshData.nodes.resize(nNodes);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.nodes.data()), sizeof(Node) * nNodes);
-
-	// Read Skeleton Nodes
-	uint32_t nSkeletonNodes = header.skeletonNodeCount;
-	if (nSkeletonNodes > 0)
-	{
-		stagingMeshData.skeletonNodes.resize(nSkeletonNodes);
-		inFile.read(reinterpret_cast<char*>(stagingMeshData.skeletonNodes.data()), sizeof(SkeletonNode) * nSkeletonNodes);
-	}
+	stagingMeshData.nodes_.resize(nNodes);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.nodes_.data()), sizeof(Node) * nNodes);
 
 	// Read Meshes
 	uint32_t nMeshes = header.meshCount;
-	stagingMeshData.meshes.resize(nMeshes);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.meshes.data()), sizeof(Mesh) * nMeshes);
+	stagingMeshData.meshes_.resize(nMeshes);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.meshes_.data()), sizeof(Mesh) * nMeshes);
 
 	// Read Materials
 	uint32_t nMaterial = header.materialCount;
-	stagingMeshData.materials.resize(nMaterial);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.materials.data()), sizeof(MaterialComponent) * nMaterial);
+	stagingMeshData.materials_.resize(nMaterial);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.materials_.data()), sizeof(MaterialComponent) * nMaterial);
 	
 	// Read Texture Path
-	stagingMeshData.textures.resize(header.textureCount);
+	stagingMeshData.textures_.resize(header.textureCount);
 	if (header.textureCount > 0)
 	{
 		for (uint32_t i = 0; i < header.textureCount; ++i)
@@ -426,7 +457,7 @@ ecs::Entity Scene::CreateMesh(const char* file)
 			uint32_t size = 0;
 			inFile.read(reinterpret_cast<char*>(&size), 4);
 
-			std::string& path = stagingMeshData.textures[i];
+			std::string& path = stagingMeshData.textures_[i];
 			path.resize(size);
 			inFile.read(path.data(), size);
 			path = folder + path;
@@ -434,17 +465,46 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	}
 
 	// Read BoundingBox
-	stagingMeshData.boundingBoxes.resize(nMeshes);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.boundingBoxes.data()), sizeof(BoundingBox) * nMeshes);
+	stagingMeshData.boxes_.resize(nMeshes);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.boxes_.data()), sizeof(BoundingBox) * nMeshes);
 
 	//Read VertexData
-	stagingMeshData.vertices.resize(header.vertexDataSize);
-	stagingMeshData.indices.resize(header.indexDataSize);
+	stagingMeshData.vertexData_.resize(header.vertexDataSize);
+	stagingMeshData.indexData_.resize(header.indexDataSize);
 	inFile.seekg(header.dataBlockStartOffset, std::ios::beg);
-	inFile.read(stagingMeshData.vertices.data(), header.vertexDataSize);
-	inFile.read(stagingMeshData.indices.data(), header.indexDataSize);
-	inFile.close();
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.vertexData_.data()), header.vertexDataSize);
+	inFile.read(reinterpret_cast<char*>(stagingMeshData.indexData_.data()), header.indexDataSize);
+
+	// Read Skeleton Nodes
+	uint32_t nSkeletonNodes = header.skeletonNodeCount;
+	if (nSkeletonNodes > 0)
+	{
+		stagingMeshData.skeletonNodes_.resize(nSkeletonNodes);
+		inFile.read(reinterpret_cast<char*>(stagingMeshData.skeletonNodes_.data()), sizeof(SkeletonNode) * nSkeletonNodes);
+
+		uint32_t nAnimation = header.animationCount;
+		if (nAnimation > 0)
+		{
+			stagingMeshData.animations_.resize(nAnimation);
+			inFile.read(reinterpret_cast<char*>(stagingMeshData.animations_.data()), sizeof(Animation) * nAnimation);
+
+			uint32_t nChannel = header.animationChannelCount;
+			stagingMeshData.channels_.resize(nChannel);
+			inFile.read(reinterpret_cast<char*>(stagingMeshData.channels_.data()), sizeof(Channel) * nChannel);
+
+			uint32_t nV3Track = header.v3TrackCount;
+			stagingMeshData.vector3Tracks_.resize(nV3Track);
+			inFile.read(reinterpret_cast<char*>(stagingMeshData.vector3Tracks_.data()), sizeof(Vector3Track) * nV3Track);
+
+			uint32_t nQuatTrack = header.quatTrackCount;
+			stagingMeshData.quaternionTracks_.resize(nQuatTrack);
+			inFile.read(reinterpret_cast<char*>(stagingMeshData.quaternionTracks_.data()), sizeof(QuaternionTrack) * nQuatTrack);
+
+		}
+	}
 	
+	inFile.close();
+
 	// Allocate GPU Memory
 	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
 	gfx::GPUBufferDesc bufferDesc;
@@ -457,8 +517,8 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	bufferDesc.size = header.indexDataSize;
 	stagingMeshData.indexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, nullptr);
 
-	gpuAllocator->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertices.data(), 0, header.vertexDataSize, nullptr);
-	gpuAllocator->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indices.data(), 0, header.indexDataSize, nullptr);
+	gpuAllocator->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize, nullptr);
+	gpuAllocator->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize, nullptr);
 	return TraverseNode(0, ecs::INVALID_ENTITY, stagingMeshData);
 }
 

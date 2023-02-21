@@ -409,9 +409,9 @@ namespace MeshConverter {
 		{
 			aiAnimation* aiAnimation = aiAnimations[i];
 			Animation currentAnimation = {
-				(float)aiAnimation->mTicksPerSecond,
-				(float)aiAnimation->mDuration,
-				(uint32_t)channels.size() - 1,
+				(float)aiAnimation->mTicksPerSecond / 1000.0f,
+				(float)aiAnimation->mDuration / 1000.0f,
+				(uint32_t)channels.size(),
 				aiAnimation->mNumChannels
 			};
 			animations.push_back(currentAnimation);
@@ -429,29 +429,29 @@ namespace MeshConverter {
 				
 				Channel currentChannel = {};
 				currentChannel.boneId = (uint32_t)std::distance(bones.begin(), found);
-				currentChannel.translationTrack = (uint32_t)v3Track.size() - 1;
+				currentChannel.translationTrack = (uint32_t)v3Track.size();
 				currentChannel.traslationCount = animNode->mNumPositionKeys;
 
 				for (uint32_t t = 0; t < animNode->mNumPositionKeys; ++t)
 				{
 					aiVectorKey key = animNode->mPositionKeys[t];
-					v3Track.push_back(Vector3Track{glm::vec3(key.mValue[0], key.mValue[1], key.mValue[2]), (float)key.mTime});
+					v3Track.push_back(Vector3Track{glm::vec3(key.mValue[0], key.mValue[1], key.mValue[2]), (float)key.mTime / 1000.0f});
 				}
 
-				currentChannel.rotationTrack = (uint32_t)rotationTrack.size() - 1;
+				currentChannel.rotationTrack = (uint32_t)rotationTrack.size();
 				currentChannel.rotationCount = animNode->mNumRotationKeys;
 				for (uint32_t t = 0; t < animNode->mNumRotationKeys; ++t)
 				{
 					aiQuatKey key = animNode->mRotationKeys[t];
-					rotationTrack.push_back(QuaternionTrack{glm::fquat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z), (float)key.mTime});
+					rotationTrack.push_back(QuaternionTrack{glm::fquat(key.mValue.w, key.mValue.x, key.mValue.y, key.mValue.z), (float)key.mTime / 1000.0f});
 				}
 
-				currentChannel.scalingTrack = (uint32_t)v3Track.size() - 1;
+				currentChannel.scalingTrack = (uint32_t)v3Track.size();
 				currentChannel.scalingCount = animNode->mNumScalingKeys;
 				for (uint32_t t = 0; t < animNode->mNumScalingKeys; ++t)
 				{
 					aiVectorKey key = animNode->mScalingKeys[t];
-					v3Track.push_back(Vector3Track{ glm::vec3(key.mValue[0], key.mValue[1], key.mValue[2]), (float)key.mTime });
+					v3Track.push_back(Vector3Track{ glm::vec3(key.mValue[0], key.mValue[1], key.mValue[2]), (float)key.mTime / 1000.0f });
 				}
 
 				channels.push_back(currentChannel);

@@ -101,6 +101,7 @@ private:
 	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
 	std::shared_ptr<gfx::GPUBuffer> mMaterialBuffer;
+	std::shared_ptr<gfx::GPUBuffer> mSkinnedMatrixBuffer;
 
 	std::shared_ptr<gfx::RenderPass> mHdrRenderPass;
 	std::shared_ptr<gfx::Framebuffer> mHdrFramebuffer;

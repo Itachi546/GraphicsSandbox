@@ -44,7 +44,7 @@ struct AnimatedVertex : public Vertex
 	{
 		for (uint32_t i = 0; i < NUM_BONE_PER_VERTEX; ++i)
 		{
-			ids[i] = 255;
+			ids[i] = -1;
 			weights[i] = 0.0f;
 		}
 	}
@@ -53,7 +53,7 @@ struct AnimatedVertex : public Vertex
 	{
 		for (uint32_t i = 0; i < NUM_BONE_PER_VERTEX; ++i)
 		{
-			if (ids[i] == 255)
+			if (ids[i] == -1)
 			{
 				ids[i] = boneId;
 				weights[i] = weight;
@@ -64,7 +64,7 @@ struct AnimatedVertex : public Vertex
 	}
 
 	// BoneId
-	uint8_t ids[NUM_BONE_PER_VERTEX];
+	int ids[NUM_BONE_PER_VERTEX];
 
 	// Bone Weight/Influence
 	float weights[NUM_BONE_PER_VERTEX];
@@ -220,7 +220,7 @@ struct Animation
 	float framePerSecond;
 	float duration;
 	uint32_t channelStart;
-	uint32_t channelEnd;
+	uint32_t channelCount;
 };
 
 struct MeshData

@@ -17,7 +17,7 @@ int main(int argc, char** argv)
 	*/
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	GLFWwindow* window = glfwCreateWindow(1360, 769, "Hello World", 0, 0);
-	glfwSwapInterval(1);
+	glfwSwapInterval(0);
 	application->SetWindow(window, false);
 	application->Initialize();
 	Logger::Debug("Total Initialization: " + std::to_string(timer.elapsedSeconds()));

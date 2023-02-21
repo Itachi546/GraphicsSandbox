@@ -53,7 +53,7 @@ void Application::Run()
 
 	mDeltaTime = float(std::max(0.0, mTimer.elapsed())) * 0.001f;
 	mTimer.record();
-	const float dt = mLockFrameRate ? (1.0f / mTargetFrameRate) : mDeltaTime;
+	const float dt = mDeltaTime;
 	mElapsedTime += dt;
 
 	update_(dt);
@@ -184,7 +184,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	gfx::SwapchainDesc swapchainDesc = {};
 	swapchainDesc.width = mWidth;
 	swapchainDesc.height = mHeight;
-	swapchainDesc.vsync = false;
+	swapchainDesc.vsync = true;
 	swapchainDesc.colorFormat = mSwapchainColorFormat;
 	swapchainDesc.depthFormat = mSwapchainDepthFormat;
 	swapchainDesc.fullscreen = false;

@@ -77,16 +77,8 @@ private:
 
 	void UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
 
-	struct StagingMeshData
+	struct StagingMeshData : public MeshData
 	{
-		std::vector<Node> nodes;
-		std::vector<SkeletonNode> skeletonNodes;
-		std::vector<Mesh> meshes;
-		std::vector<BoundingBox> boundingBoxes;
-		std::vector<char> vertices;
-		std::vector<char> indices;
-		std::vector<MaterialComponent> materials;
-		std::vector<std::string> textures;
 		std::shared_ptr<gfx::GPUBuffer> vertexBuffer;
 		std::shared_ptr<gfx::GPUBuffer> indexBuffer;
 	};
@@ -96,7 +88,7 @@ private:
 		const StagingMeshData& stagingData);
 
 	void ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vector<SkeletonNode>& skeletonNodes);
-
+	void ParseAnimation(const StagingMeshData& mesh, std::vector<AnimationClip>& animationClips);
 	void UpdateEntity(
 		ecs::Entity entity,
 		uint32_t nodeIndex,

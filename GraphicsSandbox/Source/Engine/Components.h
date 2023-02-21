@@ -29,6 +29,7 @@ struct DrawData
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
 	uint32_t elmSize;
+	ecs::Entity entity;
 };
 
 struct NameComponent
@@ -179,6 +180,13 @@ struct MeshRenderer : public IMeshRenderer
 	}
 };
 
+struct AnimationClip
+{
+	Animation animation;
+	std::vector<TransformTrack> transformTracks;
+	float currentTime = 0.0f;
+};
+
 struct SkinnedMeshRenderer : public IMeshRenderer
 {
 	SkinnedMeshRenderer() {
@@ -190,8 +198,16 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 
 	Skeleton skeleton;
 
+	// Animation Clip
+	std::vector<AnimationClip> animationClips;
+
 	uint32_t GetVertexOffset() const {
 		assert(0);
+	}
+
+	void AddAnimationClip(AnimationClip animationClip)
+	{
+		animationClips.push_back(std::move(animationClip));
 	}
 
 	void CopyVertices(void* data, uint32_t count) override
@@ -213,7 +229,6 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 	uint32_t GetIndexCount() const override {
 		return static_cast<uint32_t>(indices->size());
 	}
-
 
 	virtual ~SkinnedMeshRenderer() = default;
 };

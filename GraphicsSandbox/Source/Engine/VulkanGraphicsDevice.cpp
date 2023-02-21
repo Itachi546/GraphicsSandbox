@@ -1012,7 +1012,7 @@ namespace gfx {
             }
         }
         else {
-            presentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+            presentMode = VK_PRESENT_MODE_FIFO_KHR;
         }
 
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };

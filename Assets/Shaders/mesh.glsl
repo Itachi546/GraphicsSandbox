@@ -27,7 +27,7 @@ struct AnimatedVertex
 	float tu, tv;
 	uint8_t tx, ty, tz;
 	uint8_t bx, by, bz;
-	uint8_t boneId[4];
+	int boneId[4];
 	float boneWeight[4];
 };
 

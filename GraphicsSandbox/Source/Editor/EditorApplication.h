@@ -22,7 +22,8 @@ private:
 	Camera* mCamera;
 	void InitializeScene();
 	void InitializeCSMScene();
-	void DrawSkeletonHierarchy(Skeleton& skeleton, const glm::mat4& parentTransform, uint32_t current, uint32_t parent, ImDrawList* drawList);
+	void DrawSkeletonHierarchy(Skeleton& skeleton, uint32_t current, uint32_t parent, ImDrawList* drawList);
+	void UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform);
 	void DrawSkeleton();
 
 	std::shared_ptr<SceneHierarchy> mHierarchy;

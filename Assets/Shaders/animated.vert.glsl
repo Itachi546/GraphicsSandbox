@@ -5,6 +5,8 @@
 
 #include "mesh.glsl"
 
+#define MAX_WEIGHT 4
+#define MAX_BONE_COUNT 80
 layout(location = 0) out VS_OUT 
 {
    vec3 normal;
@@ -49,11 +51,17 @@ layout(binding = 1) readonly buffer Vertices
    AnimatedVertex aVertices[];
 };
 
+layout(binding = 2) uniform readonly SkinnedMatrix
+{
+  mat4 jointTransforms[MAX_BONE_COUNT];
+};
+
 layout(push_constant) uniform PushConstants {
   mat4 modelMatrix;
 };
 
-vec3 BONE_COLORS[4] = vec3[4](
+
+vec3 BONE_COLORS[MAX_WEIGHT] = vec3[MAX_WEIGHT](
    vec3(1.0, 0.0, 0.0),
    vec3(0.0, 1.0, 0.0),
    vec3(0.0, 0.0, 1.0),
@@ -69,8 +77,24 @@ void main()
    //PerObjectData perObjectData = aPerObjectData[gl_DrawIDARB];
 
    vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
+   vec3 normal = UnpackU8toFloat(vertex.nx, vertex.ny, vertex.nz);
+   vec4 totalLocalPosition = vec4(0.0);
+   vec4 totalLocalNormal = vec4(0.0);
 
-   vec4 wP = modelMatrix * vertex.boneWeight[0] * vec4(position, 1.0);
+   for(int i = 0; i < MAX_WEIGHT; ++i)
+   {
+      int boneId = vertex.boneId[i];
+      if(boneId == -1) continue;
+      mat4 jointTransform = jointTransforms[boneId];
+      vec4 posePosition = jointTransform * vec4(position, 1.0);
+      totalLocalPosition += posePosition * vertex.boneWeight[i];
+
+      vec4 worldNormal = jointTransform * vec4(normal, 0.0);
+      totalLocalNormal += worldNormal * vertex.boneWeight[i];
+   }
+
+   vec4 wP = totalLocalPosition;
+   //vec4 wP = modelMatrix * vec4(position, 1.0f);
    gl_Position = globals.VP * wP;
 
    // Calculate normal matrix
@@ -79,7 +103,7 @@ void main()
    vs_out.uv = vec2(vertex.tu, vertex.tv);
 
    mat3 normalTransform = mat3(transpose(inverse(modelMatrix)));
-   vs_out.normal    = normalTransform * UnpackU8toFloat(vertex.nx, vertex.ny, vertex.nz);
+   vs_out.normal    = normalTransform * totalLocalNormal.xyz;
    vs_out.tangent   = normalTransform * UnpackU8toFloat(vertex.tx, vertex.ty, vertex.tz);
    vs_out.bitangent = normalTransform * UnpackU8toFloat(vertex.bx, vertex.by, vertex.bz);
    vs_out.lsPos     = vec3(globals.V * wP);

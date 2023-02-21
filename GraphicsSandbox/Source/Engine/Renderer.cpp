@@ -152,6 +152,9 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 	auto cascadeInfoBuffer = mShadowMap->mBuffer.get();
 
 	auto compMgr = mScene->GetComponentManager();
+	// @TODO Maybe we can reuse the same data that is already uploaded to GPU for shadow pass
+	// in the main rendering pass also.
+	uint32_t skinnedBufferOffset = 0;
 	for (auto& drawData : drawDatas)
 	{
 		gfx::BufferView& vbView = drawData.vertexBuffer;
@@ -163,16 +166,17 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 		auto skinnedMeshComp = compMgr->GetComponent<SkinnedMeshRenderer>(drawData.entity);
 		std::vector<glm::mat4>& skinnedMatrix = skinnedMeshComp->skeleton.mFinalTransform;
 		assert(skinnedMatrix.size() <= MAX_BONE_COUNT);
-		glm::mat4* ptr = static_cast<glm::mat4*>(mSkinnedMatrixBuffer->mappedDataPtr);
-		std::memcpy(ptr, skinnedMatrix.data(), skinnedMatrix.size() * sizeof(glm::mat4));
 
+		uint32_t dataSize = static_cast<uint32_t>(skinnedMatrix.size() * sizeof(glm::mat4));
+		glm::mat4* ptr = static_cast<glm::mat4*>(mSkinnedMatrixBuffer->mappedDataPtr) + (skinnedBufferOffset / sizeof(glm::mat4));
+		std::memcpy(ptr, skinnedMatrix.data(), dataSize);
 
 		// TODO: Define static Descriptor beforehand
 		gfx::DescriptorInfo descriptorInfos[3] = {};
 
 		descriptorInfos[0] = { cascadeInfoBuffer, 0, cascadeInfoBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
 		descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
-		descriptorInfos[2] = { mSkinnedMatrixBuffer.get(), 0, mSkinnedMatrixBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+		descriptorInfos[2] = { mSkinnedMatrixBuffer.get(), skinnedBufferOffset, dataSize,gfx::DescriptorType::UniformBuffer };
 
 		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, pipeline);
@@ -180,6 +184,8 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 
 		mDevice->BindIndexBuffer(commandList, ib.get());
 		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
+
+		skinnedBufferOffset += dataSize;
 	}
 }
 
@@ -343,7 +349,7 @@ void Renderer::initializeBuffers()
 	mDevice->CreateBuffer(&uniformBufferDesc, mGlobalUniformBuffer.get());
 
 	// Skinned Matrix Buffer;
-	uniformBufferDesc.size = sizeof(glm::mat4) * MAX_BONE_COUNT;
+	uniformBufferDesc.size = sizeof(glm::mat4) * MAX_BONE_COUNT * 10;
 	mSkinnedMatrixBuffer = std::make_shared<gfx::GPUBuffer>();
 	mDevice->CreateBuffer(&uniformBufferDesc, mSkinnedMatrixBuffer.get());
 
@@ -449,6 +455,7 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
 
 	gfx::Pipeline* pipeline = mSkinnedMeshPipeline.get();
 	auto compMgr = mScene->GetComponentManager();
+	uint32_t skinnedBufferOffset = 0;
 	for (auto& drawData : drawDatas)
 	{
 		gfx::BufferView& vbView = drawData.vertexBuffer;
@@ -461,21 +468,24 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
 		auto skinnedMeshComp = compMgr->GetComponent<SkinnedMeshRenderer>(drawData.entity);
 		std::vector<glm::mat4>& skinnedMatrix = skinnedMeshComp->skeleton.mFinalTransform;
 		assert(skinnedMatrix.size() <= MAX_BONE_COUNT);
-		glm::mat4* ptr = static_cast<glm::mat4*>(mSkinnedMatrixBuffer->mappedDataPtr);
-		std::memcpy(ptr, skinnedMatrix.data(), skinnedMatrix.size() * sizeof(glm::mat4));
+		glm::mat4* ptr = static_cast<glm::mat4*>(mSkinnedMatrixBuffer->mappedDataPtr) + (skinnedBufferOffset / sizeof(glm::mat4));
+
+		uint32_t dataSize = static_cast<uint32_t>(skinnedMatrix.size()) * sizeof(glm::mat4);
+		std::memcpy(ptr, skinnedMatrix.data(), dataSize);
 
 		// TODO: Define static Descriptor beforehand
 		gfx::DescriptorInfo descriptorInfos[10] = {};
-
 		descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 		descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
-		descriptorInfos[2] = { mSkinnedMatrixBuffer.get(), 0, mSkinnedMatrixBuffer->desc.size,gfx::DescriptorType::UniformBuffer };
+		descriptorInfos[2] = { mSkinnedMatrixBuffer.get(), skinnedBufferOffset, dataSize, gfx::DescriptorType::UniformBuffer };
 		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, pipeline);
 		mDevice->PushConstants(commandList, pipeline, gfx::ShaderStage::Vertex, &drawData.worldTransform[0], sizeof(glm::mat4), 0);
 
 		mDevice->BindIndexBuffer(commandList, ib.get());
 		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
+
+		skinnedBufferOffset += dataSize;
 	}
 }
 

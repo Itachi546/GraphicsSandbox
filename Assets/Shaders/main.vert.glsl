@@ -39,7 +39,7 @@ void main()
    vs_out.worldPos	= wP.xyz;
    vs_out.uv = vec2(vertex.tu, vertex.tv);
 
-   mat3 normalTransform = mat3(transpose(inverse(worldMatrix)));
+   mat3 normalTransform = mat3(worldMatrix);//mat3(transpose(inverse(worldMatrix)));
    vs_out.normal    = normalTransform * UnpackU8toFloat(vertex.nx, vertex.ny, vertex.nz);
    vs_out.tangent   = normalTransform * UnpackU8toFloat(vertex.tx, vertex.ty, vertex.tz);
    vs_out.bitangent = normalTransform * UnpackU8toFloat(vertex.bx, vertex.by, vertex.bz);

@@ -180,7 +180,6 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 
 		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, pipeline);
-		mDevice->PushConstants(commandList, pipeline, gfx::ShaderStage::Vertex, &drawData.worldTransform[0], sizeof(glm::mat4), 0);
 
 		mDevice->BindIndexBuffer(commandList, ib.get());
 		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
@@ -263,7 +262,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		}
 
 		// Draw Skinned Mesh
-		DrawSkinnedMesh(commandList);
+		DrawSkinnedMesh(commandList, offset);
 
 		mDevice->EndDebugMarker(commandList);
 
@@ -448,14 +447,66 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer.get(), lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 }
 
-void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
+// Offset parameter is used to reuse the Material Buffer
+void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset)
 {
 	std::vector<DrawData> drawDatas;
 	mScene->GenerateSkinnedMeshDrawData(drawDatas);
 
 	gfx::Pipeline* pipeline = mSkinnedMeshPipeline.get();
 	auto compMgr = mScene->GetComponentManager();
+
+	// Copy Materials
+	std::array<gfx::GPUTexture, 64> textures;
+	std::fill(textures.begin(), textures.end(), *TextureCache::GetDefaultTexture());
+
+	std::vector<MaterialComponent> materials;
+	uint32_t textureIndex = 0;
+	auto addUnique = [&textures, &textureIndex](gfx::GPUTexture* texture) -> uint32_t {
+		auto found = std::find_if(textures.begin(), textures.end(), [texture](const gfx::GPUTexture& current) {
+			return texture->internalState == current.internalState;
+			});
+
+		if (found != textures.end())
+			return (uint32_t)(std::distance(textures.begin(), found));
+
+		textures[textureIndex++] = *texture;
+		return textureIndex - 1;
+	};
+
+	for (auto& drawData : drawDatas)
+	{
+		MaterialComponent material = *drawData.material;
+		for (int i = 0; i < std::size(material.textures); ++i)
+		{
+			if (IsTextureValid(material.textures[i]))
+				material.textures[i] = addUnique(TextureCache::GetByIndex(material.textures[i]));
+		}
+		materials.push_back(std::move(material));
+	}
+
+	uint32_t materialCount = (uint32_t)materials.size();
+	MaterialComponent* materialCompPtr = static_cast<MaterialComponent*>(mMaterialBuffer->mappedDataPtr) + offset;
+	std::memcpy(materialCompPtr, materials.data(), materialCount * sizeof(MaterialComponent));
+
+	auto& envMap = mScene->GetEnvironmentMap();
+
+	gfx::DescriptorInfo descriptorInfos[10] = {};
+	descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+	descriptorInfos[4] = { envMap->GetIrradianceMap().get(), 0, 0, gfx::DescriptorType::Image };
+	descriptorInfos[5] = { envMap->GetPrefilterMap().get(), 0, 0, gfx::DescriptorType::Image };
+	descriptorInfos[6] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
+	descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
+	descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
+	gfx::DescriptorInfo imageArrInfo = {};
+	imageArrInfo.resource = textures.data();
+	imageArrInfo.offset = 0;
+	imageArrInfo.size = 64;
+	imageArrInfo.type = gfx::DescriptorType::ImageArray;
+	descriptorInfos[9] = imageArrInfo;
+
 	uint32_t skinnedBufferOffset = 0;
+	uint32_t materialOffset = offset;
 	for (auto& drawData : drawDatas)
 	{
 		gfx::BufferView& vbView = drawData.vertexBuffer;
@@ -474,18 +525,18 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList)
 		std::memcpy(ptr, skinnedMatrix.data(), dataSize);
 
 		// TODO: Define static Descriptor beforehand
-		gfx::DescriptorInfo descriptorInfos[10] = {};
-		descriptorInfos[0] = { mGlobalUniformBuffer.get(), 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 		descriptorInfos[1] = { vb.get(), 0, vb->desc.size,gfx::DescriptorType::StorageBuffer };
 		descriptorInfos[2] = { mSkinnedMatrixBuffer.get(), skinnedBufferOffset, dataSize, gfx::DescriptorType::UniformBuffer };
+		descriptorInfos[3] = { mMaterialBuffer.get(), (uint32_t)(materialOffset * sizeof(MaterialComponent)), (uint32_t)sizeof(MaterialComponent), gfx::DescriptorType::StorageBuffer };
+
 		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, pipeline);
-		mDevice->PushConstants(commandList, pipeline, gfx::ShaderStage::Vertex, &drawData.worldTransform[0], sizeof(glm::mat4), 0);
 
 		mDevice->BindIndexBuffer(commandList, ib.get());
 		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
 
 		skinnedBufferOffset += dataSize;
+		materialOffset += 1;
 	}
 }
 

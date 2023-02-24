@@ -13,10 +13,6 @@ layout(binding = 1) readonly buffer Vertices
    AnimatedVertex aVertices[];
 };
 
-layout(push_constant) uniform PushConstants {
-  mat4 modelMatrix;
-};
-
 layout(binding = 2) uniform readonly SkinnedMatrix
 {
   mat4 jointTransforms[MAX_BONE_COUNT];

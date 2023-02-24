@@ -382,5 +382,6 @@
       <Filter>SHADERS</Filter>
     </None>
     <None Include="packages.config" />
+    <None Include="..\Assets\Shaders\material.glsl" />
   </ItemGroup>
 </Project>

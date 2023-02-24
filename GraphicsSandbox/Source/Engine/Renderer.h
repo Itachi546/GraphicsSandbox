@@ -118,7 +118,7 @@ private:
 	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
 	void DrawShadowMap(gfx::CommandList* commandList);
 	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::Pipeline* pipeline);
-	void DrawSkinnedMesh(gfx::CommandList* commandList);
+	void DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset);
 	void DrawSkinnedShadow(gfx::CommandList* commandList);
 
 	void CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch);

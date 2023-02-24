@@ -1,3 +1,6 @@
+#extension GL_GOOGLE_include_directive: require
+#include "material.glsl"
+
 struct LightData
 {
     vec3 position;
@@ -5,7 +8,6 @@ struct LightData
 	vec3 color;
 	float type;
 };
-
 
 layout(binding = 0) uniform readonly Globals
 {

@@ -98,7 +98,7 @@ void SceneHierarchy::CreateSkeletonNode(uint32_t parent, Skeleton& skeleton)
 
 void SceneHierarchy::CreateSkeletonHierarchy(SkinnedMeshRenderer* meshRenderer)
 {
-	CreateSkeletonNode(0, meshRenderer->skeleton);
+	CreateSkeletonNode(meshRenderer->skeleton.GetRootBone(), meshRenderer->skeleton);
 }
 
 void SceneHierarchy::CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> componentManager)

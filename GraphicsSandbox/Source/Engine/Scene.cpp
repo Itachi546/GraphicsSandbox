@@ -215,7 +215,7 @@ void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector
 }
 
 
-void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vector<SkeletonNode>& skeletonNodes)
+void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, uint32_t rootBone, const std::vector<SkeletonNode>& skeletonNodes)
 {
 	skeleton.Resize(mesh.boneCount);
 
@@ -225,7 +225,8 @@ void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vecto
 	Pose& bindPose = skeleton.GetBindPose();
 	bindPose.Resize(mesh.boneCount);
 
-	TraverseSkeletonHierarchy(0, ~0u, skeletonNodes, skeleton);
+	skeleton.SetRootBone(skeletonNodes[rootBone].boneIndex);
+	TraverseSkeletonHierarchy(rootBone, ~0u, skeletonNodes, skeleton);
 }
 
 void Scene::ParseAnimation(const StagingMeshData& meshData, std::vector<AnimationClip>& animationClips)
@@ -314,7 +315,7 @@ void Scene::UpdateEntity(ecs::Entity parent,
 				meshRenderer->SetSkinned(true);
 				SkinnedMeshRenderer* skinnedMeshRenderer = reinterpret_cast<SkinnedMeshRenderer*>(meshRenderer);
 				// Parse Skeleton
-				ParseSkeleton(mesh, skinnedMeshRenderer->skeleton, stagingMeshData.skeletonNodes_);
+				ParseSkeleton(mesh, skinnedMeshRenderer->skeleton, mesh.skeletonIndex, stagingMeshData.skeletonNodes_);
 				ParseAnimation(stagingMeshData, skinnedMeshRenderer->animationClips);
 			}
 			meshRenderer->vertexBuffer.buffer = stagingMeshData.vertexBuffer;

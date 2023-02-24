@@ -198,6 +198,7 @@ protected:
 	Pose mRestPose;
 	Pose mBindPose;
 
+	uint32_t mRootBone;
 	std::vector<glm::mat4> mInvBindPose;
 	std::vector<std::string> mJointNames;
 
@@ -208,7 +209,14 @@ public:
 	Skeleton();
 	Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
 	void Set(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
+	void SetRootBone(uint32_t rootBone) {
+		mRootBone = rootBone;
+	}
 
+	uint32_t GetRootBone()
+	{
+		return mRootBone;
+	}
 	void Resize(uint32_t size)
 	{
 		mInvBindPose.resize(size);

@@ -2380,16 +2380,12 @@ namespace gfx {
             }
             else if (resource->IsTexture())
             {
-                uint32_t size = 1;
                 uint32_t totalSize = 1;
                 uint32_t mipLevel = 0;
                 if (info.type == DescriptorType::Image)
                     mipLevel = info.mipLevel;
                 else if (info.type == DescriptorType::ImageArray)
-                {
-                    size = info.size;
-                    totalSize = 64;
-                }
+                    totalSize = info.size;
 
                 gfx::GPUTexture* textures = (gfx::GPUTexture*)(resource);
                 for (uint32_t imageIndex = 0; imageIndex < totalSize; ++imageIndex)

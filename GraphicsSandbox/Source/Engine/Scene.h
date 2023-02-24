@@ -87,7 +87,7 @@ private:
 		ecs::Entity parent,
 		const StagingMeshData& stagingData);
 
-	void ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, const std::vector<SkeletonNode>& skeletonNodes);
+	void ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, uint32_t rootBone, const std::vector<SkeletonNode>& skeletonNodes);
 	void ParseAnimation(const StagingMeshData& mesh, std::vector<AnimationClip>& animationClips);
 	void UpdateEntity(
 		ecs::Entity entity,

@@ -396,6 +396,7 @@ namespace gfx
 			uint32_t mipLevel;
 		};
 		DescriptorType type = DescriptorType::StorageBuffer;
+		uint32_t totalSize = 64;
 	};
 
 	struct Framebuffer : public GraphicsDeviceResource

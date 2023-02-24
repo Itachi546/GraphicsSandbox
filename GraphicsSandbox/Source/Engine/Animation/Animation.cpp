@@ -11,3 +11,4 @@ Skeleton::Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::st
 void Skeleton::Set(const Pose& rest, const Pose& bind, const std::vector<std::string>& names)
 {
 }
+

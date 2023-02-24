@@ -317,6 +317,7 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />
+    <None Include="..\Assets\Shaders\material.glsl" />
     <None Include="..\Assets\Shaders\mesh.glsl">
       <FileType>Document</FileType>
     </None>

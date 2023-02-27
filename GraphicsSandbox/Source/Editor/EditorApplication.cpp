@@ -11,6 +11,7 @@
 #include "ImGui/IconsFontAwesome5.h"
 
 #include "TransformGizmo.h"
+#include "../Engine/Animation/Animation.h"
 #include "../Engine/Interpolator.h"
 #include <iomanip>
 #include <algorithm>
@@ -186,19 +187,14 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
 }
-
-glm::mat4 CalculateCurrentTransform(uint32_t node, const TransformTrack& track, float time)
-{
-	return track.CalculateTransform(time);
-}
-
+/*
 void EditorApplication::UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform)
 {
 	// Local Transform
 	glm::mat4 invBindPose = skeleton.GetInvBindPose(node);
 	glm::mat4 boneTransform = skeleton.mLocalTransform[node];
-	if (node < animationClip.transformTracks.size())
-		boneTransform = CalculateCurrentTransform(node, animationClip.transformTracks[node], animationClip.currentTime);
+	if (node < animationClip.GetNumTrack())
+		boneTransform = CalculateCurrentTransform(node, animationClip[node], mCurrentTime);
 
 	glm::mat4 currentTransform = parentTransform * boneTransform;
 	skeleton.mFinalTransform[node] = currentTransform * invBindPose;
@@ -210,6 +206,7 @@ void EditorApplication::UpdateSkeletonTransform(Skeleton& skeleton, const Animat
 			UpdateSkeletonTransform(skeleton, animationClip, child, currentTransform);
 	}
 }
+*/
 
 void EditorApplication::PreUpdate(float dt) {
 
@@ -247,8 +244,14 @@ void EditorApplication::PreUpdate(float dt) {
 		mShowUI = !mShowUI;
 
 	mHierarchy->Update(dt);
+	mCurrentTime += dt;
+
 	auto compMgr = mScene.GetComponentManager();
 	auto skinnedMeshRenderers = compMgr->GetComponentArray<SkinnedMeshRenderer>();
+	if (Input::Down(Input::Key::KEY_F)) {
+		mCurrentTime = 0.0f;
+	}
+
 	for (uint32_t i = 0; i < skinnedMeshRenderers->GetCount(); ++i)
 	{
 		const ecs::Entity entity = skinnedMeshRenderers->entities[i];
@@ -257,12 +260,12 @@ void EditorApplication::PreUpdate(float dt) {
 		TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(entity);
 
 		AnimationClip& animationClip = meshRenderer.animationClips[0];
-		animationClip.currentTime += dt * animationClip.animation.framePerSecond;
-		animationClip.currentTime = fmod(animationClip.currentTime, animationClip.animation.duration);
-		UpdateSkeletonTransform(meshRenderer.skeleton, animationClip, meshRenderer.skeleton.GetRootBone(), transform->worldMatrix);
+		animationClip.SetLooping(false);
+
+		Pose& animatedPose = meshRenderer.skeleton.GetAnimatedPose();
+		animatedPose.SetDirty(true);
+		animationClip.Sample(animatedPose, mCurrentTime * animationClip.GetTickPerSeconds());
 	}
-
-
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -280,9 +283,9 @@ void EditorApplication::InitializeScene()
 	auto compMgr = mScene.GetComponentManager();
 
 	//character = mScene.CreateMesh("Assets/Models/character2.sbox");
+
 	character = mScene.CreateMesh("Assets/Models/michelle.sbox");
 	compMgr->GetComponent<TransformComponent>(character)->position = glm::vec3(4.0f, 0.0f, 6.0f);
-
 	ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/ortiz.sbox");
 
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
@@ -323,7 +326,7 @@ void EditorApplication::InitializeCSMScene()
 	comp->scale = glm::vec3(40.0f);
 }
 
-void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, uint32_t current, uint32_t parent, ImDrawList* drawList)
+void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, int current, int parent, ImDrawList* drawList)
 {
 	glm::vec3 currentPosition = skeleton.mLocalTransform[current] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	static const uint32_t color = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
@@ -336,7 +339,7 @@ void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, uint32_t curre
 		drawList->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), color, 2.0f);
 	}
 
-	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(current);
+	std::vector<int> childrens = skeleton.GetBindPose().FindChildren(current);
 	if (childrens.size() > 0)
 	{
 		for (auto child : childrens)

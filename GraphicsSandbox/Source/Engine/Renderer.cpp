@@ -164,7 +164,11 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 		auto& ib = ibView.buffer;
 
 		auto skinnedMeshComp = compMgr->GetComponent<SkinnedMeshRenderer>(drawData.entity);
-		std::vector<glm::mat4>& skinnedMatrix = skinnedMeshComp->skeleton.mFinalTransform;
+		std::vector<glm::mat4> skinnedMatrix;
+		skinnedMeshComp->skeleton.GetAnimatedPose().GetMatrixPallete(skinnedMatrix);
+		for (uint32_t i = 0; i < skinnedMatrix.size(); ++i)
+			skinnedMatrix[i] = drawData.worldTransform * skinnedMatrix[i] * skinnedMeshComp->skeleton.GetInvBindPose(i);
+
 		assert(skinnedMatrix.size() <= MAX_BONE_COUNT);
 
 		uint32_t dataSize = static_cast<uint32_t>(skinnedMatrix.size() * sizeof(glm::mat4));
@@ -517,7 +521,11 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset)
 
 		// Copy the skinned matrix to the buffer
 		auto skinnedMeshComp = compMgr->GetComponent<SkinnedMeshRenderer>(drawData.entity);
-		std::vector<glm::mat4>& skinnedMatrix = skinnedMeshComp->skeleton.mFinalTransform;
+		std::vector<glm::mat4> skinnedMatrix;
+		skinnedMeshComp->skeleton.GetAnimatedPose().GetMatrixPallete(skinnedMatrix);
+		for (uint32_t i = 0; i < skinnedMatrix.size(); ++i)
+			skinnedMatrix[i] = drawData.worldTransform * skinnedMatrix[i] * skinnedMeshComp->skeleton.GetInvBindPose(i);
+
 		assert(skinnedMatrix.size() <= MAX_BONE_COUNT);
 		glm::mat4* ptr = static_cast<glm::mat4*>(mSkinnedMatrixBuffer->mappedDataPtr) + (skinnedBufferOffset / sizeof(glm::mat4));
 

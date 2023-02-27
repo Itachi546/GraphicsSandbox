@@ -87,6 +87,7 @@ vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness)
     return normalize(sampleVec);
 }
 
+#ifdef FRAGMENT_SHADER
 void GetMetallicRoughness(sampler2D metallicMap, vec2 uv, inout float metallic, inout float roughness)
 {
 	vec4 metallicRoughness = texture(metallicMap, uv);
@@ -220,3 +221,4 @@ vec3 CalculateColor(in Material material)
 
 	return Lo;
 }
+#endif

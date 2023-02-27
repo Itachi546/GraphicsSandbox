@@ -180,13 +180,6 @@ struct MeshRenderer : public IMeshRenderer
 	}
 };
 
-struct AnimationClip
-{
-	Animation animation;
-	std::vector<TransformTrack> transformTracks;
-	float currentTime = 0.0f;
-};
-
 struct SkinnedMeshRenderer : public IMeshRenderer
 {
 	SkinnedMeshRenderer() {

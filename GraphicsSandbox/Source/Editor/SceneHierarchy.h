@@ -18,7 +18,7 @@ private:
 
 	void CreateHierarchyTab(std::shared_ptr<ecs::ComponentManager> mgr);
 
-	void CreateSkeletonNode(uint32_t parent, Skeleton& skeleton);
+	void CreateSkeletonNode(int parent, Skeleton& skeleton);
 
 	void CreateSkeletonHierarchy(SkinnedMeshRenderer* meshRenderer);
 

@@ -71,12 +71,12 @@ void SceneHierarchy::CreateTreeNode(ecs::Entity entity, std::shared_ptr<ecs::Com
 	ImGui::PopID();
 }
 
-void SceneHierarchy::CreateSkeletonNode(uint32_t parent, Skeleton& skeleton)
+void SceneHierarchy::CreateSkeletonNode(int parent, Skeleton& skeleton)
 {
 	ImGui::PushID(parent);
 	std::string name = std::string(ICON_FA_BONE) + " " + skeleton.GetJointName(parent);
 
-	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(parent);
+	std::vector<int> childrens = skeleton.GetBindPose().FindChildren(parent);
 	if (childrens.size() > 0)
 	{
 		bool nodeOpen = ImGui::TreeNodeEx(name.c_str());

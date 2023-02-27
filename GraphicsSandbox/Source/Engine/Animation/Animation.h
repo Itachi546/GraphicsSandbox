@@ -27,73 +27,20 @@ public:
 
 	void AddScale(std::vector<Vector3Track>& scales)
 	{
-		this->scale = std::move(scales);
+		this->scaling = std::move(scales);
 	}
 
-	glm::mat4 CalculateTransform(float time) const
-	{
-		uint32_t positionIndex = ~0u;
-		if (positions.size() > 0)
-		{
-			positionIndex = 0;
-			for (uint32_t i = 0; i < positions.size() - 1; ++i)
-			{
-				if (time < positions[i + 1].time)
-				{
-					positionIndex = i;
-					break;
-				}
-			}
-		}
+	void Sample(TransformComponent& out, float time) const;
 
-		uint32_t rotationIndex = ~0u;
-		if (rotations.size() > 0)
-		{
-			rotationIndex = 0;
-			for (uint32_t i = 0; i < rotations.size() - 1; ++i)
-			{
-				if (time < rotations[i + 1].time)
-				{
-					rotationIndex = i;
-					break;
-				}
-			}
-		}
-		uint32_t scalingIndex = ~0u;
-		if (scale.size() > 0)
-		{
-			scalingIndex = 0;
-			for (uint32_t i = 0; i < scale.size() - 1; ++i)
-			{
-				if (time < scale[i + 1].time) {
-					scalingIndex = i;
-					break;
-				}
-			}
-		}
-
-		if (positionIndex == ~0u)
-			return glm::mat4(1.0f);
-
-		glm::vec3 position = glm::vec3(0.0);
-		position = InterpolatePosition(positionIndex, time);
-
-		glm::fquat rotation = glm::fquat(1.0f, 0.0f, 0.0f, 0.0f);
-		rotation = InterpolateRotation(rotationIndex, time);
-
-		glm::vec3 scaling = glm::vec3(1.0f);
-		scaling = InterpolateScale(scalingIndex, time);
-
-		return glm::translate(glm::mat4(1.0f), position) *
-			glm::toMat4(rotation) *
-			glm::scale(glm::mat4(1.0f), scaling);
-	}
-
+private:
+	void SamplePosition(glm::vec3& position, float time) const;
+	void SampleRotation(glm::fquat& rotation, float time) const;
+	void SampleScaling(glm::vec3& scale, float time) const;
 
 private:
 	std::vector<Vector3Track> positions;
 	std::vector<QuaternionTrack> rotations;
-	std::vector<Vector3Track> scale;
+	std::vector<Vector3Track> scaling;
 
 	float CalculateTimeScale(float start, float end, float time) const
 	{
@@ -128,12 +75,12 @@ private:
 
 	glm::vec3 InterpolateScale(uint32_t index, float time) const
 	{
-		if (scale.size() == 1)
-			return scale[0].value;
+		if (scaling.size() == 1)
+			return scaling[0].value;
 
-		const uint32_t nextIndex = static_cast<uint32_t>((index + 1) % scale.size());
-		const Vector3Track& start = scale[index];
-		const Vector3Track& end = scale[nextIndex];
+		const uint32_t nextIndex = static_cast<uint32_t>((index + 1) % scaling.size());
+		const Vector3Track& start = scaling[index];
+		const Vector3Track& end = scaling[nextIndex];
 
 		float t = CalculateTimeScale(start.time, end.time, time);
 		return glm::lerp(start.value, end.value, t);
@@ -147,16 +94,31 @@ class Pose
 protected:
 	std::vector<TransformComponent> mJoints;
 	std::vector<int> mParents;
-
+	std::vector<glm::mat4> mMatrixPallete;
+	bool mDirty;
 public:
 	Pose(){}
+
+	Pose(const Pose& pose);
+	Pose& operator=(const Pose& other);
+
 
 	void Resize(uint32_t size) {
 		mJoints.resize(size);
 		mParents.resize(size);
+		mMatrixPallete.resize(size);
 	}
 
 	uint32_t GetSize() { return (uint32_t)mJoints.size(); }
+
+	TransformComponent GetGlobalTransform(uint32_t index) const
+	{
+		TransformComponent result = mJoints[index];
+		for (int parent = mParents[index]; parent >= 0; parent = mParents[parent]) {
+			result = TransformComponent::Combine(mJoints[parent], result);
+		}
+		return result;
+	}
 
 	TransformComponent& GetLocalTransform(uint32_t index) {
 		return mJoints[index];
@@ -169,18 +131,49 @@ public:
 	TransformComponent operator[](uint32_t index) {
 		return mJoints[index];
 	}
+/*
+	void CalculateMatrixPallete(int current, const TransformComponent& rootTransform)
+	{
+		TransformComponent currentTransform = TransformComponent::Combine(rootTransform, mJoints[current]);
+		mMatrixPallete[current] = currentTransform.CalculateWorldMatrix();
+		std::vector<int> childrens = FindChildren(current);
+		for (auto child : childrens)
+			CalculateMatrixPallete(child, currentTransform);
+	}
+	*/
+	void GetMatrixPallete(std::vector<glm::mat4>& out)
+	{
+		if (mDirty)
+		{
+			// Find Root Bone
+			auto found = std::find(mParents.begin(), mParents.end(), -1);
+			int rootBone = (int)std::distance(mParents.begin(), found);
+
+			uint32_t size = (uint32_t)mJoints.size();
+			if (size != mMatrixPallete.size())
+				mMatrixPallete.resize(size);
+
+			TransformComponent rootTransform = {};
+			for (uint32_t i = 0; i < mJoints.size(); ++i)
+				mMatrixPallete[i] = GetGlobalTransform(i).CalculateWorldMatrix();
+
+			//CalculateMatrixPallete(rootBone, rootTransform);
+			mDirty = false;
+		}
+		out = mMatrixPallete;
+	}
 
 	void SetParent(unsigned int index, int parent)
 	{
 		mParents[index] = parent;
 	}
 
-	std::vector<uint32_t> FindChildren(uint32_t parent)
+	std::vector<int> FindChildren(int parent)
 	{
-		std::vector<uint32_t> childrens;
+		std::vector<int> childrens;
 		for (auto it = mParents.begin(); it != mParents.end(); it++) {
 			if (*it == parent) {
-				childrens.push_back((uint32_t)std::distance(mParents.begin(), it));
+				childrens.push_back((int)std::distance(mParents.begin(), it));
 			}
 		}
 		return childrens;
@@ -190,6 +183,11 @@ public:
 	{
 		return mParents[index];
 	}
+
+	void SetDirty(bool state)
+	{
+		mDirty = state;
+	}
 };
 
 class Skeleton
@@ -197,6 +195,7 @@ class Skeleton
 protected:
 	Pose mRestPose;
 	Pose mBindPose;
+	Pose mAnimatedPose;
 
 	uint32_t mRootBone;
 	std::vector<glm::mat4> mInvBindPose;
@@ -204,7 +203,6 @@ protected:
 
 public:
 	std::vector<glm::mat4> mLocalTransform;
-	std::vector<glm::mat4> mFinalTransform;
 
 	Skeleton();
 	Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
@@ -217,16 +215,17 @@ public:
 	{
 		return mRootBone;
 	}
+
 	void Resize(uint32_t size)
 	{
 		mInvBindPose.resize(size);
 		mJointNames.resize(size);
 		mLocalTransform.resize(size);
-		mFinalTransform.resize(size);
 	}
 
 	Pose& GetBindPose() { return mBindPose; }
 	Pose& GetRestPose() { return mRestPose; }
+	Pose& GetAnimatedPose() { return mAnimatedPose; }
 
 	std::string& GetJointName(unsigned int index) {
 		return mJointNames[index];
@@ -250,3 +249,91 @@ public:
 		return mJointNames;
 	}
 };
+
+class AnimationClip
+{
+public:
+	AnimationClip() {
+		mName = "No name";
+		mTickPerSeconds = 1000.0f;
+		mStartTime = 0.0f;
+		mEndTime = 0.0f;
+		mLooping = true;
+	}
+
+	float GetDuration() const {
+		return mEndTime - mStartTime;
+	}
+
+	bool IsLooping() const {
+		return mLooping;
+	}
+
+	void SetLooping(bool looping)
+	{
+		mLooping = looping;
+	}
+
+	void SetTickPerSeconds(float tickPerSeconds)
+	{
+		mTickPerSeconds = tickPerSeconds;
+	}
+
+	void SetStartTime(float startTime)
+	{
+		mStartTime = startTime;
+	}
+
+	void SetEndTime(float endTime)
+	{
+		mEndTime = endTime;
+	}
+
+	float GetTickPerSeconds() const
+	{
+		return mTickPerSeconds;
+	}
+
+	const TransformTrack& operator[](unsigned int joint) const
+	{
+		return mTracks[joint];
+	}
+
+	std::string& GetName()
+	{
+		return mName;
+	}
+
+	void SetName(const std::string& name)
+	{
+		mName = name;
+	}
+
+	std::vector<TransformTrack>& GetTracks()
+	{
+		return mTracks;
+	}
+
+	void SetTrackAt(uint32_t index, TransformTrack& track)
+	{
+		mTracks[index] = track;
+	}
+
+	uint32_t GetNumTrack() const
+	{
+		return static_cast<uint32_t>(mTracks.size());
+	}
+
+	float Sample(Pose& pose, float time) const;
+
+protected:
+	std::string mName;
+	float mTickPerSeconds;
+	float mStartTime;
+	float mEndTime;
+	bool mLooping;
+	std::vector<TransformTrack> mTracks;
+
+	float AdjustTimeToFitRange(float time) const;
+};
+

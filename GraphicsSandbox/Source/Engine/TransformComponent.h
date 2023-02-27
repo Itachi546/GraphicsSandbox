@@ -13,7 +13,7 @@ struct TransformComponent
 	glm::mat4 worldMatrix{ 1.0f };
 
 	bool dirty = true;
-	void CalculateWorldMatrix()
+	glm::mat4 CalculateWorldMatrix()
 	{
 		if (dirty)
 		{
@@ -23,11 +23,25 @@ struct TransformComponent
 			worldMatrix = localMatrix;
 			dirty = false;
 		}
+		return worldMatrix;
 	}
 
 	glm::mat4 GetRotationMatrix()
 	{
 		return glm::toMat4(rotation);
 	}
+
+	static TransformComponent Combine(TransformComponent a, TransformComponent b)
+	{
+		TransformComponent out = {};
+		out.scale = a.scale * b.scale;
+		out.rotation = a.rotation * b.rotation;
+
+		out.position = a.rotation * (a.scale * b.position);
+		out.position += a.position;
+		out.dirty = true;
+		return out;
+	}
+
 };
 

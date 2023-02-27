@@ -200,6 +200,8 @@ void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector
 	*/
 	skeleton.GetBindPose().SetParent(node.boneIndex, parentIndex);
 	skeleton.GetRestPose().SetParent(node.boneIndex, parentIndex);
+	skeleton.GetAnimatedPose().SetParent(node.boneIndex, parentIndex);
+
 	skeleton.SetInvBindPose(node.boneIndex, node.offsetMatrix);
 	skeleton.mLocalTransform[node.boneIndex] = node.localTransform;
 
@@ -225,6 +227,9 @@ void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, uint32_t rootBon
 	Pose& bindPose = skeleton.GetBindPose();
 	bindPose.Resize(mesh.boneCount);
 
+	Pose& animatedPose = skeleton.GetAnimatedPose();
+	animatedPose.Resize(mesh.boneCount);
+
 	skeleton.SetRootBone(skeletonNodes[rootBone].boneIndex);
 	TraverseSkeletonHierarchy(rootBone, ~0u, skeletonNodes, skeleton);
 }
@@ -234,12 +239,15 @@ void Scene::ParseAnimation(const StagingMeshData& meshData, std::vector<Animatio
 	for (auto& animation : meshData.animations_)
 	{
 		AnimationClip animationClip = {};
-		animationClip.animation = animation;
+		animationClip.SetTickPerSeconds(animation.framePerSecond);
+		animationClip.SetStartTime(0.0f);
+		animationClip.SetEndTime(animation.duration);
+		std::vector<TransformTrack>& transformTracks = animationClip.GetTracks();
+		transformTracks.resize(meshData.skeletonNodes_.size());
 
-		uint32_t start = animation.channelStart;
-		uint32_t count = animation.channelCount;
-		animationClip.transformTracks.resize(meshData.skeletonNodes_.size());
-		for (uint32_t i = start; i < start + count; ++i)
+		uint32_t channelStart = animation.channelStart;
+		uint32_t channelCount = animation.channelCount;
+		for (uint32_t i = channelStart; i < channelStart + channelCount; ++i)
 		{
 			const Channel& channel = meshData.channels_[i];
 
@@ -258,9 +266,9 @@ void Scene::ParseAnimation(const StagingMeshData& meshData, std::vector<Animatio
 			std::vector<Vector3Track> scaling(sC);
 			std::copy(meshData.vector3Tracks_.begin() + sS, meshData.vector3Tracks_.begin() + sS + sC, scaling.begin());
 
-			animationClip.transformTracks[channel.boneId].AddPositions(translations);
-			animationClip.transformTracks[channel.boneId].AddRotations(rotations);
-			animationClip.transformTracks[channel.boneId].AddScale(scaling);
+			transformTracks[channel.boneId].AddPositions(translations);
+			transformTracks[channel.boneId].AddRotations(rotations);
+			transformTracks[channel.boneId].AddScale(scaling);
 		}
 		animationClips.push_back(std::move(animationClip));
 	}

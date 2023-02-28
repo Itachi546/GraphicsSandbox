@@ -22,7 +22,7 @@ private:
 	Camera* mCamera;
 	void InitializeScene();
 	void InitializeCSMScene();
-	void DrawSkeletonHierarchy(Skeleton& skeleton, int current, int parent, ImDrawList* drawList);
+	void DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform);
 	//void UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform);
 	void DrawSkeleton();
 

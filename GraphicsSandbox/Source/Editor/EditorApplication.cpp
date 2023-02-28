@@ -105,7 +105,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	{
 		ImGui::Begin("Render Settings");
 		ImGui::Checkbox("Show BoundingBox", &showBoundingBox);
-		//ImGui::Checkbox("Show Skeleton", &mShowSkeleton);
+		ImGui::Checkbox("Show Skeleton", &mShowSkeleton);
 		ImGui::Checkbox("Show Cascade", &showCascade);
 		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
 		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
@@ -175,10 +175,10 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
 
-	/*
-	if (mShowSkeleton)
+
+	if (mShowSkeleton && enableDebugDraw)
 		DrawSkeleton();
-	*/
+
 	//TransformGizmo::BeginFrame();
 	//static glm::mat4 out;
 	//TransformGizmo::Manipulate(mCamera->GetViewMatrix(), mCamera->GetProjectionMatrix(), TransformGizmo::Operation::Translate, out);
@@ -187,26 +187,6 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
 }
-/*
-void EditorApplication::UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform)
-{
-	// Local Transform
-	glm::mat4 invBindPose = skeleton.GetInvBindPose(node);
-	glm::mat4 boneTransform = skeleton.mLocalTransform[node];
-	if (node < animationClip.GetNumTrack())
-		boneTransform = CalculateCurrentTransform(node, animationClip[node], mCurrentTime);
-
-	glm::mat4 currentTransform = parentTransform * boneTransform;
-	skeleton.mFinalTransform[node] = currentTransform * invBindPose;
-
-	std::vector<uint32_t> childrens = skeleton.GetBindPose().FindChildren(node);
-	if (childrens.size() > 0)
-	{
-		for (auto child : childrens)
-			UpdateSkeletonTransform(skeleton, animationClip, child, currentTransform);
-	}
-}
-*/
 
 void EditorApplication::PreUpdate(float dt) {
 
@@ -260,7 +240,6 @@ void EditorApplication::PreUpdate(float dt) {
 		TransformComponent* transform = mScene.GetComponentManager()->GetComponent<TransformComponent>(entity);
 
 		AnimationClip& animationClip = meshRenderer.animationClips[0];
-		animationClip.SetLooping(false);
 
 		Pose& animatedPose = meshRenderer.skeleton.GetAnimatedPose();
 		animatedPose.SetDirty(true);
@@ -326,25 +305,37 @@ void EditorApplication::InitializeCSMScene()
 	comp->scale = glm::vec3(40.0f);
 }
 
-void EditorApplication::DrawSkeletonHierarchy(Skeleton& skeleton, int current, int parent, ImDrawList* drawList)
+void EditorApplication::DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform)
 {
-	glm::vec3 currentPosition = skeleton.mLocalTransform[current] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	/*
+	glm::vec3 parentPosition = skeleton.mLocalTransform[parent] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+	auto camera = mScene.GetCamera();
+	glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition) * glm::vec2(mWidth, mHeight);
+	glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition) * glm::vec2(mWidth, mHeight);
+	drawList->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), color, 2.0f);
+	*/
+	Pose& animatedPose = skeleton.GetAnimatedPose();
+	uint32_t count = animatedPose.GetSize();
+	auto camera = mScene.GetCamera();
 	static const uint32_t color = ImGui::ColorConvertFloat4ToU32(ImVec4(0.0f, 1.0f, 0.0f, 1.0f));
-	if (parent != ~0u)
+	for (uint32_t i = 0; i < count; ++i)
 	{
-		glm::vec3 parentPosition = skeleton.mLocalTransform[parent] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		auto camera = mScene.GetCamera();
-		glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition) * glm::vec2(mWidth, mHeight);
-		glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition) * glm::vec2(mWidth, mHeight);
-		drawList->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), color, 2.0f);
+		int parent = animatedPose.GetParent(i);
+		if (parent == -1) continue;
+
+		glm::mat4 parentTransform = animatedPose.GetGlobalTransform(parent).CalculateWorldMatrix();
+		glm::mat4 currentTransform = animatedPose.GetGlobalTransform(i).CalculateWorldMatrix();
+
+		glm::vec3 parentBonePosition = worldTransform * parentTransform * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		glm::vec3 currentBonePosition = worldTransform * currentTransform * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+		glm::vec4 p0 = camera->ComputeNDCCoordinate(parentBonePosition); //*glm::vec2(mWidth, mHeight);
+		glm::vec4 p1 = camera->ComputeNDCCoordinate(currentBonePosition);// *glm::vec2(mWidth, mHeight);
+
+		if (p0.z > 1.0f || p0.z < -1.0 || p1.z > 1.0f || p1.z < -1.0f) continue;
+		drawList->AddLine(ImVec2(p0.x * mWidth, p0.y * mHeight), ImVec2(p1.x * mWidth, p1.y * mHeight), color, 2.0f);
 	}
 
-	std::vector<int> childrens = skeleton.GetBindPose().FindChildren(current);
-	if (childrens.size() > 0)
-	{
-		for (auto child : childrens)
-			DrawSkeletonHierarchy(skeleton, child, current, drawList);
-	}
 }
 
 void EditorApplication::DrawSkeleton()
@@ -374,8 +365,9 @@ void EditorApplication::DrawSkeleton()
 	for (uint32_t i = 0; i < skinnedMeshRenderers->GetCount(); ++i)
 	{
 		const ecs::Entity entity = skinnedMeshRenderers->entities[i];
+		const glm::mat4& worldTransform = compMgr->GetComponent<TransformComponent>(entity)->CalculateWorldMatrix();
 		SkinnedMeshRenderer& meshRenderer = skinnedMeshRenderers->components[i];
-		DrawSkeletonHierarchy(meshRenderer.skeleton, 0, ~0u, drawList);
+		DrawPose(meshRenderer.skeleton, drawList, worldTransform);
 	}
 }
 

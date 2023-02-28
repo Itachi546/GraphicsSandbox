@@ -179,7 +179,7 @@ public:
 		return childrens;
 	}
 
-	unsigned int GetParent(uint32_t index)
+	int GetParent(uint32_t index)
 	{
 		return mParents[index];
 	}

@@ -93,7 +93,7 @@ public:
 		mTargetRotation.x = glm::clamp(mTargetRotation.x, -maxAngle, maxAngle);
 	}
 
-	glm::vec2 ComputeNDCCoordinate(const glm::vec3& p);
+	glm::vec4 ComputeNDCCoordinate(const glm::vec3& p);
 
 	glm::vec3 GetForward() { return mForward; }
 	glm::vec3 GetPosition() const { return mPosition; }

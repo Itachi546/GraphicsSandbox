@@ -182,8 +182,12 @@ void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector
 
 	const SkeletonNode& node = skeletonNodes[root];
 	uint32_t parentIndex = -1;
-	if(parent != -1)
+	glm::mat4 offsetMatrix4 = glm::inverse(node.offsetMatrix);
+	if (parent != -1)
+	{
 		parentIndex = skeletonNodes[parent].boneIndex;
+		offsetMatrix4 = skeletonNodes[parent].offsetMatrix * offsetMatrix4;
+	}
 
 	// @NOTE we use boneIndex to store the parent child relationship instead of
 	// nodeIndex as it can be used later to index into the matrix without any 
@@ -191,21 +195,26 @@ void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector
 	// bone index defined by weight matrix.
 	// Node index is used to traverse the hierarchy whereas all the data regarding
 	// bones are stored by using boneIndex.
-	/*
-	TransformComponent transform;
-	glm::vec3 skew;
-	glm::vec4 perspective;
-	glm::decompose(node.localTransform, transform.scale, transform.rotation, transform.position, skew, perspective);
-	transform.rotation = glm::conjugate(transform.rotation);
-	*/
-	skeleton.GetBindPose().SetParent(node.boneIndex, parentIndex);
-	skeleton.GetRestPose().SetParent(node.boneIndex, parentIndex);
-	skeleton.GetAnimatedPose().SetParent(node.boneIndex, parentIndex);
+	TransformComponent localTransform;
+	glm::mat4 localTransformMat = node.localTransform;
+	TransformComponent::From(node.localTransform, localTransform);
+
+	// Update Rest Pose Parent/Transform
+	Pose& restPose = skeleton.GetRestPose();
+	restPose.SetParent(node.boneIndex, parentIndex);
+	restPose.SetLocalTransform(node.boneIndex, localTransform);
+
+	// Update Bind Pose Parent/Transform
+	TransformComponent bindTransform;
+	TransformComponent::From(offsetMatrix4, bindTransform);
+	Pose& bindPose = skeleton.GetBindPose();
+	bindPose.SetParent(node.boneIndex, parentIndex);
+	bindPose.SetLocalTransform(node.boneIndex, bindTransform);
+
+	Pose& animatedPose = skeleton.GetAnimatedPose();
+	animatedPose.SetParent(node.boneIndex, parentIndex);
 
 	skeleton.SetInvBindPose(node.boneIndex, node.offsetMatrix);
-	skeleton.mLocalTransform[node.boneIndex] = node.localTransform;
-
-	//skeleton.GetRestPose().SetLocalTransform(node.boneIndex, transform);
 	skeleton.SetJointName(node.boneIndex, node.name);
 
 	if (node.firstChild != -1)

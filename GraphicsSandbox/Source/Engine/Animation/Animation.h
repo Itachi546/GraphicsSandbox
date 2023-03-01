@@ -202,8 +202,6 @@ protected:
 	std::vector<std::string> mJointNames;
 
 public:
-	std::vector<glm::mat4> mLocalTransform;
-
 	Skeleton();
 	Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
 	void Set(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
@@ -220,7 +218,6 @@ public:
 	{
 		mInvBindPose.resize(size);
 		mJointNames.resize(size);
-		mLocalTransform.resize(size);
 	}
 
 	Pose& GetBindPose() { return mBindPose; }

@@ -166,6 +166,7 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 		auto skinnedMeshComp = compMgr->GetComponent<SkinnedMeshRenderer>(drawData.entity);
 		std::vector<glm::mat4> skinnedMatrix;
 		skinnedMeshComp->skeleton.GetAnimatedPose().GetMatrixPallete(skinnedMatrix);
+
 		for (uint32_t i = 0; i < skinnedMatrix.size(); ++i)
 			skinnedMatrix[i] = drawData.worldTransform * skinnedMatrix[i] * skinnedMeshComp->skeleton.GetInvBindPose(i);
 

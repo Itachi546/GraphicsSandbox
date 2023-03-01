@@ -43,5 +43,12 @@ struct TransformComponent
 		return out;
 	}
 
+	static void From(const glm::mat4& matrix, TransformComponent& result)
+	{
+		glm::vec3 skew;
+		glm::vec4 perspective;
+		glm::decompose(matrix, result.scale, result.rotation, result.position, skew, perspective);
+	}
+
 };
 

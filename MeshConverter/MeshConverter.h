@@ -258,10 +258,11 @@ namespace MeshConverter {
 		uint32_t index = 0;
 		if (found == bones.end())
 		{
+			// if bone is missing we update it's offset matrix to same as parent
 			bones.push_back(bone->mName.C_Str());
-			offsetMatrix.push_back(glm::mat4(1.0f));
+			offsetMatrix.push_back(skeletonNodes[parent].offsetMatrix);
 			index = static_cast<uint32_t>(bones.size() - 1);
-			fprintf(stdout, "Failed to find the boneIndex for %s", bone->mName.C_Str());
+			fprintf(stdout, "Failed to find the boneIndex: %s\n", bone->mName.C_Str());
 		}
 		else
 			index = (uint32_t)std::distance(bones.begin(), found);

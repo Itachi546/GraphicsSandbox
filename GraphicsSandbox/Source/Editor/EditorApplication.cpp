@@ -307,13 +307,7 @@ void EditorApplication::InitializeCSMScene()
 
 void EditorApplication::DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform)
 {
-	/*
-	glm::vec3 parentPosition = skeleton.mLocalTransform[parent] * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	auto camera = mScene.GetCamera();
-	glm::vec2 p0 = camera->ComputeNDCCoordinate(parentPosition) * glm::vec2(mWidth, mHeight);
-	glm::vec2 p1 = camera->ComputeNDCCoordinate(currentPosition) * glm::vec2(mWidth, mHeight);
-	drawList->AddLine(ImVec2(p0.x, p0.y), ImVec2(p1.x, p1.y), color, 2.0f);
-	*/
+
 	Pose& animatedPose = skeleton.GetAnimatedPose();
 	uint32_t count = animatedPose.GetSize();
 	auto camera = mScene.GetCamera();

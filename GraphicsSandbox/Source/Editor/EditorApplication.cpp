@@ -94,7 +94,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	static bool enableFrustumCulling = false;
 	static bool freezeFrustum = false;
 	static bool showBoundingBox = mScene.GetShowBoundingBox();
-	static float blurRadius = 10.0f;
+	static float blurRadius = 1.0f;
 	static float bloomThreshold = 1.0f;
 	static float bloomStrength = 0.04f;
 	static bool enableNormalMapping = true;
@@ -241,9 +241,19 @@ void EditorApplication::PreUpdate(float dt) {
 
 		AnimationClip& animationClip = meshRenderer.animationClips[0];
 
-		Pose& animatedPose = meshRenderer.skeleton.GetAnimatedPose();
-		animatedPose.SetDirty(true);
-		animationClip.Sample(animatedPose, mCurrentTime * animationClip.GetTickPerSeconds());
+		Skeleton& skeleton = meshRenderer.skeleton;
+		Pose& animatedPose = skeleton.GetAnimatedPose();
+		// @TODO: Remove explicit copy method 
+		PoseMode poseMode = skeleton.GetPoseMode();
+		if (poseMode == PoseMode::Rest)
+			animatedPose.Copy(skeleton.GetRestPose());
+		else if (poseMode == PoseMode::Bind)
+			animatedPose.Copy(skeleton.GetBindPose());
+		else if (poseMode == PoseMode::Animation)
+		{
+			animatedPose.SetDirty(true);
+			animationClip.Sample(animatedPose, mCurrentTime * animationClip.GetTickPerSeconds());
+		}
 	}
 }
 

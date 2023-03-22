@@ -102,6 +102,13 @@ public:
 	Pose(const Pose& pose);
 	Pose& operator=(const Pose& other);
 
+	void Copy(const Pose& other)
+	{
+		mJoints = other.mJoints;
+		mParents = other.mParents;
+		mMatrixPallete = other.mMatrixPallete;
+		mDirty = true;
+	}
 
 	void Resize(uint32_t size) {
 		mJoints.resize(size);
@@ -111,11 +118,19 @@ public:
 
 	uint32_t GetSize() { return (uint32_t)mJoints.size(); }
 
-	TransformComponent GetGlobalTransform(uint32_t index) const
+	TransformComponent GetGlobalTransform(int index) const
 	{
 		TransformComponent result = mJoints[index];
 		for (int parent = mParents[index]; parent >= 0; parent = mParents[parent]) {
-			result = TransformComponent::Combine(mJoints[parent], result);
+			if (parent < index)
+			{
+				TransformComponent parentTransform;
+				TransformComponent::From(mMatrixPallete[parent], parentTransform);
+				result = TransformComponent::Combine(parentTransform, result);
+				break;
+			}
+			else 
+				result = TransformComponent::Combine(mJoints[parent], result);
 		}
 		return result;
 	}
@@ -131,16 +146,7 @@ public:
 	TransformComponent operator[](uint32_t index) {
 		return mJoints[index];
 	}
-/*
-	void CalculateMatrixPallete(int current, const TransformComponent& rootTransform)
-	{
-		TransformComponent currentTransform = TransformComponent::Combine(rootTransform, mJoints[current]);
-		mMatrixPallete[current] = currentTransform.CalculateWorldMatrix();
-		std::vector<int> childrens = FindChildren(current);
-		for (auto child : childrens)
-			CalculateMatrixPallete(child, currentTransform);
-	}
-	*/
+
 	void GetMatrixPallete(std::vector<glm::mat4>& out)
 	{
 		if (mDirty)
@@ -190,6 +196,12 @@ public:
 	}
 };
 
+enum class PoseMode {
+	Rest = 0,
+	Bind = 1,
+	Animation = 2
+};
+
 class Skeleton
 {
 protected:
@@ -201,6 +213,7 @@ protected:
 	std::vector<glm::mat4> mInvBindPose;
 	std::vector<std::string> mJointNames;
 
+	PoseMode mPoseMode = PoseMode::Bind;
 public:
 	Skeleton();
 	Skeleton(const Pose& rest, const Pose& bind, const std::vector<std::string>& names);
@@ -212,6 +225,16 @@ public:
 	uint32_t GetRootBone()
 	{
 		return mRootBone;
+	}
+
+	PoseMode GetPoseMode() const
+	{
+		return mPoseMode;
+	}
+
+	void SetPoseMode(PoseMode poseMode)
+	{
+		mPoseMode = poseMode;
 	}
 
 	void Resize(uint32_t size)
@@ -245,6 +268,7 @@ public:
 	std::vector<std::string>& GetJointArray() {
 		return mJointNames;
 	}
+
 };
 
 class AnimationClip

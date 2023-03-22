@@ -276,6 +276,15 @@ void SceneHierarchy::DrawMeshRendererComponent(IMeshRenderer* meshRenderer)
 		ImGui::DragFloat3("min", &meshRenderer->boundingBox.min[0]);
 		ImGui::DragFloat3("max", &meshRenderer->boundingBox.max[0]);
 		ImGui::Separator();
+
+
+		if (meshRenderer->IsSkinned())
+		{
+			Skeleton& skeleton = static_cast<SkinnedMeshRenderer*>(meshRenderer)->skeleton;
+			int poseMode = (int)skeleton.GetPoseMode();
+			if (ImGui::Combo("Pose", &poseMode, "Rest\0Bind\0Animated"))
+				skeleton.SetPoseMode(static_cast<PoseMode>(poseMode));
+		}
 	}
 }
 

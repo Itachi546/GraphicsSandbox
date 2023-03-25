@@ -105,6 +105,7 @@ namespace gfx
 		VkQueue queue_                      = VK_NULL_HANDLE;
 		VkSurfaceKHR surface_               = VK_NULL_HANDLE;
 		bool debugMarkerEnabled_ = false;
+		bool supportBindless = false;
 
 		VkCommandPool* commandPool_         = nullptr;
 		VkCommandBuffer* commandBuffer_     = nullptr;
@@ -112,6 +113,13 @@ namespace gfx
 		VkCommandBuffer stagingCmdBuffer_   = VK_NULL_HANDLE;
 		
 		std::vector<VkDescriptorPool> descriptorPools_;
+
+		// Bindless Resources
+		const uint32_t kMaxBindlessResources = 16536;
+		const uint32_t kBindlessTextureBinding = 10;
+		VkDescriptorPool bindlessDescriptorPool_;
+		VkDescriptorSetLayout bindlessDescriptorLayout_;
+		VkDescriptorSet bindlessDescriptorSet_;
 
 		struct VulkanQueryPool
 		{

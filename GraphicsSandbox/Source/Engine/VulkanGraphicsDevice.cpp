@@ -1325,6 +1325,18 @@ namespace gfx {
 
         // Create physical device
         physicalDevice_ = findSuitablePhysicalDevice(requiredDeviceExtensions);
+
+        // Check for bindless support
+        VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
+#ifdef ENABLE_BINDLESS
+        VkPhysicalDeviceFeatures2 deviceFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, &indexingFeatures};
+        vkGetPhysicalDeviceFeatures2(physicalDevice_, &deviceFeatures);
+        supportBindless = indexingFeatures.descriptorBindingPartiallyBound && 
+            indexingFeatures.runtimeDescriptorArray &&
+            indexingFeatures.descriptorBindingSampledImageUpdateAfterBind && 
+            indexingFeatures.descriptorBindingStorageImageUpdateAfterBind;
+#endif
+
         Logger::Debug("Selected Physical Device: " + std::string(properties2_.properties.deviceName));
 
         queueFamilyIndices_ = FindGraphicsQueueIndex(physicalDevice_);
@@ -1354,12 +1366,21 @@ namespace gfx {
 
         features11_.shaderDrawParameters = true;
         features12_.drawIndirectCount = true;
-        features12_.shaderInt8 = true;
+		features12_.shaderInt8 = true;
         features12_.hostQueryReset = true;
         features12_.uniformAndStorageBuffer8BitAccess = true;
         features12_.separateDepthStencilLayouts = true;
+
+        if (supportBindless)
+        {
+            Logger::Info("Bindless support found");
+            features12_.descriptorBindingPartiallyBound = VK_TRUE;
+            features12_.runtimeDescriptorArray = VK_TRUE;
+            features12_.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+            features12_.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+        }
         features11_.pNext = &features12_;
-        features2_.pNext = &features11_;
+        features12_.pNext = &features2_;
 
         // Create logical device
         VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
@@ -1368,7 +1389,7 @@ namespace gfx {
         deviceCreateInfo.pEnabledFeatures = nullptr;
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
         deviceCreateInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
-        deviceCreateInfo.pNext = &features2_;
+        deviceCreateInfo.pNext = &features11_;
 
         VK_CHECK(vkCreateDevice(physicalDevice_, &deviceCreateInfo, nullptr, &device_));
         volkLoadDevice(device_);
@@ -1409,8 +1430,70 @@ namespace gfx {
 
 		VK_CHECK(vmaCreateAllocator(&vmaCreateInfo, &vmaAllocator_));
 
-		//Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string((int)std::round(timer.elapsed())) + "ms)");
         Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string(timer.elapsedSeconds()) + "s)");
+
+        if (supportBindless)
+        {
+            VkDescriptorPoolSize poolSizeBindless[] =
+            {
+                { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, kMaxBindlessResources },
+                { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, kMaxBindlessResources },
+            };
+
+            uint32_t poolCount = ARRAYSIZE(poolSizeBindless);
+            VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+            poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+            poolInfo.maxSets = kMaxBindlessResources * poolCount;
+            poolInfo.poolSizeCount = ARRAYSIZE(poolSizeBindless);
+            poolInfo.pPoolSizes = poolSizeBindless;
+            VK_CHECK(vkCreateDescriptorPool(device_, &poolInfo, nullptr, &bindlessDescriptorPool_));
+
+            VkDescriptorSetLayoutBinding vkBinding[4];
+            // Actual descriptor set layout
+            VkDescriptorSetLayoutBinding& imageSamplerBinding = vkBinding[0];
+            imageSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            imageSamplerBinding.descriptorCount = kMaxBindlessResources;
+            imageSamplerBinding.binding = kBindlessTextureBinding;
+            imageSamplerBinding.stageFlags = VK_SHADER_STAGE_ALL;
+            imageSamplerBinding.pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutBinding& storageImageBinding = vkBinding[1];
+            storageImageBinding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            storageImageBinding.descriptorCount = kMaxBindlessResources;
+            storageImageBinding.binding = kBindlessTextureBinding + 1;
+            storageImageBinding.stageFlags = VK_SHADER_STAGE_ALL;
+            storageImageBinding.pImmutableSamplers = nullptr;
+
+            VkDescriptorSetLayoutCreateInfo layout_info = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+            layout_info.bindingCount = poolCount;
+            layout_info.pBindings = vkBinding;
+            layout_info.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+
+            VkDescriptorBindingFlags bindlessFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
+                /*VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT |*/
+                VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+
+            VkDescriptorBindingFlags bindingFlags[4];
+            bindingFlags[0] = bindlessFlags;
+            bindingFlags[1] = bindlessFlags;
+
+            VkDescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT, nullptr };
+            extended_info.bindingCount = poolCount;
+            extended_info.pBindingFlags = bindingFlags;
+            layout_info.pNext = &extended_info;
+            vkCreateDescriptorSetLayout(device_, &layout_info, nullptr, &bindlessDescriptorLayout_);
+
+            VkDescriptorSetAllocateInfo alloc_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+            alloc_info.descriptorPool = bindlessDescriptorPool_;
+            alloc_info.descriptorSetCount = 1;
+            alloc_info.pSetLayouts = &bindlessDescriptorLayout_;
+
+            VkDescriptorSetVariableDescriptorCountAllocateInfoEXT count_info{ VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT };
+            uint32_t maxBindings = kMaxBindlessResources - 1;
+            count_info.descriptorSetCount = 1;
+            count_info.pDescriptorCounts = &maxBindings;
+            VK_CHECK(vkAllocateDescriptorSets(device_, &alloc_info, &bindlessDescriptorSet_));
+        }
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -2515,6 +2598,9 @@ namespace gfx {
 
         for(auto& descriptorPool:  descriptorPools_)
 			vkDestroyDescriptorPool(device_, descriptorPool, nullptr);
+
+        vkDestroyDescriptorSetLayout(device_, bindlessDescriptorLayout_, nullptr);
+        vkDestroyDescriptorPool(device_, bindlessDescriptorPool_, nullptr);
 
         for (auto& queryPool : queryPools_)
             vkDestroyQueryPool(device_, queryPool, nullptr);

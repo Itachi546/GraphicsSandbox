@@ -191,6 +191,8 @@
     <ClInclude Include="Source\Engine\FX\SSAO.h" />
     <ClInclude Include="Source\Editor\ImGui\IconsFontAwesome5.h" />
     <ClInclude Include="Source\Engine\TransformComponent.h" />
+    <ClInclude Include="Source\Engine\ResourcePool.h" />
+    <ClInclude Include="Source\Engine\VulkanResources.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

@@ -27,10 +27,10 @@ public:
 
 	~EnvironmentMap() = default;
 private:
-	std::shared_ptr<gfx::Pipeline> mHdriToCubemap;
-	std::shared_ptr<gfx::Pipeline> mIrradiancePipeline;
-	std::shared_ptr<gfx::Pipeline> mPrefilterPipeline;
-	std::shared_ptr<gfx::Pipeline> mBRDFPipeline;
+	gfx::PipelineHandle mHdriToCubemap;
+	gfx::PipelineHandle mIrradiancePipeline;
+	gfx::PipelineHandle mPrefilterPipeline;
+	gfx::PipelineHandle mBRDFPipeline;
 	gfx::GraphicsDevice* mDevice;
 
 	const uint32_t mCubemapDims   = 512;

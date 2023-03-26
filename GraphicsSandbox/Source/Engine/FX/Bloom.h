@@ -29,9 +29,9 @@ namespace fx
 
 		gfx::GPUTexture mDownSampleTexture;
 
-		std::shared_ptr<gfx::Pipeline> mDownSamplePipeline;
-		std::shared_ptr<gfx::Pipeline> mUpSamplePipeline;
-		std::shared_ptr<gfx::Pipeline> mCompositePipeline;
+		gfx::PipelineHandle mDownSamplePipeline;
+		gfx::PipelineHandle mUpSamplePipeline;
+		gfx::PipelineHandle mCompositePipeline;
 
 		uint32_t mWidth, mHeight;
 		const uint32_t kMaxMipLevel = 5;

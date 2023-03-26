@@ -4,8 +4,8 @@
 #include "Utils.h"
 
 bool gEnableDebugDraw = true;
-gfx::Pipeline* gPipeline;
-gfx::GPUBuffer* gBuffer;
+gfx::PipelineHandle gPipeline;
+gfx::BufferHandle gBuffer;
 uint32_t gDataOffset = 0;
 const uint32_t kMaxDebugData = 10'000;
 struct DebugData
@@ -15,7 +15,7 @@ struct DebugData
 };
 DebugData* dataPtr = nullptr;
 
-void DebugDraw::Initialize(gfx::RenderPass* renderPass)
+void DebugDraw::Initialize(gfx::RenderPassHandle renderPass)
 {
 	gfx::PipelineDesc pipelineDesc;
 
@@ -38,8 +38,7 @@ void DebugDraw::Initialize(gfx::RenderPass* renderPass)
 	pipelineDesc.rasterizationState.lineWidth = 1.0f;
 	
 	gfx::GraphicsDevice* device = gfx::GetDevice();
-	gPipeline = new gfx::Pipeline;
-	device->CreateGraphicsPipeline(&pipelineDesc, gPipeline);
+	gPipeline = device->CreateGraphicsPipeline(&pipelineDesc); 
 
 	delete[] shaderDesc[0].code;
 	delete[] shaderDesc[1].code;
@@ -48,9 +47,8 @@ void DebugDraw::Initialize(gfx::RenderPass* renderPass)
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	bufferDesc.usage = gfx::Usage::Upload;
 	bufferDesc.size = kMaxDebugData * sizeof(DebugData);
-	gBuffer = new gfx::GPUBuffer;
-	device->CreateBuffer(&bufferDesc, gBuffer);
-	dataPtr = reinterpret_cast<DebugData*>(gBuffer->mappedDataPtr);
+	gBuffer = device->CreateBuffer(&bufferDesc);
+	dataPtr = reinterpret_cast<DebugData*>(device->GetMappedDataPtr(gBuffer));
 }
 
 void DebugDraw::SetEnable(bool state)
@@ -140,6 +138,4 @@ void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP)
 
 void DebugDraw::Free()
 {
-	delete gPipeline;
-	delete gBuffer;
 }

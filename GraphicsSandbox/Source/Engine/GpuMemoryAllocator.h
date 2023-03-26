@@ -7,15 +7,7 @@
 
 namespace gfx
 {
-	using BufferIndex = uint32_t;
-
-	struct BufferView
-	{
-		std::shared_ptr<GPUBuffer> buffer;
-		uint32_t offset;
-		uint32_t size;
-	};
-
+	/*
 	class GpuMemoryAllocator
 	{
 	public:
@@ -48,4 +40,5 @@ namespace gfx
 		GPUBufferDesc mStagingBufferDesc;
 	};
 
+*/
 }

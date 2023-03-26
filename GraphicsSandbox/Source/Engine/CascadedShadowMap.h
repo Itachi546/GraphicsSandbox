@@ -26,12 +26,12 @@ public:
 
 	gfx::DescriptorInfo GetCascadeBufferDescriptor()
 	{
-		return gfx::DescriptorInfo{ mBuffer.get(), 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
+		return gfx::DescriptorInfo{ mBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
 	}
 
 	gfx::DescriptorInfo GetShadowMapDescriptor()
 	{
-		return gfx::DescriptorInfo{ &mFramebuffer->attachments[0], 0, 0, gfx::DescriptorType::Image};
+		return gfx::DescriptorInfo{ &mFramebuffer->attachments[0], 0, 0, gfx::DescriptorType::Image };
 	}
 
 	void SetShadowDistance(float distance)
@@ -42,11 +42,11 @@ public:
 	~CascadedShadowMap() = default;
 
 private:
-	std::unique_ptr<gfx::Pipeline> mPipeline;
-	std::unique_ptr<gfx::Pipeline> mSkinnedPipeline;
-	std::unique_ptr<gfx::RenderPass> mRenderPass;
+	gfx::PipelineHandle mPipeline = { K_INVALID_RESOURCE_HANDLE };
+	gfx::PipelineHandle mSkinnedPipeline = { K_INVALID_RESOURCE_HANDLE };
+	gfx::RenderPassHandle mRenderPass = { K_INVALID_RESOURCE_HANDLE };
 	std::unique_ptr<gfx::Framebuffer> mFramebuffer;
-	std::unique_ptr<gfx::GPUBuffer> mBuffer;
+	gfx::BufferHandle mBuffer;
 
 	const int kNumCascades = 5;
 	const int kShadowDims = 4096;

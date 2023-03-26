@@ -3,7 +3,7 @@
 #include "Logger.h"
 
 #include <assert.h>
-
+/*
 namespace gfx
 {
 	GpuMemoryAllocator::GpuMemoryAllocator()
@@ -59,7 +59,7 @@ namespace gfx
 		}
 	}
 	*/
-
+/*
 	void GpuMemoryAllocator::CopyToBuffer(std::shared_ptr<GPUBuffer> buffer, void* data, uint32_t offset, uint32_t size, BufferView* bufferView)
 	{
 		if (data == nullptr)
@@ -104,3 +104,4 @@ namespace gfx
 		}
 	}
 };
+*/

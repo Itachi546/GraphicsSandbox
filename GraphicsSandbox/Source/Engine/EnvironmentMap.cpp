@@ -9,14 +9,10 @@ EnvironmentMap::EnvironmentMap()
 {
 	mDevice = gfx::GetDevice();
 
-	mHdriToCubemap = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline(StringConstants::HDRI_CONVERTER_COMP_PATH, mDevice, mHdriToCubemap.get());
-	mIrradiancePipeline = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline(StringConstants::IRRADIANCE_COMP_PATH, mDevice, mIrradiancePipeline.get());
-	mPrefilterPipeline = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline(StringConstants::PREFILTER_COMP_PATH, mDevice, mPrefilterPipeline.get());
-	mBRDFPipeline = std::make_shared<gfx::Pipeline>();
-	gfx::CreateComputePipeline(StringConstants::BRDF_LUT_COMP_PATH, mDevice, mBRDFPipeline.get());
+	mHdriToCubemap = gfx::CreateComputePipeline(StringConstants::HDRI_CONVERTER_COMP_PATH, mDevice);
+	mIrradiancePipeline = gfx::CreateComputePipeline(StringConstants::IRRADIANCE_COMP_PATH, mDevice);
+	mPrefilterPipeline = gfx::CreateComputePipeline(StringConstants::PREFILTER_COMP_PATH, mDevice);
+	mBRDFPipeline = gfx::CreateComputePipeline(StringConstants::BRDF_LUT_COMP_PATH, mDevice);
 
 }
 
@@ -42,13 +38,12 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 
 	// Create Staging buffer to transfer hdri data
 	const uint32_t imageDataSize = width * height * 4 * sizeof(float);
-	gfx::GPUBuffer stagingBuffer;
 	gfx::GPUBufferDesc bufferDesc;
 	bufferDesc.bindFlag = gfx::BindFlag::None;
 	bufferDesc.usage = gfx::Usage::Upload;
 	bufferDesc.size = imageDataSize;
-	mDevice->CreateBuffer(&bufferDesc, &stagingBuffer);
-	std::memcpy(stagingBuffer.mappedDataPtr, hdriData, imageDataSize);
+	gfx::BufferHandle stagingBuffer = mDevice->CreateBuffer(&bufferDesc);
+	mDevice->CopyToBuffer(stagingBuffer, hdriData, 0, imageDataSize);
 
 	// Copy from staging buffer to hdri texture
 	gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
@@ -57,7 +52,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 		gfx::PipelineStage::TransferBit,
 		gfx::PipelineStage::TransferBit
 	};
-	mDevice->CopyTexture(&hdriTexture, &stagingBuffer, &transferBarrierInfo, 0, 0);
+	mDevice->CopyTexture(&hdriTexture, stagingBuffer, &transferBarrierInfo, 0, 0);
 	Utils::ImageLoader::Free(hdriData);
 
 	// Create Destination Cubemap texture
@@ -88,18 +83,18 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 
 	// Bind resources
 	gfx::DescriptorInfo descriptorInfos[2] = {};
-	descriptorInfos[0].resource = &hdriTexture;
+	descriptorInfos[0].texture = &hdriTexture;
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].type = gfx::DescriptorType::Image;
 
-	descriptorInfos[1].resource = mCubemapTexture.get();
+	descriptorInfos[1].texture = mCubemapTexture.get();
 	descriptorInfos[1].offset = 0;
 	descriptorInfos[1].type = gfx::DescriptorType::Image;
 
 	float shaderData[] = { (float)mCubemapDims };
-	mDevice->UpdateDescriptor(mHdriToCubemap.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-	mDevice->BindPipeline(&commandList, mHdriToCubemap.get());
-	mDevice->PushConstants(&commandList, mHdriToCubemap.get(), gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
+	mDevice->UpdateDescriptor(mHdriToCubemap, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	mDevice->BindPipeline(&commandList, mHdriToCubemap);
+	mDevice->PushConstants(&commandList, mHdriToCubemap, gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
 	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mCubemapDims, 32), gfx::GetWorkSize(mCubemapDims, 32), 6);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
@@ -139,18 +134,18 @@ void EnvironmentMap::CalculateIrradiance()
 
 	// Bind resources
 	gfx::DescriptorInfo descriptorInfos[2] = {};
-	descriptorInfos[0].resource = mCubemapTexture.get();
+	descriptorInfos[0].texture = mCubemapTexture.get();
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].type = gfx::DescriptorType::Image;
 
-	descriptorInfos[1].resource = mIrradianceTexture.get();
+	descriptorInfos[1].texture = mIrradianceTexture.get();
 	descriptorInfos[1].offset = 0;
 	descriptorInfos[1].type = gfx::DescriptorType::Image;
 
 	float shaderData[] = { (float)mIrrTexDims };
-	mDevice->UpdateDescriptor(mIrradiancePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-	mDevice->BindPipeline(&commandList, mIrradiancePipeline.get());
-	mDevice->PushConstants(&commandList, mHdriToCubemap.get(), gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
+	mDevice->UpdateDescriptor(mIrradiancePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	mDevice->BindPipeline(&commandList, mIrradiancePipeline);
+	mDevice->PushConstants(&commandList, mHdriToCubemap, gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
 	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mIrrTexDims, 8), gfx::GetWorkSize(mIrrTexDims, 8), 6);
 	mDevice->SubmitCommandList(&commandList);
 	mDevice->WaitForGPU();
@@ -191,7 +186,7 @@ void EnvironmentMap::Prefilter()
 
 	// Bind resources
 	gfx::DescriptorInfo descriptorInfos[2] = {};
-	descriptorInfos[0].resource = mCubemapTexture.get();
+	descriptorInfos[0].texture = mCubemapTexture.get();
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].type = gfx::DescriptorType::Image;
 
@@ -199,15 +194,15 @@ void EnvironmentMap::Prefilter()
 	for (uint32_t i = 0; i < nMaxMipLevel; ++i)
 	{
 		float roughness = i / float(nMaxMipLevel - 1);
-		descriptorInfos[1].resource = mPrefilterTexture.get();
+		descriptorInfos[1].texture = mPrefilterTexture.get();
 		descriptorInfos[1].mipLevel = i;
 		descriptorInfos[1].type = gfx::DescriptorType::Image;
 
 		float shaderData[] = { (float)dims, roughness };
 
-		mDevice->UpdateDescriptor(mPrefilterPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-		mDevice->BindPipeline(&commandList, mPrefilterPipeline.get());
-		mDevice->PushConstants(&commandList, mPrefilterPipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
+		mDevice->UpdateDescriptor(mPrefilterPipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(&commandList, mPrefilterPipeline);
+		mDevice->PushConstants(&commandList, mPrefilterPipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
 		mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(dims, 8), gfx::GetWorkSize(dims, 8), 6);
 		dims /= 2;
 	}
@@ -247,14 +242,14 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mDevice->PipelineBarrier(&commandList, &computeBarrier);
 
 	gfx::DescriptorInfo descriptorInfo = {};
-	descriptorInfo.resource = mBRDFTexture.get();
+	descriptorInfo.texture = mBRDFTexture.get();
 	descriptorInfo.mipLevel = 0;
 	descriptorInfo.type = gfx::DescriptorType::Image;
 
 	float shaderData[] = { float(mBRDFDims) };
-	mDevice->UpdateDescriptor(mBRDFPipeline.get(), &descriptorInfo, 1);
-	mDevice->BindPipeline(&commandList, mBRDFPipeline.get());
-	mDevice->PushConstants(&commandList, mBRDFPipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
+	mDevice->UpdateDescriptor(mBRDFPipeline, &descriptorInfo, 1);
+	mDevice->BindPipeline(&commandList, mBRDFPipeline);
+	mDevice->PushConstants(&commandList, mBRDFPipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * std::size(shaderData)));
 	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mBRDFDims, 32), gfx::GetWorkSize(mBRDFDims, 32), 1);
 
 	// Layout transition for shader read/write

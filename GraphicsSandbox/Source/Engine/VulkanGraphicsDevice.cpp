@@ -46,8 +46,8 @@ namespace gfx {
         std::vector<std::pair<VkDescriptorSet, VkDescriptorPool>> destroyedDescriptorSet_;
         std::vector<VkSampler> destroyedSamplers_;
         std::vector<VkSemaphore> destroyedSemaphore_;
-		
-       void destroyReleasedResource(VkDevice device, VmaAllocator vmaAllocator)
+
+        void destroyReleasedResource(VkDevice device, VmaAllocator vmaAllocator)
         {
             for (auto& setLayout : destroyedSetLayout_)
                 vkDestroyDescriptorSetLayout(device, setLayout, nullptr);
@@ -107,94 +107,7 @@ namespace gfx {
             destroyedShaders_.clear();
             destroyedBuffers_.clear();
         }
-
-    } gAllocationHandler;
-  
-    struct VulkanRenderPass
-    {
-        VkRenderPass renderPass;
-
-        ~VulkanRenderPass()
-        {
-            gAllocationHandler.destroyedRenderPass_.push_back(renderPass);
-        }
-    };
-
-    struct VulkanPipeline
-    {
-        VkPipeline pipeline;
-        VkPipelineLayout pipelineLayout;
-        std::vector<VkShaderModule> shaderModules;
-        VkPipelineBindPoint bindPoint;
-        VkDescriptorSetLayout setLayout;
-        VkDescriptorUpdateTemplate updateTemplate;
-        // Only stores the reference of descriptor set created from 
-        // the pools. It is not created as per pipeline basis but dynamically
-        // allocated every frame
-        VkDescriptorSet descriptorSet;
-
-        ~VulkanPipeline()
-        {
-            gAllocationHandler.destroyedPipeline_.push_back(pipeline);
-            gAllocationHandler.destroyedPipelineLayout_.push_back(pipelineLayout);
-            gAllocationHandler.destroyedShaders_.insert(gAllocationHandler.destroyedShaders_.end(), shaderModules.begin(), shaderModules.end());
-            gAllocationHandler.destroyedSetLayout_.push_back(setLayout);
-            gAllocationHandler.destroyedDescriptorUpdateTemplate_.push_back(updateTemplate);
-            shaderModules.clear();
-        }
-    };
-
-    struct VulkanBuffer
-    {
-        VmaAllocation allocation = nullptr;
-        VkBuffer buffer = VK_NULL_HANDLE;
-
-        ~VulkanBuffer()
-        {
-            gAllocationHandler.destroyedBuffers_.push_back(std::make_pair(buffer, allocation));
-        }
-    };
-
-    struct VulkanTexture
-    {
-        VmaAllocation allocation = nullptr;
-        VkImage image = VK_NULL_HANDLE;
-        std::vector<VkImageView> imageViews{};
-        VkSampler sampler = VK_NULL_HANDLE;
-
-        VkFormat format = VK_FORMAT_UNDEFINED;
-        VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-        VkImageAspectFlagBits imageAspect = VK_IMAGE_ASPECT_NONE;
-        ~VulkanTexture()
-        {
-            gAllocationHandler.destroyedImages_.push_back(std::make_pair(image, allocation));
-            gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), imageViews.begin(), imageViews.end());
-            gAllocationHandler.destroyedSamplers_.push_back(sampler);
-        }
-    };
-
-
-    struct VulkanFramebuffer
-    {
-        VkFramebuffer framebuffer;
-
-        ~VulkanFramebuffer()
-        {
-            gAllocationHandler.destroyedFramebuffers_.push_back(framebuffer);
-        }
-    };
-
-    struct VulkanSemaphore
-    {
-        VkSemaphore semaphore;
-
-        ~VulkanSemaphore()
-        {
-            gAllocationHandler.destroyedSemaphore_.push_back(semaphore);
-        }
-    };
-
-
+    }  gAllocationHandler;
 
 
     /***********************************************************************************************/
@@ -1411,6 +1324,11 @@ namespace gfx {
 
 		//Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string((int)std::round(timer.elapsed())) + "ms)");
         Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string(timer.elapsedSeconds()) + "s)");
+
+        // Initialize Resource Pool
+        renderPasses.Initialize(256);
+        pipelines.Initialize(128);
+        buffers.Initialize(256);
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -1422,7 +1340,7 @@ namespace gfx {
 			swapchain_->surface = CreateSurface(instance_, physicalDevice_, queueFamilyIndices_, window);
         }
 
-        auto vkRenderPass = std::static_pointer_cast<VulkanRenderPass>(swapchainDesc->renderPass->internalState);
+        VulkanRenderPass* vkRenderPass = renderPasses.AccessResource(swapchainDesc->renderPass.handle);
         assert(vkRenderPass != nullptr);
 		createSwapchainInternal(vkRenderPass->renderPass);
 
@@ -1509,31 +1427,30 @@ namespace gfx {
         return renderPass;
     }
 
-    void VulkanGraphicsDevice::CreateRenderPass(const RenderPassDesc* desc, RenderPass* out)
+    RenderPassHandle VulkanGraphicsDevice::CreateRenderPass(const RenderPassDesc* desc)
     {
-        auto vulkanRenderPass = std::make_shared<VulkanRenderPass>();
-        vulkanRenderPass->renderPass = createRenderPass(desc);
-        out->internalState = vulkanRenderPass;
-        out->desc = *desc;
+        RenderPassHandle handle = { renderPasses.ObtainResource()};
+        VulkanRenderPass* vkRenderPass = renderPasses.AccessResource(handle.handle);
+        vkRenderPass->renderPass = createRenderPass(desc);
+        vkRenderPass->desc = *desc;
+        return handle;
     }
 
-    void VulkanGraphicsDevice::CreateFramebuffer(RenderPass* renderPass, Framebuffer* out, uint32_t layerCount)
+    void VulkanGraphicsDevice::CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount)
     {
-        assert(renderPass != nullptr);
-        auto rp = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
-
+        auto rp = renderPasses.AccessResource(renderPass.handle);
         auto vkFramebuffer = std::make_shared<VulkanFramebuffer>();
 
-        uint32_t attachmentCount = renderPass->desc.attachmentCount;
+        uint32_t attachmentCount = rp->desc.attachmentCount;
 
-        uint32_t width = renderPass->desc.width;
-		uint32_t height = renderPass->desc.height;
+        uint32_t width = rp->desc.width;
+		uint32_t height = rp->desc.height;
 
         std::vector<VkImageView> imageViews(attachmentCount);
         out->attachments.resize(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
         {
-            Attachment* attachment = (renderPass->desc.attachments + i);
+            Attachment* attachment = (rp->desc.attachments + i);
             uint32_t index = attachment->index;
 			GPUTexture* texture = &out->attachments[index];
             attachment->desc.width = width;
@@ -1591,15 +1508,14 @@ namespace gfx {
         vkGetQueryPoolResults(device_, queryPool, index, count, sizeof(uint64_t) * count, result, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
     }
 
-    void VulkanGraphicsDevice::CreateGraphicsPipeline(const PipelineDesc* desc, Pipeline* out)
+    PipelineHandle VulkanGraphicsDevice::CreateGraphicsPipeline(const PipelineDesc* desc)
     {
-        auto vkPipeline = std::make_shared<VulkanPipeline>();
+        PipelineHandle pipelineHandle = { pipelines.ObtainResource() };
+        VulkanPipeline* vkPipeline = pipelines.AccessResource(pipelineHandle.handle);
         vkPipeline->bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
         VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
-
         std::vector<VkPipelineShaderStageCreateInfo> stages(desc->shaderCount);
-
         ShaderReflection shaderReflection;
         for (uint32_t i = 0; i < desc->shaderCount; ++i)
         {
@@ -1687,7 +1603,7 @@ namespace gfx {
 		VkPipelineLayout pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderReflection.pushConstantRanges);
         createInfo.layout = pipelineLayout;
 
-		createInfo.renderPass = std::static_pointer_cast<VulkanRenderPass>(desc->renderPass->internalState)->renderPass;
+		createInfo.renderPass = renderPasses.AccessResource(desc->renderPass.handle)->renderPass;
 
         VkPipeline pipeline = 0;
         VK_CHECK(vkCreateGraphicsPipelines(device_, 0, 1, &createInfo, 0, &pipeline));
@@ -1695,14 +1611,14 @@ namespace gfx {
         vkPipeline->pipelineLayout = pipelineLayout;
         vkPipeline->pipeline = pipeline;
         vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, vkPipeline->setLayout, shaderReflection);
-        out->internalState = vkPipeline;
+        return pipelineHandle;
     }
 
-    void VulkanGraphicsDevice::CreateComputePipeline(const PipelineDesc* desc, Pipeline* out)
+    PipelineHandle VulkanGraphicsDevice::CreateComputePipeline(const PipelineDesc* desc)
     {
-        auto vkPipeline = std::make_shared<VulkanPipeline>();
+        PipelineHandle pipelineHandle = { pipelines.ObtainResource() };
+        VulkanPipeline* vkPipeline = pipelines.AccessResource(pipelineHandle.handle);
         vkPipeline->bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-        out->internalState = vkPipeline;
 
         assert(desc->shaderCount > 0);
         ShaderDescription* shaderDesc = desc->shaderDesc;
@@ -1727,17 +1643,14 @@ namespace gfx {
 		VK_CHECK(vkCreateComputePipelines(device_, 0, 1, &createInfo, nullptr, &vkPipeline->pipeline));
 
         vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline->pipelineLayout, vkPipeline->setLayout, { shaderRefl });
+        return pipelineHandle;
     }
 
-    void VulkanGraphicsDevice::CreateBuffer(const GPUBufferDesc* desc, GPUBuffer* out)
+    BufferHandle VulkanGraphicsDevice::CreateBuffer(const GPUBufferDesc* desc)
     {
-        auto internalState = std::make_shared<VulkanBuffer>();
-
-        out->internalState = internalState;
-        out->resourceType = GPUResource::Type::Buffer;
-        out->mappedDataSize = 0;
-        out->mappedDataPtr = nullptr;
-        out->desc = *desc;
+        BufferHandle bufferHandle = { buffers.ObtainResource() };
+        VulkanBuffer* buffer = buffers.AccessResource(bufferHandle.handle);
+        buffer->desc = *desc;
 
         VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         createInfo.size = desc->size;
@@ -1768,12 +1681,12 @@ namespace gfx {
         createInfo.queueFamilyIndexCount = 1;
         createInfo.pQueueFamilyIndices = &queueFamilyIndices_;
 
-        VK_CHECK(vmaCreateBuffer(vmaAllocator_, &createInfo, &allocCreateInfo, &internalState->buffer, &internalState->allocation, nullptr));
+        VK_CHECK(vmaCreateBuffer(vmaAllocator_, &createInfo, &allocCreateInfo, &buffer->buffer, &buffer->allocation, nullptr));
         if (desc->usage == Usage::ReadBack || desc->usage == Usage::Upload)
         {
-            out->mappedDataPtr = internalState->allocation->GetMappedData();
-            out->mappedDataSize = internalState->allocation->GetSize();
+            buffer->mappedDataPtr = buffer->allocation->GetMappedData();
         }
+        return bufferHandle;
     }
 
     void VulkanGraphicsDevice::CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)
@@ -1909,9 +1822,9 @@ namespace gfx {
         vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
     }
 
-    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPass* renderPass, Framebuffer* framebuffer)
+    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, Framebuffer* framebuffer)
     {
-        auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(renderPass->internalState);
+        VulkanRenderPass* vkRenderpass = renderPasses.AccessResource(renderPass.handle);
         VkRenderPass rp = vkRenderpass->renderPass;
         auto vkCmdList = GetCommandList(commandList);
 
@@ -1922,13 +1835,13 @@ namespace gfx {
         uint32_t width = swapchain_->desc.width;
         uint32_t height = swapchain_->desc.height;
 
-        uint32_t attachmentCount = renderPass->desc.attachmentCount;
+        uint32_t attachmentCount = vkRenderpass->desc.attachmentCount;
         if (framebuffer)
         {
             vkFramebuffer = std::static_pointer_cast<VulkanFramebuffer>(framebuffer->internalState)->framebuffer;
             fbDepthAttachmentIndex = framebuffer->depthAttachmentIndex;
-            width  = renderPass->desc.width;
-            height = renderPass->desc.height;
+            width  = vkRenderpass->desc.width;
+            height = vkRenderpass->desc.height;
         }
         else
         {
@@ -1962,12 +1875,11 @@ namespace gfx {
         vkCmdSetScissor(vkCmdList->commandBuffer, 0, 1, &scissor);
     }
 
-    void VulkanGraphicsDevice::BindPipeline(CommandList* commandList, Pipeline* pipeline)
+    void VulkanGraphicsDevice::BindPipeline(CommandList* commandList, PipelineHandle pipeline)
     {
         auto cmdList = GetCommandList(commandList);
-        auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
+        auto vkPipeline = pipelines.AccessResource(pipeline.handle);
         vkCmdBindPipeline(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipeline);
-
 		vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
     }
 
@@ -1983,10 +1895,10 @@ namespace gfx {
         vkCmdDrawIndexed(cmd->commandBuffer, indexCount, instanceCount, firstIndex, 0, 0);
     }
 
-    void VulkanGraphicsDevice::DrawIndexedIndirect(CommandList* commandList, GPUBuffer* indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride)
+    void VulkanGraphicsDevice::DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride)
     {
         auto cmd = GetCommandList(commandList);
-        auto dcb  = std::static_pointer_cast<VulkanBuffer>(indirectBuffer->internalState);
+        auto dcb = buffers.AccessResource(indirectBuffer.handle);
         vkCmdDrawIndexedIndirect(cmd->commandBuffer, dcb->buffer, offset, drawCount, stride);
     }
 
@@ -1996,21 +1908,18 @@ namespace gfx {
         vkCmdDispatch(cmd->commandBuffer, groupCountX, groupCountY, groupCountZ);
     }
 
-    bool VulkanGraphicsDevice::IsSwapchainReady(RenderPass* rp)
+    bool VulkanGraphicsDevice::IsSwapchainReady(RenderPassHandle rp)
     {
-        auto vkRenderpass = std::static_pointer_cast<VulkanRenderPass>(rp->internalState);
-
+		VulkanRenderPass* vkRenderpass = renderPasses.AccessResource(rp.handle);
         if (isSwapchainResized())
 			return createSwapchainInternal(vkRenderpass->renderPass);
-
-
         return true;
     }
 
-    void VulkanGraphicsDevice::BindIndexBuffer(CommandList* commandList, GPUBuffer* buffer)
+    void VulkanGraphicsDevice::BindIndexBuffer(CommandList* commandList, BufferHandle buffer)
     {
         auto cmd = GetCommandList(commandList);
-        auto gpuBuffer = std::static_pointer_cast<VulkanBuffer>(buffer->internalState);
+        auto gpuBuffer = buffers.AccessResource(buffer.handle);
         vkCmdBindIndexBuffer(cmd->commandBuffer, gpuBuffer->buffer, 0, VK_INDEX_TYPE_UINT32);
     }
 
@@ -2115,15 +2024,59 @@ namespace gfx {
         destroyReleasedResources();
     }
 
-    void VulkanGraphicsDevice::CopyBuffer(GPUBuffer* dst, GPUBuffer* src, uint32_t dstOffset)
+    void VulkanGraphicsDevice::CopyToBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)
     {
-        uint32_t copySize = static_cast<uint32_t>(std::min(dst->desc.size, src->desc.size));
-        if (dst->mappedDataPtr && src->mappedDataPtr)
-            std::memcpy(dst->mappedDataPtr, src->mappedDataPtr, copySize);
+        VulkanBuffer* buffer = buffers.AccessResource(handle.handle);
+        if (data == nullptr)
+        {
+            Logger::Error("Null data to copy to buffer");
+            return;
+        }
+
+        if (offset > buffer->desc.size)
+        {
+            Logger::Error("Invalid offset and size (offset > size)");
+            return;
+        }
+
+        if (size > buffer->desc.size)
+        {
+            Logger::Error("Copysize exceed the size of buffer");
+            return;
+        }
+
+        auto device = GetDevice();
+
+        void* ptr = buffer->mappedDataPtr;
+        if (buffer->mappedDataPtr)
+        {
+            uint8_t* dstLoc = reinterpret_cast<uint8_t*>(ptr) + offset;
+            std::memcpy(dstLoc, data, size);
+        }
+        else
+        {
+            GPUBufferDesc bufferDesc = {};
+            bufferDesc.bindFlag = gfx::BindFlag::None;
+            bufferDesc.usage = gfx::Usage::Upload;
+            bufferDesc.size = size;
+            BufferHandle stagingBuffer = CreateBuffer(&bufferDesc);
+
+            VulkanBuffer* vkBuffer = buffers.AccessResource(stagingBuffer.handle);
+            std::memcpy(vkBuffer->mappedDataPtr, data, size);
+            CopyBuffer(handle, stagingBuffer, offset);
+        }
+    }
+
+    void VulkanGraphicsDevice::CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset)
+    {
+        VulkanBuffer* srcBuffer = buffers.AccessResource(src.handle);
+        VulkanBuffer* dstBuffer = buffers.AccessResource(dst.handle);
+
+        uint32_t copySize = static_cast<uint32_t>(std::min(dstBuffer->allocation->GetSize(), srcBuffer->allocation->GetSize()));
+        if (dstBuffer->mappedDataPtr && srcBuffer->mappedDataPtr)
+            std::memcpy(dstBuffer->mappedDataPtr, srcBuffer->mappedDataPtr, copySize);
         else 
         {
-			auto srcBuffer = std::static_pointer_cast<VulkanBuffer>(src->internalState);
-            auto dstBuffer = std::static_pointer_cast<VulkanBuffer>(dst->internalState);
 
 			VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
             VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -2143,9 +2096,9 @@ namespace gfx {
         }
     }
 
-    void VulkanGraphicsDevice::CopyTexture(GPUTexture* dst, GPUBuffer* src, PipelineBarrierInfo* barriers, uint32_t arrayLevel, uint32_t mipLevel)
+    void VulkanGraphicsDevice::CopyTexture(GPUTexture* dst, BufferHandle src, PipelineBarrierInfo* barriers, uint32_t arrayLevel, uint32_t mipLevel)
     {
-        auto from = std::static_pointer_cast<VulkanBuffer>(src->internalState);
+        auto from = buffers.AccessResource(src.handle);
         auto to = std::static_pointer_cast<VulkanTexture>(dst->internalState);
 
         assert(from != nullptr);
@@ -2207,13 +2160,15 @@ namespace gfx {
         // Create Staging buffer to transfer image data
         uint32_t sizePerPixel = _FindSizeInByte(desc->format);
 		const uint32_t imageDataSize = desc->width * desc->height * sizePerPixel;
-        gfx::GPUBuffer stagingBuffer;
+        gfx::BufferHandle stagingBuffer;
         gfx::GPUBufferDesc bufferDesc;
         bufferDesc.bindFlag = gfx::BindFlag::None;
         bufferDesc.usage = gfx::Usage::Upload;
         bufferDesc.size = imageDataSize;
-        CreateBuffer(&bufferDesc, &stagingBuffer);
-        std::memcpy(stagingBuffer.mappedDataPtr, src, sizeInByte);
+
+		stagingBuffer = CreateBuffer(&bufferDesc);
+        VulkanBuffer* buffer = buffers.AccessResource(stagingBuffer.handle);
+        std::memcpy(buffer->mappedDataPtr, src, sizeInByte);
 
         // Copy from staging buffer to GPUTexture
         gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
@@ -2222,7 +2177,7 @@ namespace gfx {
             gfx::PipelineStage::TransferBit,
             gfx::PipelineStage::TransferBit
         };
-        CopyTexture(dst, &stagingBuffer, &transferBarrierInfo, 0, 0);
+        CopyTexture(dst, stagingBuffer, &transferBarrierInfo, 0, 0);
         // If miplevels is greater than  1 the mip are generated
         // else the imagelayout is transitioned to shader attachment optimal
         if(generateMipMap)
@@ -2357,28 +2312,38 @@ namespace gfx {
 			barrierCount, imageBarriers.data());
     }
 
-    void VulkanGraphicsDevice::UpdateDescriptor(Pipeline* pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
+    void* VulkanGraphicsDevice::GetMappedDataPtr(BufferHandle buffer)
     {
-        auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
+        VulkanBuffer* vkBuffer = buffers.AccessResource(buffer.handle);
+        if (vkBuffer)
+            return vkBuffer->mappedDataPtr;
+        return nullptr;
+    }
+
+    uint32_t VulkanGraphicsDevice::GetBufferSize(BufferHandle handle)
+    {
+        return (uint32_t)buffers.AccessResource(handle.handle)->desc.size;
+    }
+
+    void VulkanGraphicsDevice::UpdateDescriptor(PipelineHandle pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)
+    {
+        auto vkPipeline = pipelines.AccessResource(pipeline.handle);
 
         // lazy initialization of descriptor set
         std::vector<VulkanDescriptorInfo> descriptorInfos;
         for (uint32_t i = 0; i < descriptorInfoCount; ++i)
         {
             DescriptorInfo info = *(descriptorInfo + i);
-            gfx::GPUResource* resource = info.resource;
-            if (resource == nullptr)
-                continue;
-            if (resource->IsBuffer())
+            if (info.type == DescriptorType::StorageBuffer || info.type == DescriptorType::UniformBuffer)
             {
-                auto vkBuffer = std::static_pointer_cast<VulkanBuffer>(resource->internalState);
+                auto vkBuffer = buffers.AccessResource(info.buffer.handle);
                 VulkanDescriptorInfo descriptorInfo = {};
                 descriptorInfo.bufferInfo.buffer = vkBuffer->buffer;
                 descriptorInfo.bufferInfo.offset = info.offset;
                 descriptorInfo.bufferInfo.range = info.size;
                 descriptorInfos.push_back(descriptorInfo);
             }
-            else if (resource->IsTexture())
+            else
             {
                 uint32_t totalSize = 1;
                 uint32_t mipLevel = 0;
@@ -2387,7 +2352,7 @@ namespace gfx {
                 else if (info.type == DescriptorType::ImageArray)
                     totalSize = info.size;
 
-                gfx::GPUTexture* textures = (gfx::GPUTexture*)(resource);
+                gfx::GPUTexture* textures = (gfx::GPUTexture*)(info.texture);
                 for (uint32_t imageIndex = 0; imageIndex < totalSize; ++imageIndex)
                 {
                     gfx::GPUTexture* texture = textures + imageIndex;
@@ -2444,10 +2409,10 @@ namespace gfx {
         vkUpdateDescriptorSetWithTemplate(device_, vkPipeline->descriptorSet, vkPipeline->updateTemplate,  descriptorInfos.data());
     }
 
-    void VulkanGraphicsDevice::PushConstants(CommandList* commandList, Pipeline* pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset)
+    void VulkanGraphicsDevice::PushConstants(CommandList* commandList, PipelineHandle pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset)
     {
         auto cmd = GetCommandList(commandList);
-        auto vkPipeline = std::static_pointer_cast<VulkanPipeline>(pipeline->internalState);
+        VulkanPipeline* vkPipeline = pipelines.AccessResource(pipeline.handle);
 
         VkShaderStageFlags shaderStageFlag = 0;
         if (HasFlag<>(shaderStages, ShaderStage::Vertex))
@@ -2481,15 +2446,34 @@ namespace gfx {
     }
 
 
-    VkRenderPass VulkanGraphicsDevice::Get(RenderPass* rp)
+    VkRenderPass VulkanGraphicsDevice::Get(RenderPassHandle rp)
     {
-        return std::static_pointer_cast<VulkanRenderPass>(rp->internalState)->renderPass;
+        return renderPasses.AccessResource(rp.handle)->renderPass;
     }
 
     VkCommandBuffer VulkanGraphicsDevice::Get(CommandList* commandList)
     {
         auto cmdList = GetCommandList(commandList);
         return cmdList->commandBuffer;
+    }
+
+    void VulkanGraphicsDevice::Destroy(RenderPassHandle renderPass)
+    {
+        VulkanRenderPass* vkRp = renderPasses.AccessResource(renderPass.handle);
+        gAllocationHandler.destroyedRenderPass_.push_back(vkRp->renderPass);
+        renderPasses.ReleaseResource(renderPass.handle);
+    }
+
+    void VulkanGraphicsDevice::Destroy(PipelineHandle pipeline)
+    {
+        VulkanPipeline* vkPipeline = pipelines.AccessResource(pipeline.handle);
+        gAllocationHandler.destroyedPipeline_.push_back(vkPipeline->pipeline);
+        gAllocationHandler.destroyedPipelineLayout_.push_back(vkPipeline->pipelineLayout);
+        gAllocationHandler.destroyedShaders_.insert(gAllocationHandler.destroyedShaders_.end(), vkPipeline->shaderModules.begin(), vkPipeline->shaderModules.end());
+        gAllocationHandler.destroyedSetLayout_.push_back(vkPipeline->setLayout);
+        gAllocationHandler.destroyedDescriptorUpdateTemplate_.push_back(vkPipeline->updateTemplate);
+        vkPipeline->shaderModules.clear();
+        pipelines.ReleaseResource(pipeline.handle);
     }
 
     VulkanGraphicsDevice::~VulkanGraphicsDevice()

@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "CommonInclude.h"
+#include "ResourcePool.h"
 
 namespace gfx
 {
@@ -159,12 +160,38 @@ namespace gfx
 		float x, y, w, h, minDepth, maxDepth;
 	};
 
+	struct RenderPassHandle {
+		ResourceHandle handle;
+	};
+
+	struct BufferHandle {
+		ResourceHandle handle;
+	};
+
+	struct TextureHandle {
+		ResourceHandle handle;
+	};
+
+	struct PipelineHandle {
+		ResourceHandle handle;
+	};
+
+	struct DescriptorSetHandle {
+		ResourceHandle handle;
+	};
+
 	struct GraphicsDeviceResource {
 		std::shared_ptr<void> internalState;
 		bool IsValid() { return internalState != nullptr; }
 	};
 
-	struct RenderPass;
+	struct BufferView
+	{
+		BufferHandle buffer;
+		uint32_t offset;
+		uint32_t size;
+	};
+
 	struct SwapchainDesc
 	{
 		union
@@ -181,7 +208,7 @@ namespace gfx
 		bool fullscreen = false;
 		bool vsync = false;
 		bool enableDepth = false;
-		RenderPass* renderPass = nullptr;
+		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
 
 
@@ -237,9 +264,11 @@ namespace gfx
 		PipelineStage dstStage;
 	};
 
+	/*
 	struct Pipeline : public GraphicsDeviceResource
 	{
 	};
+	*/
 
 	struct ShaderDescription
 	{
@@ -280,7 +309,7 @@ namespace gfx
 		RasterizationState rasterizationState = {};
 		BlendState* blendState = nullptr;
 		uint32_t blendStateCount = 0;
-		RenderPass* renderPass = nullptr;
+		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
 
 	struct GPUResource : public GraphicsDeviceResource
@@ -326,13 +355,13 @@ namespace gfx
 		BindFlag bindFlag = BindFlag::None;
 
 	};
-
+/*
 	struct GPUBuffer : public GPUResource
 	{
 		GPUBufferDesc desc;
 
 	};
-
+	*/
 	struct SamplerInfo
 	{
 		TextureFilter textureFilter = TextureFilter::Linear;
@@ -376,10 +405,11 @@ namespace gfx
 		bool hasDepthAttachment = false;
 	};
 
+	/*
 	struct RenderPass : public GraphicsDeviceResource
 	{
 		RenderPassDesc desc;
-	};
+	};*/
 
 	struct GPUTexture : public GPUResource
 	{
@@ -389,7 +419,11 @@ namespace gfx
 
 	struct DescriptorInfo
 	{
-		GPUResource* resource;
+		union {
+			BufferHandle buffer;
+			GPUResource* texture;
+		};
+
 		uint32_t offset = 0;
 		union {
 			uint32_t size = 0;
@@ -397,6 +431,29 @@ namespace gfx
 		};
 		DescriptorType type = DescriptorType::StorageBuffer;
 		uint32_t totalSize = 64;
+
+		DescriptorInfo() = default;
+
+		DescriptorInfo(BufferHandle handle, uint32_t offset, uint32_t size, DescriptorType type, uint32_t totalSize = 64) : 
+			buffer(handle),
+			offset(offset),
+			size(size),
+			type(type),
+			totalSize(totalSize)
+		{
+
+		}
+
+		DescriptorInfo(GPUResource* texture, uint32_t offset, uint32_t mipLevel, DescriptorType type, uint32_t totalSize = 64) :
+			texture(texture),
+			offset(offset),
+			mipLevel(mipLevel),
+			type(type),
+			totalSize(totalSize)
+		{
+
+		}
+
 	};
 
 	struct Framebuffer : public GraphicsDeviceResource

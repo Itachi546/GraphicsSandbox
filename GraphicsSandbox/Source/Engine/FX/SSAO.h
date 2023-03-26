@@ -21,10 +21,10 @@ namespace fx
 	private:
 		uint32_t mWidth, mHeight;
 		gfx::GraphicsDevice* mDevice;
-		std::shared_ptr<gfx::Pipeline> mPipeline;
+		gfx::PipelineHandle mPipeline;
 		std::shared_ptr<gfx::GPUTexture> mTexture;
 		std::shared_ptr<gfx::GPUTexture> mNoiseTexture;
-		std::shared_ptr <gfx::GPUBuffer> mKernelBuffer;
+		gfx::BufferHandle mKernelBuffer;
 
 		void Initialize();
 	};

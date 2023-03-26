@@ -51,10 +51,10 @@ namespace fx
 		uint32_t height = mHeight;
 
 		float shaderData[] = {bloomStrength, 0.0f, 0.0f, 0.0f};
-		mDevice->PushConstants(commandList, mUpSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
+		mDevice->PushConstants(commandList, mUpSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
 
-		mDevice->UpdateDescriptor(mCompositePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-		mDevice->BindPipeline(commandList, mCompositePipeline.get());
+		mDevice->UpdateDescriptor(mCompositePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(commandList, mCompositePipeline);
 		mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 32), gfx::GetWorkSize(height, 32), 1);
 		mDevice->EndDebugMarker(commandList);
 		Profiler::EndRangeGPU(commandList, compositeId);
@@ -96,7 +96,7 @@ namespace fx
 
 				barrier.srcStage = gfx::PipelineStage::ComputeShader;
 
-				descriptorInfos[0].resource = &mDownSampleTexture;
+				descriptorInfos[0].texture = &mDownSampleTexture;
 				descriptorInfos[0].mipLevel = i - 1;
 			}
 
@@ -105,9 +105,9 @@ namespace fx
 			uint32_t width = mWidth >> (i + 1);
 			uint32_t height = mHeight >> (i + 1);
 			float shaderData[] = { (float)width, (float)height, 0.0f, 0.0f};
-			mDevice->PushConstants(commandList, mDownSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
-			mDevice->UpdateDescriptor(mDownSamplePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-			mDevice->BindPipeline(commandList, mDownSamplePipeline.get());
+			mDevice->PushConstants(commandList, mDownSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
+			mDevice->UpdateDescriptor(mDownSamplePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+			mDevice->BindPipeline(commandList, mDownSamplePipeline);
 			mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
 
 		}
@@ -143,9 +143,9 @@ namespace fx
 			uint32_t width = mWidth >> i;
 			uint32_t height = mHeight >> i;
 			float shaderData[] = { (float)width, (float)height, blurRadius };
-			mDevice->PushConstants(commandList, mUpSamplePipeline.get(), gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 3), 0);
-			mDevice->UpdateDescriptor(mUpSamplePipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-			mDevice->BindPipeline(commandList, mUpSamplePipeline.get());
+			mDevice->PushConstants(commandList, mUpSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 3), 0);
+			mDevice->UpdateDescriptor(mUpSamplePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+			mDevice->BindPipeline(commandList, mUpSamplePipeline);
 			mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
 		}
 		mDevice->EndDebugMarker(commandList);
@@ -153,14 +153,9 @@ namespace fx
 
 	void Bloom::Initialize()
 	{
-		mDownSamplePipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline(StringConstants::BLOOM_DOWNSAMPLE_COMP_PATH, mDevice, mDownSamplePipeline.get());
-
-		mUpSamplePipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline(StringConstants::BLOOM_UPSAMPLE_COMP_PATH, mDevice, mUpSamplePipeline.get());
-
-		mCompositePipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_COMP_PATH, mDevice, mCompositePipeline.get());
+		mDownSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_DOWNSAMPLE_COMP_PATH, mDevice);
+		mUpSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_UPSAMPLE_COMP_PATH, mDevice);
+		mCompositePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_COMP_PATH, mDevice);
 
 		gfx::GPUTextureDesc textureDesc = {};
 		gfx::SamplerInfo samplerInfo = {};

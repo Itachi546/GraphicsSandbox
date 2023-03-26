@@ -32,8 +32,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		renderPassDesc.attachmentCount = (uint32_t)std::size(attachments);
 		renderPassDesc.attachments = attachments;
 		renderPassDesc.hasDepthAttachment = true;
-		mRenderPass = std::make_unique<gfx::RenderPass>();
-		mDevice->CreateRenderPass(&renderPassDesc, mRenderPass.get());
+		mRenderPass = mDevice->CreateRenderPass(&renderPassDesc);
 	}
 
 	{
@@ -54,21 +53,18 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		pipelineDesc.shaderCount = (uint32_t)std::size(shaders);
 		pipelineDesc.shaderDesc = shaders;
 
-		pipelineDesc.renderPass = mRenderPass.get();
+		pipelineDesc.renderPass = mRenderPass;
 		pipelineDesc.rasterizationState.enableDepthTest = true;
 		pipelineDesc.rasterizationState.enableDepthWrite = true;
 		pipelineDesc.rasterizationState.enableDepthClamp = true;
 		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Front;
-
-		mPipeline = std::make_unique<gfx::Pipeline>();
-		mDevice->CreateGraphicsPipeline(&pipelineDesc, mPipeline.get());
+		mPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
 
 		{
 			char* code = Utils::ReadFile(StringConstants::SHADOW_SKINNED_VERT_PATH, &size);
 			shaders[0] = { code, size };
 		}
-		mSkinnedPipeline = std::make_unique<gfx::Pipeline>();
-		mDevice->CreateGraphicsPipeline(&pipelineDesc, mSkinnedPipeline.get());
+		mSkinnedPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
 
 		for (uint32_t i = 0; i < std::size(shaders); ++i)
 			delete[] shaders[i].code;
@@ -76,7 +72,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 
 	{
 		mFramebuffer = std::make_unique<gfx::Framebuffer>();
-		mDevice->CreateFramebuffer(mRenderPass.get(), mFramebuffer.get(), kNumCascades);
+		mDevice->CreateFramebuffer(mRenderPass, mFramebuffer.get(), kNumCascades);
 	}
 
 	{
@@ -84,8 +80,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		bufferDesc.bindFlag = gfx::BindFlag::ConstantBuffer;
 		bufferDesc.size = sizeof(CascadeData);
 		bufferDesc.usage = gfx::Usage::Upload;
-		mBuffer = std::make_unique<gfx::GPUBuffer>();
-		mDevice->CreateBuffer(&bufferDesc, mBuffer.get());
+		mBuffer = mDevice->CreateBuffer(&bufferDesc);
 	}
 }
 
@@ -155,7 +150,7 @@ void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 
 	// Copy data to uniform buffer
 	mCascadeData.shadowDims = glm::vec4(kShadowDims, kShadowDims, kNumCascades, kNumCascades);
-	std::memcpy(mBuffer->mappedDataPtr, &mCascadeData, sizeof(CascadeData));
+	mDevice->CopyToBuffer(mBuffer, &mCascadeData, 0, sizeof(CascadeData));
 }
 
 void CascadedShadowMap::BeginRender(gfx::CommandList* commandList)
@@ -167,7 +162,7 @@ void CascadedShadowMap::BeginRender(gfx::CommandList* commandList)
 	gfx::PipelineBarrierInfo depthBarrier = { &barrierInfos[0], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
 	mDevice->PipelineBarrier(commandList, &depthBarrier);
 
-	mDevice->BeginRenderPass(commandList, mRenderPass.get(), mFramebuffer.get());
+	mDevice->BeginRenderPass(commandList, mRenderPass, mFramebuffer.get());
 	mDevice->BeginDebugMarker(commandList, "ShadowPass");
 }
 

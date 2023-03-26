@@ -27,7 +27,7 @@ void Application::initialize_()
 	Logger::Initialize();
 	Input::Initialize(mWindow);
 	TextureCache::Initialize();
-	DebugDraw::Initialize(mSwapchainRP.get());
+	DebugDraw::Initialize(mSwapchainRP);
 
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);
@@ -82,7 +82,7 @@ void Application::render_()
 {
 	RangeId cpuRenderTime = Profiler::StartRangeCPU("RenderTime CPU");
 
-	if (!mDevice->IsSwapchainReady(mSwapchainRP.get()))
+	if (!mDevice->IsSwapchainReady(mSwapchainRP))
 		return;
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
@@ -106,10 +106,10 @@ void Application::render_()
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
 	mDevice->CopyToSwapchain(&commandList, sceneDepthTexture, gfx::ImageLayout::DepthStencilAttachmentOptimal);
 
-	mDevice->BeginRenderPass(&commandList, mSwapchainRP.get(), nullptr);
+	mDevice->BeginRenderPass(&commandList, mSwapchainRP, nullptr);
 	gfx::DescriptorInfo descriptorInfo = { outputTexture, 0, 0, gfx::DescriptorType::Image };
-	mDevice->UpdateDescriptor(mSwapchainPipeline.get(), &descriptorInfo, 1);
-	mDevice->BindPipeline(&commandList, mSwapchainPipeline.get());
+	mDevice->UpdateDescriptor(mSwapchainPipeline, &descriptorInfo, 1);
+	mDevice->BindPipeline(&commandList, mSwapchainPipeline);
 	mDevice->Draw(&commandList, 6, 0, 1);
 
 	// Draw DebugData
@@ -149,7 +149,6 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	gfx::GetDevice() = mDevice.get();
 
 	// Create Default RenderPass
-	mSwapchainRP = std::make_shared<gfx::RenderPass>();
 	WindowProperties props = {};
 	Platform::GetWindowProperties(mWindow, &props);
 	mWidth = props.width;
@@ -178,7 +177,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	renderPassDesc.attachmentCount = (uint32_t)std::size(attachments);
 	renderPassDesc.attachments = attachments;
 	renderPassDesc.hasDepthAttachment = false;
-	mDevice->CreateRenderPass(&renderPassDesc, mSwapchainRP.get());
+	mSwapchainRP = mDevice->CreateRenderPass(&renderPassDesc);
 
 	// Create Swapchain
 	gfx::SwapchainDesc swapchainDesc = {};
@@ -189,7 +188,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.depthFormat = mSwapchainDepthFormat;
 	swapchainDesc.fullscreen = false;
 	swapchainDesc.enableDepth = true;
-	swapchainDesc.renderPass = mSwapchainRP.get();
+	swapchainDesc.renderPass = mSwapchainRP;
 	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	mDevice->CreateSwapchain(&swapchainDesc, window);
 
@@ -210,7 +209,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	pipelineDesc.shaderCount = 2;
 	pipelineDesc.shaderDesc = shaders.data();
 
-	pipelineDesc.renderPass = mSwapchainRP.get();
+	pipelineDesc.renderPass = mSwapchainRP;
 	pipelineDesc.rasterizationState.enableDepthTest = false;
 	pipelineDesc.rasterizationState.enableDepthWrite = false;
 	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
@@ -218,8 +217,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	pipelineDesc.blendState = &blendState;
 	pipelineDesc.blendStateCount = 1;
 
-	mSwapchainPipeline = std::make_shared<gfx::Pipeline>();
-	mDevice->CreateGraphicsPipeline(&pipelineDesc, mSwapchainPipeline.get());
+	mSwapchainPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
 	delete[] vertexCode;
 	delete[] fragmentCode;
 }

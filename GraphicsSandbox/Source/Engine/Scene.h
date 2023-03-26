@@ -2,7 +2,6 @@
 
 #include "ECS.h"
 #include "Components.h"
-#include "GpuMemoryAllocator.h"
 #include "EnvironmentMap.h"
 #include "Camera.h"
 
@@ -79,8 +78,8 @@ private:
 
 	struct StagingMeshData : public MeshData
 	{
-		std::shared_ptr<gfx::GPUBuffer> vertexBuffer;
-		std::shared_ptr<gfx::GPUBuffer> indexBuffer;
+		gfx::BufferHandle vertexBuffer;
+		gfx::BufferHandle indexBuffer;
 	};
 
 	ecs::Entity CreateMeshEntity(uint32_t nodeIndex,

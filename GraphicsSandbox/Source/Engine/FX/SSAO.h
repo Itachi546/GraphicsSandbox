@@ -16,14 +16,14 @@ namespace fx
 			mHeight = height;
 		}
 
-		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* depthTexture, float blurRadius);
+		void Generate(gfx::CommandList* commandList, gfx::TextureHandle depthTexture, float blurRadius);
 
 	private:
 		uint32_t mWidth, mHeight;
 		gfx::GraphicsDevice* mDevice;
 		gfx::PipelineHandle mPipeline;
-		std::shared_ptr<gfx::GPUTexture> mTexture;
-		std::shared_ptr<gfx::GPUTexture> mNoiseTexture;
+		gfx::TextureHandle mTexture;
+		gfx::TextureHandle mNoiseTexture;
 		gfx::BufferHandle mKernelBuffer;
 
 		void Initialize();

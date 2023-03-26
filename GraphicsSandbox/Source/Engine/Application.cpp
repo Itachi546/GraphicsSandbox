@@ -95,19 +95,19 @@ void Application::render_()
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
 	RangeId swapchainRangeId = Profiler::StartRangeGPU(&commandList, "Swapchain Render");
 
-	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
+	gfx::TextureHandle outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
 	gfx::ImageBarrierInfo shaderReadBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
 	gfx::PipelineBarrierInfo shaderReadPipelineBarrier = { &shaderReadBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader};
 	mDevice->PipelineBarrier(&commandList, &shaderReadPipelineBarrier);
 
-	gfx::GPUTexture* sceneDepthTexture = mRenderer->GetOutputTexture(OutputTextureType::HDRDepth);
+	gfx::TextureHandle sceneDepthTexture = mRenderer->GetOutputTexture(OutputTextureType::HDRDepth);
 	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::None, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, sceneDepthTexture };
 	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
 	mDevice->CopyToSwapchain(&commandList, sceneDepthTexture, gfx::ImageLayout::DepthStencilAttachmentOptimal);
 
 	mDevice->BeginRenderPass(&commandList, mSwapchainRP, nullptr);
-	gfx::DescriptorInfo descriptorInfo = { outputTexture, 0, 0, gfx::DescriptorType::Image };
+	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
 	mDevice->UpdateDescriptor(mSwapchainPipeline, &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mSwapchainPipeline);
 	mDevice->Draw(&commandList, 6, 0, 1);

@@ -23,9 +23,8 @@ struct ResourcePool
 		freeIndices.resize(poolSize);
 		resourceMemory.resize(poolSize);
 		for (uint32_t i = 0; i < poolSize; ++i)
-			freeIndices[i] = i;
+			freeIndices[i] = poolSize - i - 1;
 
-		freeIndicesHead = 0;
 		usedIndices = 0;
 	}
 
@@ -34,7 +33,7 @@ struct ResourcePool
 	* allocated resources
 	*/
 	void Shutdown() {
-		if (freeIndicesHead != 0) {
+		if (usedIndices > 0) {
 			Logger::Warn("Resource pool has unfreed resources.\n");
 			resourceMemory.clear();
 			freeIndices.clear();
@@ -46,12 +45,15 @@ struct ResourcePool
 	* the free indices list
 	*/
 	uint32_t ObtainResource() {
-		if (freeIndicesHead < poolSize)
+
+		if (freeIndices.size() > 0)
 		{
-			const uint32_t freeIndex = freeIndices[freeIndicesHead++];
+			uint32_t freeIndex = freeIndices.back();
+			freeIndices.pop_back();
 			usedIndices++;
 			return freeIndex;
 		}
+
 		Logger::Error("Resource space unavailable");
 		return K_INVALID_RESOURCE_HANDLE;
 	}
@@ -61,8 +63,15 @@ struct ResourcePool
 	*/
 	void ReleaseResource(uint32_t handle)
 	{
-		freeIndices[--freeIndicesHead] = handle;
-		usedIndices--;
+		auto found = std::find(freeIndices.begin(), freeIndices.end(), handle);
+		if (found == freeIndices.end())
+		{
+			freeIndices.push_back(handle);
+			usedIndices--;
+		}
+		else {
+			Logger::Warn("Releasing already destroyed resource");
+		}
 	}
 
 	/*
@@ -84,9 +93,6 @@ struct ResourcePool
 
 	// List of free indices
 	std::vector<uint32_t> freeIndices;
-
-	// Free Indices head pointer
-	uint32_t freeIndicesHead;
 
 	// Count of used indices
 	uint32_t usedIndices;

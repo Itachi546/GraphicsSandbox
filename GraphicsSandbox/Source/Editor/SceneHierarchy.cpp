@@ -227,7 +227,7 @@ void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 		auto ShowTexture = [](uint32_t index, std::string textureType) {
 			std::string filename = "No File";
 			if (index != INVALID_TEXTURE)
-				filename = TextureCache::GetByIndex(index)->name;
+				filename = TextureCache::GetTextureName(index);
 			ImGui::Text("%s: %s\n", textureType.c_str(), filename.c_str());
 		};
 

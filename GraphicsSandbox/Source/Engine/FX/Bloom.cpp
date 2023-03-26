@@ -14,7 +14,7 @@ namespace fx
 		Initialize();
 	}
 
-	void Bloom::Generate(gfx::CommandList* commandList, gfx::GPUTexture* inputTexture, float blurRadius)
+	void Bloom::Generate(gfx::CommandList* commandList, gfx::TextureHandle inputTexture, float blurRadius)
 	{
 		RangeId bloomDownsample = Profiler::StartRangeGPU(commandList, "Bloom Downsample");
 		GenerateDownSamples(commandList, inputTexture);
@@ -25,14 +25,14 @@ namespace fx
 		Profiler::EndRangeGPU(commandList, bloomUpsample);
 	}
 
-	void Bloom::Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture, float bloomStrength)
+	void Bloom::Composite(gfx::CommandList* commandList, gfx::TextureHandle hdrTexture, float bloomStrength)
 	{
 		RangeId compositeId = Profiler::StartRangeGPU(commandList, "Bloom Composite Pass");
 		// Composite Pass
 		mDevice->BeginDebugMarker(commandList, "Bloom Composite Pass");
 		gfx::ImageBarrierInfo imageBarrierInfo[] = {
 			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, hdrTexture, 0, 0, 1, 1},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, &mDownSampleTexture, 0, 0, 1, 1}
+			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, 0, 0, 1, 1}
 		};
 
 		gfx::PipelineBarrierInfo barrier = {
@@ -43,7 +43,7 @@ namespace fx
 
 		mDevice->PipelineBarrier(commandList, &barrier);
 		gfx::DescriptorInfo descriptorInfos[] = {
-			gfx::DescriptorInfo{hdrTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&hdrTexture, 0, 0, gfx::DescriptorType::Image},
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
 		};
 
@@ -60,7 +60,7 @@ namespace fx
 		Profiler::EndRangeGPU(commandList, compositeId);
 	}
 
-	void Bloom::GenerateDownSamples(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture)
+	void Bloom::GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture)
 	{
 		mDevice->BeginDebugMarker(commandList, "Bloom Downsample");
 
@@ -68,7 +68,7 @@ namespace fx
 		// Convert the textureFormat
 		gfx::ImageBarrierInfo imageBarrierInfo[] = {
 			gfx::ImageBarrierInfo{gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, brightTexture},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, &mDownSampleTexture}
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mDownSampleTexture}
 		};
 
 		gfx::PipelineBarrierInfo barrier = {
@@ -80,7 +80,7 @@ namespace fx
 		//mDevice->PipelineBarrier(commandList, &barrier);
 		// Describe Descriptors
 		gfx::DescriptorInfo descriptorInfos[] = {
-			gfx::DescriptorInfo{brightTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&brightTexture, 0, 0, gfx::DescriptorType::Image},
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
 		};
 
@@ -91,7 +91,7 @@ namespace fx
 			{
 				imageBarrierInfo[0] = { gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead };
 				imageBarrierInfo[0].baseMipLevel = i - 1;
-				imageBarrierInfo[0].resource = &mDownSampleTexture;
+				imageBarrierInfo[0].resource = mDownSampleTexture;
 				imageBarrierInfo[1].baseMipLevel = i;
 
 				barrier.srcStage = gfx::PipelineStage::ComputeShader;
@@ -126,8 +126,8 @@ namespace fx
 		{
 			// Generate Upsamples
 			gfx::ImageBarrierInfo imageBarrierInfo[] = {
-				gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, &mDownSampleTexture, i, 0, 1, 1},
-				gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, &mDownSampleTexture, i - 1, 0, 1, 1}
+				gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, i, 0, 1, 1},
+				gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, mDownSampleTexture, i - 1, 0, 1, 1}
 			};
 
 			gfx::PipelineBarrierInfo barrier = {
@@ -165,6 +165,6 @@ namespace fx
 		textureDesc.mipLevels = kMaxMipLevel;
 		textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 		textureDesc.format = mFormat;
-		mDevice->CreateTexture(&textureDesc, &mDownSampleTexture);
+		mDownSampleTexture = mDevice->CreateTexture(&textureDesc);
 	}
 };

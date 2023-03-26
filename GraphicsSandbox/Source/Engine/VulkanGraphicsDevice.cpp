@@ -1329,6 +1329,7 @@ namespace gfx {
         renderPasses.Initialize(256);
         pipelines.Initialize(128);
         buffers.Initialize(256);
+        textures.Initialize(1024);
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -1452,14 +1453,15 @@ namespace gfx {
         {
             Attachment* attachment = (rp->desc.attachments + i);
             uint32_t index = attachment->index;
-			GPUTexture* texture = &out->attachments[index];
             attachment->desc.width = width;
             attachment->desc.height = height;
 
             assert(attachment->desc.arrayLayers == layerCount);
+            TextureHandle& texture = out->attachments[index];
+            texture.handle = textures.ObtainResource();
+			texture = CreateTexture(&attachment->desc);
+            imageViews[index] = textures.AccessResource(texture.handle)->imageViews[0];
 
-            CreateTexture(&attachment->desc, texture);
-            imageViews[index] = std::static_pointer_cast<VulkanTexture>(texture->internalState)->imageViews[0]; 
             if (attachment->desc.imageAspect == ImageAspect::Depth)
                 out->depthAttachmentIndex = attachment->index;
         }
@@ -1512,7 +1514,9 @@ namespace gfx {
     {
         PipelineHandle pipelineHandle = { pipelines.ObtainResource() };
         VulkanPipeline* vkPipeline = pipelines.AccessResource(pipelineHandle.handle);
-        vkPipeline->bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        std::memset(vkPipeline, 0, sizeof(VulkanPipeline));
+		
+		vkPipeline->bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
         VkGraphicsPipelineCreateInfo createInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
         std::vector<VkPipelineShaderStageCreateInfo> stages(desc->shaderCount);
@@ -1618,6 +1622,8 @@ namespace gfx {
     {
         PipelineHandle pipelineHandle = { pipelines.ObtainResource() };
         VulkanPipeline* vkPipeline = pipelines.AccessResource(pipelineHandle.handle);
+        std::memset(vkPipeline, 0, sizeof(VulkanPipeline));
+
         vkPipeline->bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 
         assert(desc->shaderCount > 0);
@@ -1650,6 +1656,8 @@ namespace gfx {
     {
         BufferHandle bufferHandle = { buffers.ObtainResource() };
         VulkanBuffer* buffer = buffers.AccessResource(bufferHandle.handle);
+        std::memset(buffer, 0, sizeof(VulkanBuffer));
+
         buffer->desc = *desc;
 
         VkBufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -1689,21 +1697,24 @@ namespace gfx {
         return bufferHandle;
     }
 
-    void VulkanGraphicsDevice::CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)
+    TextureHandle VulkanGraphicsDevice::CreateTexture(const GPUTextureDesc* desc)
     {
-        auto internalState = std::make_shared<VulkanTexture>();
+        TextureHandle textureHandle = { textures.ObtainResource() };
+        VulkanTexture* texture = textures.AccessResource(textureHandle.handle);
+        std::memset(texture, 0, sizeof(VulkanTexture));
 
-        out->internalState = internalState;
-        out->resourceType = GPUResource::Type::Texture;
-        out->mappedDataSize = 0;
-        out->mappedDataPtr = nullptr;
-        out->desc = *desc;
+        texture->width = desc->width;
+        texture->height = desc->height;
+        texture->depth = desc->depth;
+        texture->mipLevels = desc->mipLevels;
+        texture->arrayLayers = desc->arrayLayers;
+        texture->sizePerPixelByte = _FindSizeInByte(desc->format);
 
         VkFormat format = _ConvertFormat(desc->format);
-        internalState->format = format;
+        texture->format = format;
 
         VkImageAspectFlagBits imageAspect = _ConvertImageAspect(desc->imageAspect);
-        internalState->imageAspect = imageAspect;
+        texture->imageAspect = imageAspect;
 
         VkImageUsageFlags usage = 0;
         bool depthAttachment = false;
@@ -1749,18 +1760,19 @@ namespace gfx {
         VmaAllocation allocation = {};
         VkImage image = createImageInternal(vmaAllocator_, &createInfo, &allocation);
 
-        internalState->imageViews.resize(desc->mipLevels);
+        texture->imageViews.resize(desc->mipLevels);
         for (uint32_t i = 0; i < desc->mipLevels; ++i)
-            internalState->imageViews[i] = CreateImageView(device_, image, _ConvertImageViewType(desc->imageViewType), format, imageAspect, createInfo.arrayLayers, desc->mipLevels - i, i);
+            texture->imageViews[i] = CreateImageView(device_, image, _ConvertImageViewType(desc->imageViewType), format, imageAspect, createInfo.arrayLayers, desc->mipLevels - i, i);
 
         if (desc->bCreateSampler)
         {
             VkSampler sampler = CreateSampler(device_, &desc->samplerInfo, properties2_.properties.limits.maxSamplerAnisotropy);
-            internalState->sampler = sampler;
+            texture->sampler = sampler;
         }
 
-        internalState->image = image;
-        internalState->allocation = allocation;
+        texture->image = image;
+        texture->allocation = allocation;
+        return textureHandle;
     }
 
     void VulkanGraphicsDevice::CreateSemaphore(Semaphore* out)
@@ -1825,6 +1837,7 @@ namespace gfx {
     void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, Framebuffer* framebuffer)
     {
         VulkanRenderPass* vkRenderpass = renderPasses.AccessResource(renderPass.handle);
+
         VkRenderPass rp = vkRenderpass->renderPass;
         auto vkCmdList = GetCommandList(commandList);
 
@@ -1929,17 +1942,17 @@ namespace gfx {
         vkCmdEndRenderPass(cmdList->commandBuffer);
     }
 
-    void VulkanGraphicsDevice::CopyToSwapchain(CommandList* commandList, GPUTexture* texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel, uint32_t mipLevel)
+    void VulkanGraphicsDevice::CopyToSwapchain(CommandList* commandList, TextureHandle texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel, uint32_t mipLevel)
     {
         auto cmd = GetCommandList(commandList);
         uint32_t imageIndex = swapchain_->currentImageIndex;
 
-        auto src = std::static_pointer_cast<VulkanTexture>(texture->internalState);
+        auto src = textures.AccessResource(texture.handle);
         VkImageAspectFlagBits imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;
         VkFilter filter = VK_FILTER_LINEAR;
         VkImage dstImage = swapchain_->images[imageIndex];
         VkPipelineStageFlagBits pipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        if (texture->desc.imageAspect == ImageAspect::Depth)
+        if (src->imageAspect == VK_IMAGE_ASPECT_DEPTH_BIT)
         {
             imageAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
             filter = VK_FILTER_NEAREST;
@@ -1953,8 +1966,8 @@ namespace gfx {
             VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
         vkCmdPipelineBarrier(cmd->commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &transferBarrier);
 
-        int levelWidth  = std::max(1u, texture->desc.width >> mipLevel);
-        int levelHeight = std::max(1u, texture->desc.height >> mipLevel);
+        int levelWidth  = std::max(1u, src->width >> mipLevel);
+        int levelHeight = std::max(1u, src->height >> mipLevel);
 
         VkImageBlit blitRegion = {};
         blitRegion.srcSubresource.aspectMask = imageAspect;
@@ -2096,10 +2109,10 @@ namespace gfx {
         }
     }
 
-    void VulkanGraphicsDevice::CopyTexture(GPUTexture* dst, BufferHandle src, PipelineBarrierInfo* barriers, uint32_t arrayLevel, uint32_t mipLevel)
+    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barriers, uint32_t arrayLevel, uint32_t mipLevel)
     {
-        auto from = buffers.AccessResource(src.handle);
-        auto to = std::static_pointer_cast<VulkanTexture>(dst->internalState);
+        VulkanBuffer* from = buffers.AccessResource(src.handle);
+        VulkanTexture* to = textures.AccessResource(dst.handle);
 
         assert(from != nullptr);
         assert(to != nullptr);
@@ -2120,7 +2133,7 @@ namespace gfx {
         region.imageSubresource.layerCount = 1;
 
         region.imageOffset = { 0, 0, 0 };
-        region.imageExtent = {dst->desc.width, dst->desc.height, dst->desc.depth};
+        region.imageExtent = {to->width, to->height, to->depth};
 
         // Check Image Layout
 
@@ -2154,19 +2167,19 @@ namespace gfx {
         vkDeviceWaitIdle(device_);
     }
 
-    void VulkanGraphicsDevice::CopyTexture(GPUTexture* dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
+    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
     {
-        GPUTextureDesc* desc = &dst->desc;
+        VulkanTexture* dstTexture = textures.AccessResource(dst.handle);
+
         // Create Staging buffer to transfer image data
-        uint32_t sizePerPixel = _FindSizeInByte(desc->format);
-		const uint32_t imageDataSize = desc->width * desc->height * sizePerPixel;
-        gfx::BufferHandle stagingBuffer;
+        const uint32_t imageDataSize = dstTexture->width * dstTexture->height * dstTexture->sizePerPixelByte;
+
         gfx::GPUBufferDesc bufferDesc;
         bufferDesc.bindFlag = gfx::BindFlag::None;
         bufferDesc.usage = gfx::Usage::Upload;
         bufferDesc.size = imageDataSize;
 
-		stagingBuffer = CreateBuffer(&bufferDesc);
+        gfx::BufferHandle stagingBuffer = CreateBuffer(&bufferDesc);
         VulkanBuffer* buffer = buffers.AccessResource(stagingBuffer.handle);
         std::memcpy(buffer->mappedDataPtr, src, sizeInByte);
 
@@ -2181,21 +2194,21 @@ namespace gfx {
         // If miplevels is greater than  1 the mip are generated
         // else the imagelayout is transitioned to shader attachment optimal
         if(generateMipMap)
-			GenerateMipmap(dst, desc->mipLevels);
+			GenerateMipmap(dst, dstTexture->mipLevels);
     }
 
-    void VulkanGraphicsDevice::GenerateMipmap(GPUTexture* src, uint32_t mipCount)
+    void VulkanGraphicsDevice::GenerateMipmap(TextureHandle src, uint32_t mipCount)
     {
         VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
         VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
 
-        auto vkImage = std::static_pointer_cast<VulkanTexture>(src->internalState);
+        VulkanTexture* vkImage = textures.AccessResource(src.handle);
         if (mipCount > 1)
         {
-            int width = src->desc.width;
-            int height = src->desc.height;
+            int width = vkImage->width;
+            int height = vkImage->height;
             for (uint32_t i = 0; i < mipCount - 1; ++i)
             {
                 VkImageMemoryBarrier barrierInfo = CreateImageBarrier(vkImage->image,
@@ -2279,7 +2292,7 @@ namespace gfx {
             ImageBarrierInfo& barrierInfo = barriers->barrierInfo[i];
 
             VkImageLayout newLayout = _ConvertLayout(barrierInfo.newLayout);
-            auto texture = std::static_pointer_cast<VulkanTexture>(barrierInfo.resource->internalState);
+            VulkanTexture* texture = textures.AccessResource(barrierInfo.resource.handle);
 
             // @NOTE: for now we don't care about access mask
 			//if (texture->layout == newLayout)
@@ -2352,12 +2365,12 @@ namespace gfx {
                 else if (info.type == DescriptorType::ImageArray)
                     totalSize = info.size;
 
-                gfx::GPUTexture* textures = (gfx::GPUTexture*)(info.texture);
+                gfx::TextureHandle* inputTextures = (gfx::TextureHandle*)(info.texture);
                 for (uint32_t imageIndex = 0; imageIndex < totalSize; ++imageIndex)
                 {
-                    gfx::GPUTexture* texture = textures + imageIndex;
+                    gfx::TextureHandle texture = inputTextures[imageIndex];
                     VulkanDescriptorInfo descriptorInfo = {};
-					auto vkTexture = std::static_pointer_cast<VulkanTexture>(texture->internalState);
+                    auto vkTexture = textures.AccessResource(texture.handle);
 					descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
 					
 					assert(vkTexture->imageViews.size() > mipLevel);
@@ -2366,31 +2379,6 @@ namespace gfx {
 					descriptorInfo.imageInfo.sampler = vkTexture->sampler;
                     descriptorInfos.push_back(descriptorInfo);
                 }
-                /*
-                if (info.type == DescriptorType::Image)
-                {
-                    VulkanDescriptorInfo descriptorInfo = {};
-                    auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
-                    descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
-                    assert(vkTexture->imageViews.size() > info.mipLevel);
-                    descriptorInfo.imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
-                    assert(vkTexture->sampler != VK_NULL_HANDLE);
-                    descriptorInfo.imageInfo.sampler = vkTexture->sampler;
-                    descriptorInfos.push_back(descriptorInfo);
-                }
-                else if(info.type == DescriptorType::ImageArray) {
-
-                    for (int imageCount = 0; i < info.size; ++i)
-                    {
-                        auto vkTexture = std::static_pointer_cast<VulkanTexture>(info.resource->internalState);
-                        descriptorInfos[i].imageInfo.imageLayout = vkTexture->layout;
-                        assert(vkTexture->imageViews.size() > info.mipLevel);
-                        descriptorInfos[i].imageInfo.imageView = vkTexture->imageViews[info.mipLevel];
-                        assert(vkTexture->sampler != VK_NULL_HANDLE);
-                        descriptorInfos[i].imageInfo.sampler = vkTexture->sampler;
-                    }
-                }
-                */
             }
         }
 
@@ -2476,8 +2464,33 @@ namespace gfx {
         pipelines.ReleaseResource(pipeline.handle);
     }
 
+    void VulkanGraphicsDevice::Destroy(BufferHandle buffer)
+    {
+        VulkanBuffer* vkBuffer = buffers.AccessResource(buffer.handle);
+        gAllocationHandler.destroyedBuffers_.push_back(std::make_pair(vkBuffer->buffer, vkBuffer->allocation));
+        vkBuffer->desc = {};
+        buffers.ReleaseResource(buffer.handle);
+    }
+
+    void VulkanGraphicsDevice::Destroy(TextureHandle texture)
+    {
+        VulkanTexture* vkTexture = textures.AccessResource(texture.handle);
+        gAllocationHandler.destroyedImages_.push_back(std::make_pair(vkTexture->image, vkTexture->allocation));
+        gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), vkTexture->imageViews.begin(), vkTexture->imageViews.end());
+        gAllocationHandler.destroyedSamplers_.push_back(vkTexture->sampler);
+
+        vkTexture->imageViews.clear();
+        textures.ReleaseResource(texture.handle);
+    }
+
     VulkanGraphicsDevice::~VulkanGraphicsDevice()
     {
+        // Release resources
+        buffers.Shutdown();
+        textures.Shutdown();
+        pipelines.Shutdown();
+        renderPasses.Shutdown();
+
         gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), swapchain_->imageViews.begin(), swapchain_->imageViews.end());
         swapchain_->images.clear();
         swapchain_->imageViews.clear();

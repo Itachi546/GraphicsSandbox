@@ -66,6 +66,7 @@ struct VulkanPipeline
 
 struct VulkanBuffer
 {
+	// @TODO Remove BufferDesc from here
 	VmaAllocation allocation = nullptr;
 	VkBuffer buffer = VK_NULL_HANDLE;
 	gfx::GPUBufferDesc desc;
@@ -89,14 +90,13 @@ struct VulkanTexture
 	VkFormat format = VK_FORMAT_UNDEFINED;
 	VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	VkImageAspectFlagBits imageAspect = VK_IMAGE_ASPECT_NONE;
-	~VulkanTexture()
-	{
-		/*
-		gAllocationHandler.destroyedImages_.push_back(std::make_pair(image, allocation));
-		gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), imageViews.begin(), imageViews.end());
-		gAllocationHandler.destroyedSamplers_.push_back(sampler);
-		*/
-	}
+
+	uint32_t width = 512;
+	uint32_t height = 512;
+	uint32_t depth = 1;
+	uint32_t mipLevels = 1;
+	uint32_t arrayLayers = 1;
+	uint32_t sizePerPixelByte = 3;
 };
 
 

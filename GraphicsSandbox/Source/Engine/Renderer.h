@@ -39,7 +39,7 @@ public:
 	
 	std::shared_ptr<CascadedShadowMap> GetShadowMap() { return mShadowMap; }
 
-	gfx::GPUTexture* GetOutputTexture(OutputTextureType colorTextureType);
+	gfx::TextureHandle GetOutputTexture(OutputTextureType colorTextureType);
 
 	// Bloom Setting
 	void SetEnableBloom(bool state) { mEnableBloom = state; }
@@ -82,7 +82,7 @@ private:
 		std::vector<gfx::DrawIndirectCommand> drawCommands;
 		std::vector<glm::mat4> transforms;
 		std::vector<MaterialComponent> materials;
-		std::array<gfx::GPUTexture, 64> textures;
+		std::array<gfx::TextureHandle, 64> textures;
 		uint32_t textureCount = 0;
 		gfx::BufferView vertexBuffer;
 		gfx::BufferView indexBuffer;
@@ -114,7 +114,7 @@ private:
 
 	gfx::PipelineHandle loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();
-	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
+	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
 	void DrawShadowMap(gfx::CommandList* commandList);
 	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline);
 	void DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset);

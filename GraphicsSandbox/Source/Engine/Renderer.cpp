@@ -219,7 +219,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		DrawShadowMap(commandList);
 
 		gfx::ImageBarrierInfo shadowBarrier = {
-				gfx::ImageBarrierInfo{gfx::AccessFlag::DepthStencilWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, &mShadowMap->mFramebuffer->attachments[0]},
+				gfx::ImageBarrierInfo{gfx::AccessFlag::DepthStencilWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mShadowMap->mFramebuffer->attachments[0]},
 		};
 		gfx::PipelineBarrierInfo barrier = { &shadowBarrier, 1, gfx::PipelineStage::LateFramentTest, gfx::PipelineStage::FragmentShader};
 		mDevice->PipelineBarrier(commandList, &barrier);
@@ -228,9 +228,9 @@ void Renderer::Render(gfx::CommandList* commandList)
 	// Begin HDR RenderPass
 	{
 		gfx::ImageBarrierInfo barriers[] = {
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[0]},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, &mHdrFramebuffer->attachments[1]},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mHdrFramebuffer->attachments[2]},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mHdrFramebuffer->attachments[0]},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mHdrFramebuffer->attachments[1]},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mHdrFramebuffer->attachments[2]},
 		};
 
 		gfx::PipelineBarrierInfo colorAttachmentBarrier = { barriers, 2, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput };
@@ -271,10 +271,10 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 		// Draw Cubemap
 		auto& envMap = mScene->GetEnvironmentMap();
-		gfx::GPUTexture* cubemap = envMap->GetCubemap().get();
+		gfx::TextureHandle cubemap = envMap->GetCubemap();
 
 		mDevice->BeginDebugMarker(commandList, "Draw Cubemap", 1.0f, 1.0f, 1.0f, 1.0f);
-		DrawCubemap(commandList, envMap->GetCubemap().get());
+		DrawCubemap(commandList, envMap->GetCubemap());
 		mDevice->EndDebugMarker(commandList);
 		mDevice->EndRenderPass(commandList);
 		Profiler::EndRangeGPU(commandList, hdrPass);
@@ -284,27 +284,27 @@ void Renderer::Render(gfx::CommandList* commandList)
 	{
 		auto bloomPass = Profiler::StartRangeGPU(commandList, "Bloom Pass");
 		// Bloom Pass
-		mBloomFX->Generate(commandList, &mHdrFramebuffer->attachments[1], mBloomBlurRadius);
-		mBloomFX->Composite(commandList, &mHdrFramebuffer->attachments[0], mBloomStrength);
+		mBloomFX->Generate(commandList, mHdrFramebuffer->attachments[1], mBloomBlurRadius);
+		mBloomFX->Composite(commandList, mHdrFramebuffer->attachments[0], mBloomStrength);
 		Profiler::EndRangeGPU(commandList, bloomPass);
 	}
 }
 
-gfx::GPUTexture* Renderer::GetOutputTexture(OutputTextureType colorTextureType)
+gfx::TextureHandle Renderer::GetOutputTexture(OutputTextureType colorTextureType)
 {
 	switch (colorTextureType)
 	{
 	case OutputTextureType::HDROutput:
-		return &mHdrFramebuffer->attachments[0];
+		return mHdrFramebuffer->attachments[0];
 	case OutputTextureType::HDRBrightTexture:
-		return &mHdrFramebuffer->attachments[1];
+		return mHdrFramebuffer->attachments[1];
 	case OutputTextureType::BloomUpSample:
 		return mBloomFX->GetTexture();
 	case OutputTextureType::HDRDepth:
-		return &mHdrFramebuffer->attachments[2];
+		return mHdrFramebuffer->attachments[2];
 	default:
 		assert(!"Undefined output texture");
-		return nullptr;
+		return gfx::TextureHandle{ K_INVALID_RESOURCE_HANDLE };
 	}
 }
 
@@ -370,7 +370,7 @@ void Renderer::initializeBuffers()
 	mDrawIndirectBuffer = mDevice->CreateBuffer(&bufferDesc);
 }
 
-void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap)
+void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
 {
 	MeshRenderer* meshRenderer = mScene->mComponentManager->GetComponent<MeshRenderer>(mScene->mCube);
 
@@ -389,7 +389,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubem
 	descriptorInfos[1].size = vb.size;
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
-	descriptorInfos[2].texture = cubemap;
+	descriptorInfos[2].texture = &cubemap;
 	descriptorInfos[2].offset = 0;
 	descriptorInfos[2].type = gfx::DescriptorType::Image;
 
@@ -420,11 +420,14 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 
 	descriptorInfos[3] = { mMaterialBuffer, (uint32_t)(lastOffset * sizeof(MaterialComponent)), (uint32_t)(batch.materials.size() * (uint32_t)sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer};
 
-	descriptorInfos[4] = { envMap->GetIrradianceMap().get(), 0, 0, gfx::DescriptorType::Image };
+	gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
+	descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
 
-	descriptorInfos[5] = { envMap->GetPrefilterMap().get(), 0, 0, gfx::DescriptorType::Image };
+	gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
+	descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
 
-	descriptorInfos[6] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
+	gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
+	descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
 
 	descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
 	descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
@@ -453,20 +456,20 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset)
 	auto compMgr = mScene->GetComponentManager();
 
 	// Copy Materials
-	std::array<gfx::GPUTexture, 64> textures;
-	std::fill(textures.begin(), textures.end(), *TextureCache::GetDefaultTexture());
+	std::array<gfx::TextureHandle, 64> textures;
+	std::fill(textures.begin(), textures.end(), TextureCache::GetDefaultTexture());
 
 	std::vector<MaterialComponent> materials;
 	uint32_t textureIndex = 0;
-	auto addUnique = [&textures, &textureIndex](gfx::GPUTexture* texture) -> uint32_t {
-		auto found = std::find_if(textures.begin(), textures.end(), [texture](const gfx::GPUTexture& current) {
-			return texture->internalState == current.internalState;
+	auto addUnique = [&textures, &textureIndex](gfx::TextureHandle texture) -> uint32_t {
+		auto found = std::find_if(textures.begin(), textures.end(), [texture](const gfx::TextureHandle& current) {
+			return texture.handle == current.handle;
 			});
 
 		if (found != textures.end())
 			return (uint32_t)(std::distance(textures.begin(), found));
 
-		textures[textureIndex++] = *texture;
+		textures[textureIndex++] = texture;
 		return textureIndex - 1;
 	};
 
@@ -486,11 +489,17 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset)
 
 	auto& envMap = mScene->GetEnvironmentMap();
 
+
 	gfx::DescriptorInfo descriptorInfos[10] = {};
 	descriptorInfos[0] = { mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
-	descriptorInfos[4] = { envMap->GetIrradianceMap().get(), 0, 0, gfx::DescriptorType::Image };
-	descriptorInfos[5] = { envMap->GetPrefilterMap().get(), 0, 0, gfx::DescriptorType::Image };
-	descriptorInfos[6] = { envMap->GetBRDFLUT().get(), 0, 0, gfx::DescriptorType::Image };
+
+	gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
+	descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
+	gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
+	descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
+	gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
+	descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
+
 	descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
 	descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
 	gfx::DescriptorInfo imageArrInfo = {};
@@ -551,16 +560,16 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 	RenderBatch* activeBatch = nullptr;
 	if (drawDatas.size() > 0)
 	{
-		auto addUnique = [](RenderBatch* activeBatch, gfx::GPUTexture* texture) -> uint32_t {
-			std::array<gfx::GPUTexture, 64>& textureList = activeBatch->textures;
+		auto addUnique = [](RenderBatch* activeBatch, gfx::TextureHandle texture) -> uint32_t {
+			std::array<gfx::TextureHandle, 64>& textureList = activeBatch->textures;
 			uint32_t& textureCount = activeBatch->textureCount;
-			auto found = std::find_if(textureList.begin(), textureList.end(), [texture](const gfx::GPUTexture& current) {
-				return texture->internalState == current.internalState;
+			auto found = std::find_if(textureList.begin(), textureList.end(), [texture](const gfx::TextureHandle& current) {
+				return texture.handle == current.handle;
 				});
 			if (found != textureList.end())
 				return (uint32_t)(std::distance(textureList.begin(), found));
 
-			textureList[textureCount++] = *texture;
+			textureList[textureCount++] = texture;
 			return textureCount - 1;
 		};
 
@@ -580,7 +589,7 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 				renderBatch.push_back(RenderBatch{});
 				activeBatch = &renderBatch.back();
 				// Initialize by default texture
-				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), *TextureCache::GetDefaultTexture());
+				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), TextureCache::GetDefaultTexture());
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
 				activeBatch->indexBuffer = drawData.indexBuffer;
 				lastBuffer = buffer;

@@ -19,7 +19,6 @@ EnvironmentMap::EnvironmentMap()
 void EnvironmentMap::CreateFromHDRI(const char* hdri)
 {
 	Logger::Debug("Converting hdri: " + std::string(hdri));
-	mCubemapTexture = std::make_shared<gfx::GPUTexture>();
 
 	// Load HDRI Image File 
 	int width, height, nComponent;
@@ -33,8 +32,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	hdriDesc.imageViewType = gfx::ImageViewType::IV2D;
 	hdriDesc.format = gfx::Format::R32B32G32A32_SFLOAT;
 	hdriDesc.bCreateSampler = true;
-	gfx::GPUTexture hdriTexture;
-	mDevice->CreateTexture(&hdriDesc, &hdriTexture);
+	gfx::TextureHandle hdriTexture = mDevice->CreateTexture(&hdriDesc);
 
 	// Create Staging buffer to transfer hdri data
 	const uint32_t imageDataSize = width * height * 4 * sizeof(float);
@@ -52,8 +50,11 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 		gfx::PipelineStage::TransferBit,
 		gfx::PipelineStage::TransferBit
 	};
-	mDevice->CopyTexture(&hdriTexture, stagingBuffer, &transferBarrierInfo, 0, 0);
+	mDevice->CopyTexture(hdriTexture, stagingBuffer, &transferBarrierInfo, 0, 0);
 	Utils::ImageLoader::Free(hdriData);
+
+	// Destroy intermediate resources
+	mDevice->Destroy(stagingBuffer);
 
 	// Create Destination Cubemap texture
 	gfx::GPUTextureDesc cubemapDesc{};
@@ -63,15 +64,15 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	cubemapDesc.arrayLayers = 6;
 	cubemapDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
 	cubemapDesc.bCreateSampler = true;
-	mDevice->CreateTexture(&cubemapDesc, mCubemapTexture.get());
+	mCubemapTexture = mDevice->CreateTexture(&cubemapDesc); 
 
 	// Begin Compute Shader
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = { 
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, &hdriTexture},
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mCubemapTexture.get()}
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, hdriTexture},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mCubemapTexture}
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -87,7 +88,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].type = gfx::DescriptorType::Image;
 
-	descriptorInfos[1].texture = mCubemapTexture.get();
+	descriptorInfos[1].texture = &mCubemapTexture;
 	descriptorInfos[1].offset = 0;
 	descriptorInfos[1].type = gfx::DescriptorType::Image;
 
@@ -100,14 +101,14 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	mDevice->WaitForGPU();
 	Logger::Debug("HDRI Converted Successfully");
 
+	mDevice->Destroy(hdriTexture);
 }
 
 void EnvironmentMap::CalculateIrradiance()
 {
 	Logger::Debug("Generating Irradiance Texture");
-	assert(mCubemapTexture != nullptr);
+	assert(mCubemapTexture.handle != K_INVALID_RESOURCE_HANDLE);
 
-	mIrradianceTexture = std::make_shared<gfx::GPUTexture>();
 	gfx::GPUTextureDesc irrDesc{};
 	irrDesc.width = irrDesc.height = mIrrTexDims;
 	irrDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
@@ -115,13 +116,13 @@ void EnvironmentMap::CalculateIrradiance()
 	irrDesc.arrayLayers = 6;
 	irrDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
 	irrDesc.bCreateSampler = true;
-	mDevice->CreateTexture(&irrDesc, mIrradianceTexture.get());
+	mIrradianceTexture = mDevice->CreateTexture(&irrDesc);
 
 	// Begin Compute Shader
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mIrradianceTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mIrradianceTexture},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -134,11 +135,11 @@ void EnvironmentMap::CalculateIrradiance()
 
 	// Bind resources
 	gfx::DescriptorInfo descriptorInfos[2] = {};
-	descriptorInfos[0].texture = mCubemapTexture.get();
+	descriptorInfos[0].texture = &mCubemapTexture;
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].type = gfx::DescriptorType::Image;
 
-	descriptorInfos[1].texture = mIrradianceTexture.get();
+	descriptorInfos[1].texture = &mIrradianceTexture;
 	descriptorInfos[1].offset = 0;
 	descriptorInfos[1].type = gfx::DescriptorType::Image;
 
@@ -155,9 +156,8 @@ void EnvironmentMap::CalculateIrradiance()
 void EnvironmentMap::Prefilter()
 {
 	Logger::Debug("Generating Prefiltered Environment Texture");
-	assert(mCubemapTexture != nullptr);
+	assert(mCubemapTexture.handle != K_INVALID_RESOURCE_HANDLE);
 
-	mPrefilterTexture = std::make_shared<gfx::GPUTexture>();
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mPrefilterDims;
 	desc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
@@ -166,14 +166,14 @@ void EnvironmentMap::Prefilter()
 	desc.mipLevels = nMaxMipLevel;
 	desc.format = gfx::Format::R16B16G16A16_SFLOAT;
 	desc.bCreateSampler = true;
-	mDevice->CreateTexture(&desc, mPrefilterTexture.get());
+	mPrefilterTexture = mDevice->CreateTexture(&desc);
 
 	// Begin Compute Shader
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mPrefilterTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mPrefilterTexture},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -186,7 +186,7 @@ void EnvironmentMap::Prefilter()
 
 	// Bind resources
 	gfx::DescriptorInfo descriptorInfos[2] = {};
-	descriptorInfos[0].texture = mCubemapTexture.get();
+	descriptorInfos[0].texture = &mCubemapTexture;
 	descriptorInfos[0].offset = 0;
 	descriptorInfos[0].type = gfx::DescriptorType::Image;
 
@@ -194,7 +194,7 @@ void EnvironmentMap::Prefilter()
 	for (uint32_t i = 0; i < nMaxMipLevel; ++i)
 	{
 		float roughness = i / float(nMaxMipLevel - 1);
-		descriptorInfos[1].texture = mPrefilterTexture.get();
+		descriptorInfos[1].texture = &mPrefilterTexture;
 		descriptorInfos[1].mipLevel = i;
 		descriptorInfos[1].type = gfx::DescriptorType::Image;
 
@@ -214,9 +214,8 @@ void EnvironmentMap::Prefilter()
 void EnvironmentMap::CalculateBRDFLUT()
 {
 	Logger::Debug("Generating BRDF LUT");
-	assert(mCubemapTexture != nullptr);
+	assert(mCubemapTexture.handle != K_INVALID_RESOURCE_HANDLE);
 
-	mBRDFTexture = std::make_shared<gfx::GPUTexture>();
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mBRDFDims;
 	desc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
@@ -224,14 +223,14 @@ void EnvironmentMap::CalculateBRDFLUT()
 	desc.format = gfx::Format::R16G16_SFLOAT;
 	desc.imageAspect = gfx::ImageAspect::Color;
 	desc.bCreateSampler = true;
-	mDevice->CreateTexture(&desc, mBRDFTexture.get());
+	mBRDFTexture = mDevice->CreateTexture(&desc);
 
 	// Begin Compute Shader
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mBRDFTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mBRDFTexture},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -242,7 +241,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mDevice->PipelineBarrier(&commandList, &computeBarrier);
 
 	gfx::DescriptorInfo descriptorInfo = {};
-	descriptorInfo.texture = mBRDFTexture.get();
+	descriptorInfo.texture = &mBRDFTexture;
 	descriptorInfo.mipLevel = 0;
 	descriptorInfo.type = gfx::DescriptorType::Image;
 
@@ -254,7 +253,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 
 	// Layout transition for shader read/write
 	gfx::ImageBarrierInfo imageBarrier2[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mBRDFTexture.get()},
+		gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mBRDFTexture},
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier2 = {

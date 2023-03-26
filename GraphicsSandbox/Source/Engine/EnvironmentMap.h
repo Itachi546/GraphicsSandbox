@@ -20,10 +20,10 @@ public:
 	// Generate BRDF LUT
 	void CalculateBRDFLUT();
 
-	inline std::shared_ptr<gfx::GPUTexture> GetCubemap() { return mCubemapTexture; }
-	inline std::shared_ptr<gfx::GPUTexture> GetIrradianceMap() { return mIrradianceTexture; }
-	inline std::shared_ptr<gfx::GPUTexture> GetPrefilterMap() { return mPrefilterTexture; }
-	inline std::shared_ptr<gfx::GPUTexture> GetBRDFLUT() { return mBRDFTexture; }
+	inline gfx::TextureHandle GetCubemap() { return mCubemapTexture; }
+	inline gfx::TextureHandle GetIrradianceMap() { return mIrradianceTexture; }
+	inline gfx::TextureHandle GetPrefilterMap() { return mPrefilterTexture; }
+	inline gfx::TextureHandle GetBRDFLUT() { return mBRDFTexture; }
 
 	~EnvironmentMap() = default;
 private:
@@ -39,8 +39,8 @@ private:
 	const uint32_t nMaxMipLevel   = 6;
 	const uint32_t mBRDFDims      = 512;
 
-	std::shared_ptr<gfx::GPUTexture> mCubemapTexture;
-	std::shared_ptr<gfx::GPUTexture> mIrradianceTexture;
-	std::shared_ptr<gfx::GPUTexture> mPrefilterTexture;
-	std::shared_ptr<gfx::GPUTexture> mBRDFTexture;
+	gfx::TextureHandle mCubemapTexture = { K_INVALID_RESOURCE_HANDLE };
+	gfx::TextureHandle mIrradianceTexture = { K_INVALID_RESOURCE_HANDLE };
+	gfx::TextureHandle mPrefilterTexture = { K_INVALID_RESOURCE_HANDLE };
+	gfx::TextureHandle mBRDFTexture = { K_INVALID_RESOURCE_HANDLE };
 };

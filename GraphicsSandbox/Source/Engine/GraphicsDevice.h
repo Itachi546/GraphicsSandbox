@@ -15,12 +15,12 @@ namespace gfx
 		virtual PipelineHandle CreateGraphicsPipeline(const PipelineDesc* desc) =  0;
 		virtual PipelineHandle CreateComputePipeline(const PipelineDesc* desc) = 0;
 		virtual BufferHandle CreateBuffer(const GPUBufferDesc* desc) = 0;
+		virtual TextureHandle CreateTexture(const GPUTextureDesc* desc) = 0;
 
 		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
-		virtual void CreateTexture(const GPUTextureDesc* desc, GPUTexture* out) = 0;
 		virtual void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0) = 0;
-		virtual void CopyTexture(GPUTexture* dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
-		virtual void CopyTexture(GPUTexture* dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
+		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
+		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
 		virtual void CreateSemaphore(Semaphore* out) = 0;
 		virtual void CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount) = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
@@ -28,7 +28,7 @@ namespace gfx
 		virtual void* GetMappedDataPtr(BufferHandle buffer) = 0;
 		virtual uint32_t GetBufferSize(BufferHandle handle) = 0;
 
-		virtual void GenerateMipmap(GPUTexture* src, uint32_t mipCount) = 0;
+		virtual void GenerateMipmap(TextureHandle src, uint32_t mipCount) = 0;
 
 		virtual void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count) = 0;
 		virtual void Query(CommandList* commandList, QueryPool* pool, uint32_t index) = 0;
@@ -39,7 +39,7 @@ namespace gfx
 		virtual void PushConstants(CommandList* commandList, PipelineHandle pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) = 0;
 
 		virtual void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers) = 0;
-		virtual void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
+		virtual void CopyToSwapchain(CommandList* commandList, TextureHandle texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 
 		virtual void BeginDebugMarker(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) = 0;
 		virtual void EndDebugMarker(CommandList* commandList) = 0;
@@ -73,6 +73,8 @@ namespace gfx
 
 		virtual void Destroy(RenderPassHandle renderPass) = 0;
 		virtual void Destroy(PipelineHandle pipeline) = 0;
+		virtual void Destroy(BufferHandle buffer) = 0;
+		virtual void Destroy(TextureHandle texture) = 0;
 
 	protected:
 		ValidationMode mValidationMode = ValidationMode::Enabled;

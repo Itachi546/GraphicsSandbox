@@ -27,15 +27,15 @@ namespace gfx
 		VulkanGraphicsDevice(const VulkanGraphicsDevice&) = delete;
 		void operator=(const VulkanGraphicsDevice&) = delete;
 
-		bool CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
-		RenderPassHandle CreateRenderPass(const RenderPassDesc* desc)                       override;
-		PipelineHandle   CreateGraphicsPipeline(const PipelineDesc* desc)                   override;
-		PipelineHandle CreateComputePipeline(const PipelineDesc* desc)                      override;
-		BufferHandle CreateBuffer(const GPUBufferDesc* desc)                      override;
-		void CreateTexture(const GPUTextureDesc* desc, GPUTexture* out)                        override;
-		void CreateSemaphore(Semaphore* out)                                                   override;
-		void CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount)  override;          
-		void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
+		bool             CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
+		RenderPassHandle CreateRenderPass(const RenderPassDesc* desc)                                      override;
+		PipelineHandle   CreateGraphicsPipeline(const PipelineDesc* desc)                                  override;
+		PipelineHandle   CreateComputePipeline(const PipelineDesc* desc)                                   override;
+		BufferHandle     CreateBuffer(const GPUBufferDesc* desc)                                           override;
+		TextureHandle    CreateTexture(const GPUTextureDesc* desc)                                         override;
+		void             CreateSemaphore(Semaphore* out)                                                   override;
+		void             CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount)  override;
+		void             CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                        override;
 
 		void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)                   override;
 
@@ -44,18 +44,18 @@ namespace gfx
 
 		double GetTimestampFrequency() override { return properties2_.properties.limits.timestampPeriod; }
 
-		void CopyToSwapchain(CommandList* commandList, GPUTexture* texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		void CopyToSwapchain(CommandList* commandList, TextureHandle texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
 
 		void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) override;
 		void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0)                override;
-		void CopyTexture(GPUTexture* dst, BufferHandle src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
-		void CopyTexture(GPUTexture* dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
+		void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 
 		void* GetMappedDataPtr(BufferHandle buffer) override;
 		uint32_t GetBufferSize(BufferHandle handle) override;
 
-		void GenerateMipmap(GPUTexture* src, uint32_t mipCount)                                override;
+		void GenerateMipmap(TextureHandle src, uint32_t mipCount)                                override;
 
 		CommandList BeginCommandList()                                                         override;
 
@@ -66,7 +66,7 @@ namespace gfx
 		void Present(Semaphore* waitSemaphore)                                                   override;
 		void WaitForGPU()                                                                        override;
 		void PrepareSwapchainForPresent(CommandList* commandList)                                override;
-		
+
 		void BindPipeline(CommandList* commandList, PipelineHandle pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, BufferHandle buffer)                      override;
 
@@ -97,23 +97,25 @@ namespace gfx
 
 		void Destroy(RenderPassHandle renderPass) override;
 		void Destroy(PipelineHandle pipeline) override;
+		void Destroy(BufferHandle buffer) override;
+		void Destroy(TextureHandle texture) override;
 
 
 		~VulkanGraphicsDevice();
 	private:
-		VkInstance instance_                = VK_NULL_HANDLE;
+		VkInstance instance_ = VK_NULL_HANDLE;
 		VkDebugUtilsMessengerEXT messenger_ = VK_NULL_HANDLE;
-		VkPhysicalDevice physicalDevice_    = VK_NULL_HANDLE;
-		VkDevice device_                    = VK_NULL_HANDLE;
-		VkQueue queue_                      = VK_NULL_HANDLE;
-		VkSurfaceKHR surface_               = VK_NULL_HANDLE;
+		VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
+		VkDevice device_ = VK_NULL_HANDLE;
+		VkQueue queue_ = VK_NULL_HANDLE;
+		VkSurfaceKHR surface_ = VK_NULL_HANDLE;
 		bool debugMarkerEnabled_ = false;
 
-		VkCommandPool* commandPool_         = nullptr;
-		VkCommandBuffer* commandBuffer_     = nullptr;
+		VkCommandPool* commandPool_ = nullptr;
+		VkCommandBuffer* commandBuffer_ = nullptr;
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
-		VkCommandBuffer stagingCmdBuffer_   = VK_NULL_HANDLE;
-		
+		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
+
 		std::vector<VkDescriptorPool> descriptorPools_;
 
 		struct VulkanQueryPool
@@ -165,6 +167,6 @@ namespace gfx
 		ResourcePool<VulkanRenderPass> renderPasses;
 		ResourcePool<VulkanPipeline> pipelines;
 		ResourcePool<VulkanBuffer> buffers;
-
+		ResourcePool<VulkanTexture> textures;
 	};
 };

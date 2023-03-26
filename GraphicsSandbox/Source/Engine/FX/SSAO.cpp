@@ -12,12 +12,12 @@ namespace fx
 		Initialize();
 	}
 
-	void SSAO::Generate(gfx::CommandList* commandList, gfx::GPUTexture* depthTexture, float blurRadius)
+	void SSAO::Generate(gfx::CommandList* commandList, gfx::TextureHandle depthTexture, float blurRadius)
 	{
 		mDevice->BeginDebugMarker(commandList, "SSAO");
 		gfx::DescriptorInfo descriptorInfos[] = {
-			gfx::DescriptorInfo{depthTexture, 0, 0, gfx::DescriptorType::Image},
-			gfx::DescriptorInfo{mNoiseTexture.get(), 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&depthTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&mNoiseTexture, 0, 0, gfx::DescriptorType::Image},
 			gfx::DescriptorInfo{mKernelBuffer, 0, 0, gfx::DescriptorType::UniformBuffer}
 		};
 		/*
@@ -88,11 +88,10 @@ namespace fx
 			textureDesc.height = 4;
 			textureDesc.bindFlag = gfx::BindFlag::ShaderResource;
 			textureDesc.format = gfx::Format::R16B16G16_SFLOAT;
-			mNoiseTexture = std::make_shared<gfx::GPUTexture>();
-			mDevice->CreateTexture(&textureDesc, mNoiseTexture.get());
+			mNoiseTexture = mDevice->CreateTexture(&textureDesc);
 
 			uint32_t imageDataSize = static_cast<uint32_t>(sizeof(glm::vec3) * sampleRotation.size());
-			mDevice->CopyTexture(mNoiseTexture.get(), sampleRotation.data(), imageDataSize, 0, 0);
+			mDevice->CopyTexture(mNoiseTexture, sampleRotation.data(), imageDataSize, 0, 0);
 		}
 
 		mPipeline = gfx::CreateComputePipeline(StringConstants::SSAO_COMP_PATH, mDevice);
@@ -106,8 +105,7 @@ namespace fx
 			textureDesc.height = mHeight;
 			textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 			textureDesc.format = gfx::Format::R16_SFLOAT;
-			mTexture = std::make_shared<gfx::GPUTexture>();
-			mDevice->CreateTexture(&textureDesc, mTexture.get());
+			mTexture = mDevice->CreateTexture(&textureDesc);
 		}
 
 	}

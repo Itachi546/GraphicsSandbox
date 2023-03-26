@@ -156,7 +156,7 @@ void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 void CascadedShadowMap::BeginRender(gfx::CommandList* commandList)
 {
 	gfx::ImageBarrierInfo barrierInfos[] = {
-		{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, &mFramebuffer->attachments[0]},
+		{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mFramebuffer->attachments[0]},
 	};
 
 	gfx::PipelineBarrierInfo depthBarrier = { &barrierInfos[0], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};

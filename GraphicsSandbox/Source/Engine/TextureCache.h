@@ -13,9 +13,9 @@ namespace TextureCache
 
 	std::string GetTextureName(uint32_t index);
 
-	gfx::GPUTexture* GetDefaultTexture();
+	gfx::TextureHandle GetDefaultTexture();
 
-	gfx::GPUTexture* GetByIndex(uint32_t index);
+	gfx::TextureHandle GetByIndex(uint32_t index);
 
 	gfx::DescriptorInfo GetDescriptorInfo();
 

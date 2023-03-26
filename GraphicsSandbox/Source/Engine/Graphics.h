@@ -250,7 +250,7 @@ namespace gfx
 		AccessFlag srcAccessMask;
 		AccessFlag dstAccessMask;
 		ImageLayout newLayout;
-		GPUResource* resource;
+		TextureHandle resource;
 		uint32_t baseMipLevel = 0;
 		uint32_t baseArrayLevel = 0;
 		uint32_t mipCount = ~0u;
@@ -411,17 +411,20 @@ namespace gfx
 		RenderPassDesc desc;
 	};*/
 
+	/*
 	struct GPUTexture : public GPUResource
 	{
 		std::string name;
 		GPUTextureDesc desc;
 	};
+	*/
 
 	struct DescriptorInfo
 	{
 		union {
 			BufferHandle buffer;
-			GPUResource* texture;
+			// @TODO Refactor this
+			TextureHandle* texture;
 		};
 
 		uint32_t offset = 0;
@@ -444,7 +447,7 @@ namespace gfx
 
 		}
 
-		DescriptorInfo(GPUResource* texture, uint32_t offset, uint32_t mipLevel, DescriptorType type, uint32_t totalSize = 64) :
+		DescriptorInfo(TextureHandle* texture, uint32_t offset, uint32_t mipLevel, DescriptorType type, uint32_t totalSize = 64) :
 			texture(texture),
 			offset(offset),
 			mipLevel(mipLevel),
@@ -458,7 +461,7 @@ namespace gfx
 
 	struct Framebuffer : public GraphicsDeviceResource
 	{
-		std::vector<GPUTexture> attachments;
+		std::vector<TextureHandle> attachments;
 		uint32_t depthAttachmentIndex = ~0u;
 	};
 

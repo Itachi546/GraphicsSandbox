@@ -108,13 +108,6 @@ struct VulkanFramebuffer
 	gfx::TextureHandle attachments[16];
 	uint32_t width;
 	uint32_t height;
-
-	~VulkanFramebuffer()
-	{
-		/*
-		gAllocationHandler.destroyedFramebuffers_.push_back(framebuffer);
-		*/
-	}
 };
 
 struct VulkanSemaphore

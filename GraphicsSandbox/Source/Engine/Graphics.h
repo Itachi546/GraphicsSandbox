@@ -192,13 +192,6 @@ namespace gfx
 		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
 
-
-
-	struct Semaphore : public GraphicsDeviceResource
-	{
-
-	};
-
 	enum class AccessFlag
 	{
 		None,
@@ -245,12 +238,6 @@ namespace gfx
 		PipelineStage dstStage;
 	};
 
-	/*
-	struct Pipeline : public GraphicsDeviceResource
-	{
-	};
-	*/
-
 	struct ShaderDescription
 	{
 		const char* code;
@@ -293,22 +280,6 @@ namespace gfx
 		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
 
-	struct GPUResource : public GraphicsDeviceResource
-	{
-		enum class Type
-		{
-			Buffer,
-			Texture,
-			Unknown
-		} resourceType = Type::Unknown;
-
-		constexpr bool IsTexture() const { return resourceType == Type::Texture; }
-		constexpr bool IsBuffer() const { return resourceType == Type::Buffer; }
-
-		void* mappedDataPtr;
-		std::size_t mappedDataSize;
-	};
-
 	enum class Usage
 	{
 		Default, //CPU No access, GPU read/write
@@ -336,13 +307,7 @@ namespace gfx
 		BindFlag bindFlag = BindFlag::None;
 
 	};
-/*
-	struct GPUBuffer : public GPUResource
-	{
-		GPUBufferDesc desc;
 
-	};
-	*/
 	struct SamplerInfo
 	{
 		TextureFilter textureFilter = TextureFilter::Linear;
@@ -439,13 +404,7 @@ namespace gfx
 		}
 
 	};
-	/*
-	struct Framebuffer : public GraphicsDeviceResource
-	{
-		std::vector<TextureHandle> attachments;
-		uint32_t depthAttachmentIndex = ~0u;
-	};
-	*/
+
 	struct DrawIndirectCommand
 	{
 		uint32_t    indexCount;

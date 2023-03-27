@@ -1331,6 +1331,7 @@ namespace gfx {
         buffers.Initialize(256);
         textures.Initialize(1024);
         framebuffers.Initialize(64);
+        semaphores.Initialize(64);
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -1778,12 +1779,13 @@ namespace gfx {
         return textureHandle;
     }
 
-    void VulkanGraphicsDevice::CreateSemaphore(Semaphore* out)
+    SemaphoreHandle VulkanGraphicsDevice::CreateSemaphore()
     {
-		auto vkSemaphore = std::make_shared<VulkanSemaphore>();
+        SemaphoreHandle semaphoreHandle = { semaphores.ObtainResource() };
+        VulkanSemaphore* vkSemaphore = semaphores.AccessResource(semaphoreHandle.handle);
         VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
         VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &vkSemaphore->semaphore));
-        out->internalState = vkSemaphore;
+        return semaphoreHandle;
     }
 
     CommandList VulkanGraphicsDevice::BeginCommandList()
@@ -1817,11 +1819,11 @@ namespace gfx {
         return commandList;
     }
 
-    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)
+    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore)
     {
-        assert(acquireSemaphore != nullptr);
+        assert(acquireSemaphore.handle != K_INVALID_RESOURCE_HANDLE);
         auto vkCmdList = GetCommandList(commandList);
-        auto vkSemaphore = std::static_pointer_cast<VulkanSemaphore>(acquireSemaphore->internalState);
+        VulkanSemaphore* vkSemaphore = semaphores.AccessResource(acquireSemaphore.handle);
 
         uint32_t imageIndex = 0;
         VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, vkSemaphore->semaphore, VK_NULL_HANDLE, &imageIndex));
@@ -2001,12 +2003,12 @@ namespace gfx {
     }
 
 
-    void VulkanGraphicsDevice::SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)
+    void VulkanGraphicsDevice::SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore)
     {
         VulkanCommandList* cmdList = GetCommandList(commandList);
-        if (signalSemaphore)
+        if (signalSemaphore.handle != K_INVALID_RESOURCE_HANDLE)
         {
-            auto vkSemaphore = std::static_pointer_cast<VulkanSemaphore>(signalSemaphore->internalState);
+            VulkanSemaphore* vkSemaphore = semaphores.AccessResource(signalSemaphore.handle);
             cmdList->signalSemaphore.push_back(vkSemaphore->semaphore);
         }
 
@@ -2023,10 +2025,10 @@ namespace gfx {
         vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
-    void VulkanGraphicsDevice::Present(Semaphore* waitSemaphore)
+    void VulkanGraphicsDevice::Present(SemaphoreHandle waitSemaphore)
     {
-        assert(waitSemaphore != nullptr);
-        auto vkSemaphore = std::static_pointer_cast<VulkanSemaphore>(waitSemaphore->internalState);
+        assert(waitSemaphore.handle != K_INVALID_RESOURCE_HANDLE);
+        VulkanSemaphore* vkSemaphore = semaphores.AccessResource(waitSemaphore.handle);
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.pImageIndices = &swapchain_->currentImageIndex;
         presentInfo.waitSemaphoreCount = 1;
@@ -2500,6 +2502,13 @@ namespace gfx {
         framebuffers.ReleaseResource(framebuffer.handle);
     }
 
+    void VulkanGraphicsDevice::Destroy(SemaphoreHandle semaphore)
+    {
+        VulkanSemaphore* vkSemaphore = semaphores.AccessResource(semaphore.handle);
+        gAllocationHandler.destroyedSemaphore_.push_back(vkSemaphore->semaphore);
+        semaphores.ReleaseResource(semaphore.handle);
+    }
+
     TextureHandle VulkanGraphicsDevice::GetFramebufferAttachment(FramebufferHandle handle, uint32_t index)
     {
         VulkanFramebuffer* framebuffer = framebuffers.AccessResource(handle.handle);
@@ -2516,6 +2525,7 @@ namespace gfx {
         buffers.Shutdown();
         textures.Shutdown();
         pipelines.Shutdown();
+        semaphores.Shutdown();
 
         gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), swapchain_->imageViews.begin(), swapchain_->imageViews.end());
         swapchain_->images.clear();

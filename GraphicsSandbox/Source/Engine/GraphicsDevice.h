@@ -17,7 +17,7 @@ namespace gfx
 		virtual BufferHandle CreateBuffer(const GPUBufferDesc* desc) = 0;
 		virtual TextureHandle CreateTexture(const GPUTextureDesc* desc) = 0;
 		virtual FramebufferHandle CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount) = 0;
-		virtual void CreateSemaphore(Semaphore* out) = 0;
+		virtual SemaphoreHandle CreateSemaphore() = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
 		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
@@ -45,12 +45,12 @@ namespace gfx
 		virtual void EndDebugMarker(CommandList* commandList) = 0;
 
 
-		virtual void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore) = 0;
+		virtual void PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore) = 0;
 		virtual CommandList BeginCommandList() = 0;
 		virtual void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb) = 0;
 		virtual void EndRenderPass(CommandList* commandList) = 0;
-		virtual void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore = nullptr) = 0;
-		virtual void Present(Semaphore* waitSemaphore) = 0;
+		virtual void SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore = INVALID_SEMAPHORE) = 0;
+		virtual void Present(SemaphoreHandle waitSemaphore) = 0;
 		virtual void WaitForGPU() = 0;
 
 		//virtual void BindViewport(Viewport* viewports, int count, CommandList* commandList) = 0;
@@ -78,7 +78,7 @@ namespace gfx
 		virtual void Destroy(BufferHandle buffer) = 0;
 		virtual void Destroy(TextureHandle texture) = 0;
 		virtual void Destroy(FramebufferHandle framebuffer) = 0;
-
+		virtual void Destroy(SemaphoreHandle semaphore) = 0;
 		virtual void Shutdown() = 0;
 
 	protected:

@@ -34,7 +34,7 @@ namespace gfx
 		PipelineHandle     CreateComputePipeline(const PipelineDesc* desc)                                   override;
 		BufferHandle       CreateBuffer(const GPUBufferDesc* desc)                                           override;
 		TextureHandle      CreateTexture(const GPUTextureDesc* desc)                                         override;
-		void               CreateSemaphore(Semaphore* out)                                                   override;
+		SemaphoreHandle    CreateSemaphore()                                                                 override;
 		FramebufferHandle  CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)               override;
 		void               CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
@@ -60,11 +60,11 @@ namespace gfx
 
 		CommandList BeginCommandList()                                                         override;
 
-		void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)             override;
+		void PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore)             override;
 		void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb)  override;
 		void EndRenderPass(CommandList* commandList)                                             override;
-		void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)             override;
-		void Present(Semaphore* waitSemaphore)                                                   override;
+		void SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore)             override;
+		void Present(SemaphoreHandle waitSemaphore)                                                   override;
 		void WaitForGPU()                                                                        override;
 		void PrepareSwapchainForPresent(CommandList* commandList)                                override;
 
@@ -101,6 +101,7 @@ namespace gfx
 		void Destroy(BufferHandle buffer) override;
 		void Destroy(TextureHandle texture) override;
 		void Destroy(FramebufferHandle framebuffer) override;
+		void Destroy(SemaphoreHandle semaphore) override;
 
 		TextureHandle GetFramebufferAttachment(FramebufferHandle, uint32_t index) override;
 
@@ -173,5 +174,6 @@ namespace gfx
 		ResourcePool<VulkanBuffer> buffers;
 		ResourcePool<VulkanTexture> textures;
 		ResourcePool<VulkanFramebuffer> framebuffers;
+		ResourcePool<VulkanSemaphore> semaphores;
 	};
 };

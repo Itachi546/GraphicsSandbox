@@ -127,8 +127,11 @@ void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 	auto pipeline = mShadowMap->mPipeline;
 	for (auto& batch : mRenderBatches)
 	{
-		DrawBatch(commandList, batch, lastOffset, pipeline, true);
-		lastOffset += (uint32_t)batch.drawCommands.size();
+		if (batch.drawCommands.size() > 0)
+		{
+			DrawBatch(commandList, batch, lastOffset, pipeline, true);
+			lastOffset += (uint32_t)batch.drawCommands.size();
+		}
 	}
 
 	DrawSkinnedMesh(commandList, 0, mShadowMap->mSkinnedPipeline, true);
@@ -401,6 +404,7 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 {
 	std::vector<DrawData> drawDatas;
 	mScene->GenerateSkinnedMeshDrawData(drawDatas);
+	if (drawDatas.size() == 0) return;
 
 	auto compMgr = mScene->GetComponentManager();
 

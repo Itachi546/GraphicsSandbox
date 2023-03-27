@@ -8,7 +8,6 @@
 
 #include "../Shared/MeshData.h"
 #include "TransformComponent.h"
-#include "GpuMemoryAllocator.h"
 #include "Animation/animation.h"
 
 #include "ECS.h"

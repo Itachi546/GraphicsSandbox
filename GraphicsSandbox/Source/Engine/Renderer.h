@@ -4,9 +4,10 @@
 #include "Graphics.h"
 #include "GraphicsDevice.h"
 #include "Components.h"
+#include "Resource.h"
 #include <vector>
 
-class gfx::GpuMemoryAllocator;
+
 class Scene;
 class CascadedShadowMap;
 
@@ -40,7 +41,7 @@ public:
 	
 	std::shared_ptr<CascadedShadowMap> GetShadowMap() { return mShadowMap; }
 
-	gfx::GPUTexture* GetOutputTexture(OutputTextureType colorTextureType);
+	gfx::TextureHandle GetOutputTexture(OutputTextureType colorTextureType);
 
 	// Bloom Setting
 	void SetEnableBloom(bool state) { mEnableBloom = state; }
@@ -53,6 +54,7 @@ public:
 		mGlobalUniformData.enabledNormalMapping = int(state);
 	}
 
+	void Shutdown();
 	virtual ~Renderer() = default;
 private:
 
@@ -83,7 +85,7 @@ private:
 		std::vector<gfx::DrawIndirectCommand> drawCommands;
 		std::vector<glm::mat4> transforms;
 		std::vector<MaterialComponent> materials;
-		std::array<gfx::GPUTexture, 64> textures;
+		std::array<gfx::TextureHandle, 64> textures;
 		uint32_t textureCount = 0;
 		gfx::BufferView vertexBuffer;
 		gfx::BufferView indexBuffer;
@@ -93,18 +95,18 @@ private:
 	gfx::GraphicsDevice* mDevice;
 	Scene* mScene;
 
-	std::shared_ptr<gfx::Pipeline> mMeshPipeline;
-	std::shared_ptr<gfx::Pipeline> mSkinnedMeshPipeline;
-	std::shared_ptr<gfx::Pipeline> mCubemapPipeline;
+	gfx::PipelineHandle mMeshPipeline;
+	gfx::PipelineHandle mSkinnedMeshPipeline;
+	gfx::PipelineHandle mCubemapPipeline;
 
-	std::shared_ptr<gfx::GPUBuffer> mGlobalUniformBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mTransformBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mDrawIndirectBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mMaterialBuffer;
-	std::shared_ptr<gfx::GPUBuffer> mSkinnedMatrixBuffer;
+	gfx::BufferHandle mGlobalUniformBuffer;
+	gfx::BufferHandle mTransformBuffer;
+	gfx::BufferHandle mDrawIndirectBuffer;
+	gfx::BufferHandle mMaterialBuffer;
+	gfx::BufferHandle mSkinnedMatrixBuffer;
 
-	std::shared_ptr<gfx::RenderPass> mHdrRenderPass;
-	std::shared_ptr<gfx::Framebuffer> mHdrFramebuffer;
+	gfx::RenderPassHandle mHdrRenderPass;
+	gfx::FramebufferHandle mHdrFramebuffer;
 	
 	gfx::Format mHDRDepthFormat = gfx::Format::D32_SFLOAT;
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
@@ -113,16 +115,16 @@ private:
 	std::shared_ptr<fx::Bloom> mBloomFX;
 	std::shared_ptr<CascadedShadowMap> mShadowMap;
 
-	std::shared_ptr<gfx::Pipeline> loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
+	gfx::PipelineHandle loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();
-	void DrawCubemap(gfx::CommandList* commandList, gfx::GPUTexture* cubemap);
+	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
 	void DrawShadowMap(gfx::CommandList* commandList);
-	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::Pipeline* pipeline);
+	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline);
 	void DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset);
 	void DrawSkinnedShadow(gfx::CommandList* commandList);
 
 	void CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch);
-	void DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& renderBatch, gfx::Pipeline* pipeline, uint32_t lastOffset);
+	void DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& renderBatch, gfx::PipelineHandle pipeline, uint32_t lastOffset);
 
 	bool mUpdateBatches = true;
 	// Bloom Settings

@@ -206,6 +206,8 @@
     <ClInclude Include="Source\Engine\Platform.h" />
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Engine\Renderer.h" />
+    <ClInclude Include="Source\Engine\Resource.h" />
+    <ClInclude Include="Source\Engine\ResourcePool.h" />
     <ClInclude Include="Source\Engine\Scene.h" />
     <ClInclude Include="Source\Engine\StringConstants.h" />
     <ClInclude Include="Source\Engine\TextureCache.h" />
@@ -215,6 +217,7 @@
     <ClInclude Include="Source\Engine\Utils.h" />
     <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h" />
     <ClInclude Include="Source\Engine\spirv_reflect.h" />
+    <ClInclude Include="Source\Engine\VulkanResources.h" />
     <ClInclude Include="Source\Shared\MathUtils.h" />
     <ClInclude Include="Source\Shared\MeshData.h" />
     <ClInclude Include="Source\Test\BloomTest.h" />

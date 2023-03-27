@@ -20,17 +20,18 @@ public:
 	// Generate BRDF LUT
 	void CalculateBRDFLUT();
 
-	inline std::shared_ptr<gfx::GPUTexture> GetCubemap() { return mCubemapTexture; }
-	inline std::shared_ptr<gfx::GPUTexture> GetIrradianceMap() { return mIrradianceTexture; }
-	inline std::shared_ptr<gfx::GPUTexture> GetPrefilterMap() { return mPrefilterTexture; }
-	inline std::shared_ptr<gfx::GPUTexture> GetBRDFLUT() { return mBRDFTexture; }
+	inline gfx::TextureHandle GetCubemap() { return mCubemapTexture; }
+	inline gfx::TextureHandle GetIrradianceMap() { return mIrradianceTexture; }
+	inline gfx::TextureHandle GetPrefilterMap() { return mPrefilterTexture; }
+	inline gfx::TextureHandle GetBRDFLUT() { return mBRDFTexture; }
 
-	~EnvironmentMap() = default;
+	void Shutdown();
+	virtual ~EnvironmentMap() = default;
 private:
-	std::shared_ptr<gfx::Pipeline> mHdriToCubemap;
-	std::shared_ptr<gfx::Pipeline> mIrradiancePipeline;
-	std::shared_ptr<gfx::Pipeline> mPrefilterPipeline;
-	std::shared_ptr<gfx::Pipeline> mBRDFPipeline;
+	gfx::PipelineHandle mHdriToCubemap;
+	gfx::PipelineHandle mIrradiancePipeline;
+	gfx::PipelineHandle mPrefilterPipeline;
+	gfx::PipelineHandle mBRDFPipeline;
 	gfx::GraphicsDevice* mDevice;
 
 	const uint32_t mCubemapDims   = 512;
@@ -39,8 +40,8 @@ private:
 	const uint32_t nMaxMipLevel   = 6;
 	const uint32_t mBRDFDims      = 512;
 
-	std::shared_ptr<gfx::GPUTexture> mCubemapTexture;
-	std::shared_ptr<gfx::GPUTexture> mIrradianceTexture;
-	std::shared_ptr<gfx::GPUTexture> mPrefilterTexture;
-	std::shared_ptr<gfx::GPUTexture> mBRDFTexture;
+	gfx::TextureHandle mCubemapTexture = gfx::INVALID_TEXTURE;
+	gfx::TextureHandle mIrradianceTexture = gfx::INVALID_TEXTURE;
+	gfx::TextureHandle mPrefilterTexture = gfx::INVALID_TEXTURE;
+	gfx::TextureHandle mBRDFTexture = gfx::INVALID_TEXTURE;
 };

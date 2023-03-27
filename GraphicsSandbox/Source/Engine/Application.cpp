@@ -27,7 +27,7 @@ void Application::initialize_()
 	Logger::Initialize();
 	Input::Initialize(mWindow);
 	TextureCache::Initialize();
-	DebugDraw::Initialize(mSwapchainRP.get());
+	DebugDraw::Initialize(mSwapchainRP);
 
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);
@@ -82,34 +82,34 @@ void Application::render_()
 {
 	RangeId cpuRenderTime = Profiler::StartRangeCPU("RenderTime CPU");
 
-	if (!mDevice->IsSwapchainReady(mSwapchainRP.get()))
+	if (!mDevice->IsSwapchainReady(mSwapchainRP))
 		return;
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	Profiler::BeginFrameGPU(&commandList);
 	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 
-	mDevice->PrepareSwapchain(&commandList, &mAcquireSemaphore);
+	mDevice->PrepareSwapchain(&commandList, mAcquireSemaphore);
 	mRenderer->Render(&commandList);
 
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
 	RangeId swapchainRangeId = Profiler::StartRangeGPU(&commandList, "Swapchain Render");
 
-	gfx::GPUTexture* outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
+	gfx::TextureHandle outputTexture = mRenderer->GetOutputTexture(OutputTextureType::HDROutput);
 	gfx::ImageBarrierInfo shaderReadBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
 	gfx::PipelineBarrierInfo shaderReadPipelineBarrier = { &shaderReadBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader};
 	mDevice->PipelineBarrier(&commandList, &shaderReadPipelineBarrier);
 
-	gfx::GPUTexture* sceneDepthTexture = mRenderer->GetOutputTexture(OutputTextureType::HDRDepth);
+	gfx::TextureHandle sceneDepthTexture = mRenderer->GetOutputTexture(OutputTextureType::HDRDepth);
 	gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::None, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, sceneDepthTexture };
 	gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
 	mDevice->CopyToSwapchain(&commandList, sceneDepthTexture, gfx::ImageLayout::DepthStencilAttachmentOptimal);
 
-	mDevice->BeginRenderPass(&commandList, mSwapchainRP.get(), nullptr);
-	gfx::DescriptorInfo descriptorInfo = { outputTexture, 0, 0, gfx::DescriptorType::Image };
-	mDevice->UpdateDescriptor(mSwapchainPipeline.get(), &descriptorInfo, 1);
-	mDevice->BindPipeline(&commandList, mSwapchainPipeline.get());
+	mDevice->BeginRenderPass(&commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
+	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
+	mDevice->UpdateDescriptor(mSwapchainPipeline, &descriptorInfo, 1);
+	mDevice->BindPipeline(&commandList, mSwapchainPipeline);
 	mDevice->Draw(&commandList, 6, 0, 1);
 
 	// Draw DebugData
@@ -126,8 +126,8 @@ void Application::render_()
 	mDevice->PrepareSwapchainForPresent(&commandList);
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 
-	mDevice->SubmitCommandList(&commandList, &mReleaseSemaphore);
-	mDevice->Present(&mReleaseSemaphore);
+	mDevice->SubmitCommandList(&commandList, mReleaseSemaphore);
+	mDevice->Present(mReleaseSemaphore);
 	mDevice->WaitForGPU();
 
 	Profiler::EndRangeCPU(cpuRenderTime);
@@ -149,7 +149,6 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	gfx::GetDevice() = mDevice.get();
 
 	// Create Default RenderPass
-	mSwapchainRP = std::make_shared<gfx::RenderPass>();
 	WindowProperties props = {};
 	Platform::GetWindowProperties(mWindow, &props);
 	mWidth = props.width;
@@ -178,7 +177,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	renderPassDesc.attachmentCount = (uint32_t)std::size(attachments);
 	renderPassDesc.attachments = attachments;
 	renderPassDesc.hasDepthAttachment = false;
-	mDevice->CreateRenderPass(&renderPassDesc, mSwapchainRP.get());
+	mSwapchainRP = mDevice->CreateRenderPass(&renderPassDesc);
 
 	// Create Swapchain
 	gfx::SwapchainDesc swapchainDesc = {};
@@ -189,12 +188,12 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.depthFormat = mSwapchainDepthFormat;
 	swapchainDesc.fullscreen = false;
 	swapchainDesc.enableDepth = true;
-	swapchainDesc.renderPass = mSwapchainRP.get();
+	swapchainDesc.renderPass = mSwapchainRP;
 	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	mDevice->CreateSwapchain(&swapchainDesc, window);
 
-	mDevice->CreateSemaphore(&mAcquireSemaphore);
-	mDevice->CreateSemaphore(&mReleaseSemaphore);
+	mAcquireSemaphore = mDevice->CreateSemaphore();
+	mReleaseSemaphore = mDevice->CreateSemaphore();
 
     // Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
@@ -210,7 +209,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	pipelineDesc.shaderCount = 2;
 	pipelineDesc.shaderDesc = shaders.data();
 
-	pipelineDesc.renderPass = mSwapchainRP.get();
+	pipelineDesc.renderPass = mSwapchainRP;
 	pipelineDesc.rasterizationState.enableDepthTest = false;
 	pipelineDesc.rasterizationState.enableDepthWrite = false;
 	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
@@ -218,16 +217,23 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	pipelineDesc.blendState = &blendState;
 	pipelineDesc.blendStateCount = 1;
 
-	mSwapchainPipeline = std::make_shared<gfx::Pipeline>();
-	mDevice->CreateGraphicsPipeline(&pipelineDesc, mSwapchainPipeline.get());
+	mSwapchainPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
 	delete[] vertexCode;
 	delete[] fragmentCode;
 }
 
 Application::~Application()
 {
-	TextureCache::Free();
-	DebugDraw::Free();
+	mDevice->Destroy(mSwapchainRP);
+	mDevice->Destroy(mSwapchainPipeline);
+	mDevice->Destroy(mAcquireSemaphore);
+	mDevice->Destroy(mReleaseSemaphore);
+
+	TextureCache::Shutdown();
+	DebugDraw::Shutdown();
+	mScene.Shutdown();
+	mRenderer->Shutdown();
+	mDevice->Shutdown();
 }
 
 bool Application::windowResizeEvent(const Event& evt)

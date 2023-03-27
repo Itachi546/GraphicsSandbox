@@ -12,13 +12,13 @@ namespace fx
 		Initialize();
 	}
 
-	void SSAO::Generate(gfx::CommandList* commandList, gfx::GPUTexture* depthTexture, float blurRadius)
+	void SSAO::Generate(gfx::CommandList* commandList, gfx::TextureHandle depthTexture, float blurRadius)
 	{
 		mDevice->BeginDebugMarker(commandList, "SSAO");
 		gfx::DescriptorInfo descriptorInfos[] = {
-			gfx::DescriptorInfo{depthTexture, 0, 0, gfx::DescriptorType::Image},
-			gfx::DescriptorInfo{mNoiseTexture.get(), 0, 0, gfx::DescriptorType::Image},
-			gfx::DescriptorInfo{mKernelBuffer.get(), 0, 0, gfx::DescriptorType::UniformBuffer}
+			gfx::DescriptorInfo{&depthTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&mNoiseTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{mKernelBuffer, 0, 0, gfx::DescriptorType::UniformBuffer}
 		};
 		/*
 		// Generate Upsamples
@@ -34,11 +34,19 @@ namespace fx
 		};
 		mDevice->PipelineBarrier(commandList, &barrier);
 		*/
-		mDevice->UpdateDescriptor(mPipeline.get(), descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-		mDevice->BindPipeline(commandList, mPipeline.get());
+		mDevice->UpdateDescriptor(mPipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->BindPipeline(commandList, mPipeline);
 		mDevice->DispatchCompute(commandList, gfx::GetWorkSize(mWidth, 8), gfx::GetWorkSize(mHeight, 8), 1);
 
 		mDevice->EndDebugMarker(commandList);
+	}
+
+	void SSAO::Shutdown()
+	{
+		mDevice->Destroy(mPipeline);
+		mDevice->Destroy(mTexture);
+		mDevice->Destroy(mNoiseTexture);
+		mDevice->Destroy(mKernelBuffer);
 	}
 
 	void SSAO::Initialize()
@@ -61,14 +69,13 @@ namespace fx
 		}
 		// Transfer kernel data to uniform buffer
 		{
-			mKernelBuffer = std::make_shared<gfx::GPUBuffer>();
 			uint32_t kernelDataSize = static_cast<uint32_t>(sizeof(glm::vec3) * sampleKernel.size());
 			gfx::GPUBufferDesc desc;
 			desc.bindFlag = gfx::BindFlag::ConstantBuffer;
 			desc.size = kernelDataSize;
 			desc.usage = gfx::Usage::Upload;
-			mDevice->CreateBuffer(&desc, mKernelBuffer.get());
-			std::memcpy(mKernelBuffer->mappedDataPtr, sampleKernel.data(), kernelDataSize);
+			mKernelBuffer = mDevice->CreateBuffer(&desc);
+			mDevice->CopyToBuffer(mKernelBuffer, sampleKernel.data(), 0, kernelDataSize);
 		}
 
 		// Generate rotation vector in tangent space
@@ -89,15 +96,13 @@ namespace fx
 			textureDesc.height = 4;
 			textureDesc.bindFlag = gfx::BindFlag::ShaderResource;
 			textureDesc.format = gfx::Format::R16B16G16_SFLOAT;
-			mNoiseTexture = std::make_shared<gfx::GPUTexture>();
-			mDevice->CreateTexture(&textureDesc, mNoiseTexture.get());
+			mNoiseTexture = mDevice->CreateTexture(&textureDesc);
 
 			uint32_t imageDataSize = static_cast<uint32_t>(sizeof(glm::vec3) * sampleRotation.size());
-			mDevice->CopyTexture(mNoiseTexture.get(), sampleRotation.data(), imageDataSize, 0, 0);
+			mDevice->CopyTexture(mNoiseTexture, sampleRotation.data(), imageDataSize, 0, 0);
 		}
 
-		mPipeline = std::make_shared<gfx::Pipeline>();
-		gfx::CreateComputePipeline(StringConstants::SSAO_COMP_PATH, mDevice, mPipeline.get());
+		mPipeline = gfx::CreateComputePipeline(StringConstants::SSAO_COMP_PATH, mDevice);
 
 		// Generate SSAO output texture
 		{
@@ -108,8 +113,7 @@ namespace fx
 			textureDesc.height = mHeight;
 			textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 			textureDesc.format = gfx::Format::R16_SFLOAT;
-			mTexture = std::make_shared<gfx::GPUTexture>();
-			mDevice->CreateTexture(&textureDesc, mTexture.get());
+			mTexture = mDevice->CreateTexture(&textureDesc);
 		}
 
 	}

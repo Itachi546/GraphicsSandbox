@@ -1,6 +1,5 @@
 #include "Scene.h"
 #include "Logger.h"
-#include "GpuMemoryAllocator.h"
 #include "../Shared/MeshData.h"
 #include "TextureCache.h"
 #include "DebugDraw.h"
@@ -524,19 +523,21 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	inFile.close();
 
 	// Allocate GPU Memory
-	gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
+	gfx::GraphicsDevice* gfxDevice = gfx::GetDevice();
 	gfx::GPUBufferDesc bufferDesc;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	bufferDesc.usage = gfx::Usage::Default;
 	bufferDesc.size = header.vertexDataSize;
-	stagingMeshData.vertexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, nullptr);
+	stagingMeshData.vertexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
+	mAllocatedBuffers.push_back(stagingMeshData.vertexBuffer);
 
 	bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
 	bufferDesc.size = header.indexDataSize;
-	stagingMeshData.indexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, nullptr);
+	stagingMeshData.indexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
+	mAllocatedBuffers.push_back(stagingMeshData.indexBuffer);
 
-	gpuAllocator->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize, nullptr);
-	gpuAllocator->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize, nullptr);
+	gfxDevice->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize);
+	gfxDevice->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize);
 	return TraverseNode(0, ecs::INVALID_ENTITY, stagingMeshData);
 }
 
@@ -597,10 +598,15 @@ std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 	return children;
 }
 
-Scene::~Scene()
+void Scene::Shutdown()
 {
+	gfx::GraphicsDevice* device = gfx::GetDevice();
+
+	for (gfx::BufferHandle buffer : mAllocatedBuffers)
+		device->Destroy(buffer);
+
+	mEnvMap->Shutdown();
 	ecs::Destroy(mComponentManager.get());
-	gfx::GpuMemoryAllocator::GetInstance()->FreeMemory();
 }
 
 void Scene::UpdateTransform()
@@ -676,46 +682,55 @@ void Scene::InitializePrimitiveMeshes()
 
 	{
 		// Allocate Vertex Buffer
-		gfx::GpuMemoryAllocator* gpuAllocator = gfx::GpuMemoryAllocator::GetInstance();
 		uint32_t vertexBufferIndex = 0;
 		gfx::GPUBufferDesc bufferDesc = { vertexCount * static_cast<uint32_t>(sizeof(Vertex)),
 			gfx::Usage::Default,
 			gfx::BindFlag::ShaderResource };
-		std::shared_ptr<gfx::GPUBuffer> vertexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, &vertexBufferIndex);
+
+		gfx::GraphicsDevice* device = gfx::GetDevice();
+		gfx::BufferHandle vertexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(vertexBuffer);
 
 		// Allocate Index Buffer
 		uint32_t indexBufferIndex = 0;
 		bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
 		bufferDesc.size = indexCount * static_cast<uint32_t>(sizeof(uint32_t));
-		std::shared_ptr<gfx::GPUBuffer> indexBuffer = gpuAllocator->AllocateBuffer(&bufferDesc, &indexBufferIndex);
+		gfx::BufferHandle indexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(indexBuffer);
 
 		MeshRenderer* cubeMesh = mComponentManager->GetComponent<MeshRenderer>(mCube);
 		uint32_t vertexOffset = 0;
 		uint32_t vertexSize = static_cast<uint32_t>(cubeMesh->vertices->size() * sizeof(Vertex));
-		gpuAllocator->CopyToBuffer(vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize, &cubeMesh->vertexBuffer);
+		device->CopyToBuffer(vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize);
+		cubeMesh->vertexBuffer = { vertexBuffer, vertexOffset, vertexSize };
 		vertexOffset += vertexSize;
 
 		uint32_t indexOffset = 0;
 		uint32_t indexSize = static_cast<uint32_t>(cubeMesh->indices->size() * sizeof(uint32_t));
-		gpuAllocator->CopyToBuffer(indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize, &cubeMesh->indexBuffer);
+		device->CopyToBuffer(indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize);
+		cubeMesh->indexBuffer = { indexBuffer, indexOffset, indexSize };
 		indexOffset += indexSize;
 
 		MeshRenderer* sphereMesh = mComponentManager->GetComponent<MeshRenderer>(mSphere);
 		vertexSize = static_cast<uint32_t>(sphereMesh->vertices->size() * sizeof(Vertex));
-		gpuAllocator->CopyToBuffer(vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize, &sphereMesh->vertexBuffer);
+		device->CopyToBuffer(vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize);
+		sphereMesh->vertexBuffer = { vertexBuffer, vertexOffset, vertexSize };
 		vertexOffset += vertexSize;
 
 		indexSize = static_cast<uint32_t>(sphereMesh->indices->size() * sizeof(uint32_t));
-		gpuAllocator->CopyToBuffer(indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize, &sphereMesh->indexBuffer);
+		device->CopyToBuffer(indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize);
+		sphereMesh->indexBuffer = { indexBuffer, indexOffset, indexSize };
 		indexOffset += indexSize;
 
 
 		MeshRenderer* planeMesh = mComponentManager->GetComponent<MeshRenderer>(mPlane);
 		vertexSize = static_cast<uint32_t>(planeMesh->vertices->size() * sizeof(Vertex));
-		gpuAllocator->CopyToBuffer(vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize, &planeMesh->vertexBuffer);
+		device->CopyToBuffer(vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize);
+		planeMesh->vertexBuffer = { vertexBuffer, vertexOffset, vertexSize };
 
 		indexSize = static_cast<uint32_t>(planeMesh->indices->size() * sizeof(uint32_t));
-		gpuAllocator->CopyToBuffer(indexBuffer, planeMesh->indices->data(), indexOffset, indexSize, &planeMesh->indexBuffer);
+		device->CopyToBuffer(indexBuffer, planeMesh->indices->data(), indexOffset, indexSize);
+		planeMesh->indexBuffer = { indexBuffer, indexOffset, indexSize };
 	}
 }
 

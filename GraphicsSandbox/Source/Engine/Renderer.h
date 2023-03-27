@@ -34,11 +34,6 @@ public:
 
 	void Render(gfx::CommandList* commandList);
 
-	void SetUpdateBatches(bool state)
-	{
-		mUpdateBatches = state;
-	}
-	
 	std::shared_ptr<CascadedShadowMap> GetShadowMap() { return mShadowMap; }
 
 	gfx::TextureHandle GetOutputTexture(OutputTextureType colorTextureType);
@@ -126,7 +121,6 @@ private:
 	void CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch);
 	void DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& renderBatch, gfx::PipelineHandle pipeline, uint32_t lastOffset);
 
-	bool mUpdateBatches = true;
 	// Bloom Settings
 	bool mEnableBloom = false;
 	float mBloomThreshold = 1.0f;

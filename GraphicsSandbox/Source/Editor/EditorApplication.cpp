@@ -218,7 +218,6 @@ void EditorApplication::PreUpdate(float dt) {
 		auto [x, y] = Input::GetMouseState().delta;
 		mCamera->Rotate(-y, x, dt);
 	}
-	mRenderer->SetUpdateBatches(true);
 
 	if (Input::Press(Input::Key::KEY_H))
 		mShowUI = !mShowUI;

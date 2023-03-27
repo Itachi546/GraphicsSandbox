@@ -68,13 +68,9 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 // TODO: temp width and height variable
 void Renderer::Update(float dt)
 {
-	if (mUpdateBatches)
-	{
-		std::vector<DrawData> drawDatas;
-		mScene->GenerateDrawData(drawDatas);
-		CreateBatch(drawDatas, mRenderBatches);
-		mUpdateBatches = false;
-	}
+	std::vector<DrawData> drawDatas;
+	mScene->GenerateDrawData(drawDatas);
+	CreateBatch(drawDatas, mRenderBatches);
 
 	auto compMgr = mScene->GetComponentManager();
 	// Generate light Direction

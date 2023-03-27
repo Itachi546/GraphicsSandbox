@@ -16,10 +16,12 @@ namespace fx
 		}
 
 		// Generate Bloom texture from brightTexture
-		void Generate(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture, float blurRadius);
+		void Generate(gfx::CommandList* commandList, gfx::TextureHandle brightTexture, float blurRadius);
 		// Composite the Bloom texture on renderTarget
-		void Composite(gfx::CommandList* commandList, gfx::GPUTexture* hdrTexture, float bloomStrength);
-		gfx::GPUTexture* GetTexture() { return &mDownSampleTexture; }
+		void Composite(gfx::CommandList* commandList, gfx::TextureHandle hdrTexture, float bloomStrength);
+		gfx::TextureHandle GetTexture() { return mDownSampleTexture; }
+
+		void Shutdown();
 
 	private:
 
@@ -27,18 +29,18 @@ namespace fx
 
 		gfx::GraphicsDevice* mDevice;
 
-		gfx::GPUTexture mDownSampleTexture;
+		gfx::TextureHandle mDownSampleTexture;
 
-		std::shared_ptr<gfx::Pipeline> mDownSamplePipeline;
-		std::shared_ptr<gfx::Pipeline> mUpSamplePipeline;
-		std::shared_ptr<gfx::Pipeline> mCompositePipeline;
+		gfx::PipelineHandle mDownSamplePipeline;
+		gfx::PipelineHandle mUpSamplePipeline;
+		gfx::PipelineHandle mCompositePipeline;
 
 		uint32_t mWidth, mHeight;
 		const uint32_t kMaxMipLevel = 5;
 
 		void Initialize();
 
-		void GenerateDownSamples(gfx::CommandList* commandList, gfx::GPUTexture* brightTexture);
+		void GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture);
 		void GenerateUpSamples(gfx::CommandList* commandList, float blurRadius);
 	};
 };

@@ -12,7 +12,7 @@ namespace gfx
 		return (width + localWorkSize - 1) / localWorkSize;
 	}
 
-	inline void CreateComputePipeline(const char* filename, gfx::GraphicsDevice* device, gfx::Pipeline* out)
+	inline PipelineHandle CreateComputePipeline(const char* filename, gfx::GraphicsDevice* device)
 	{
 		uint32_t codeLen = 0;
 		char* code = Utils::ReadFile(filename, &codeLen);
@@ -23,8 +23,10 @@ namespace gfx
 			pipelineDesc.shaderCount = 1;
 			pipelineDesc.shaderDesc = &shaderDesc;
 
-			device->CreateComputePipeline(&pipelineDesc, out);
+			PipelineHandle handle = device->CreateComputePipeline(&pipelineDesc);
 			delete[] code;
+			return handle;
 		}
+		return PipelineHandle{ K_INVALID_RESOURCE_HANDLE };
 	}
 }

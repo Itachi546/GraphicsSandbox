@@ -50,7 +50,7 @@ void EditorApplication::Initialize()
 	initInfo.DescriptorPool = vkDevice->GetDescriptorPool();
 	initInfo.Allocator = 0;
 
-	ImGui_ImplVulkan_Init(&initInfo, vkDevice->Get(mSwapchainRP.get()));
+	ImGui_ImplVulkan_Init(&initInfo, vkDevice->Get(mSwapchainRP));
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	ImGui_ImplVulkan_CreateFontsTexture(vkDevice->Get(&commandList));

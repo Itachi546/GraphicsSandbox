@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "CommonInclude.h"
+#include "Resource.h"
 
 namespace gfx
 {
@@ -159,12 +160,19 @@ namespace gfx
 		float x, y, w, h, minDepth, maxDepth;
 	};
 
+	
 	struct GraphicsDeviceResource {
 		std::shared_ptr<void> internalState;
 		bool IsValid() { return internalState != nullptr; }
 	};
 
-	struct RenderPass;
+	struct BufferView
+	{
+		BufferHandle buffer;
+		uint32_t offset;
+		uint32_t size;
+	};
+
 	struct SwapchainDesc
 	{
 		union
@@ -181,14 +189,7 @@ namespace gfx
 		bool fullscreen = false;
 		bool vsync = false;
 		bool enableDepth = false;
-		RenderPass* renderPass = nullptr;
-	};
-
-
-
-	struct Semaphore : public GraphicsDeviceResource
-	{
-
+		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
 
 	enum class AccessFlag
@@ -223,7 +224,7 @@ namespace gfx
 		AccessFlag srcAccessMask;
 		AccessFlag dstAccessMask;
 		ImageLayout newLayout;
-		GPUResource* resource;
+		TextureHandle resource;
 		uint32_t baseMipLevel = 0;
 		uint32_t baseArrayLevel = 0;
 		uint32_t mipCount = ~0u;
@@ -235,10 +236,6 @@ namespace gfx
 		uint32_t barrierInfoCount;
 		PipelineStage srcStage;
 		PipelineStage dstStage;
-	};
-
-	struct Pipeline : public GraphicsDeviceResource
-	{
 	};
 
 	struct ShaderDescription
@@ -280,23 +277,7 @@ namespace gfx
 		RasterizationState rasterizationState = {};
 		BlendState* blendState = nullptr;
 		uint32_t blendStateCount = 0;
-		RenderPass* renderPass = nullptr;
-	};
-
-	struct GPUResource : public GraphicsDeviceResource
-	{
-		enum class Type
-		{
-			Buffer,
-			Texture,
-			Unknown
-		} resourceType = Type::Unknown;
-
-		constexpr bool IsTexture() const { return resourceType == Type::Texture; }
-		constexpr bool IsBuffer() const { return resourceType == Type::Buffer; }
-
-		void* mappedDataPtr;
-		std::size_t mappedDataSize;
+		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
 
 	enum class Usage
@@ -324,12 +305,6 @@ namespace gfx
 		uint32_t size = 0;
 		Usage usage = Usage::Default;
 		BindFlag bindFlag = BindFlag::None;
-
-	};
-
-	struct GPUBuffer : public GPUResource
-	{
-		GPUBufferDesc desc;
 
 	};
 
@@ -376,20 +351,28 @@ namespace gfx
 		bool hasDepthAttachment = false;
 	};
 
+	/*
 	struct RenderPass : public GraphicsDeviceResource
 	{
 		RenderPassDesc desc;
-	};
+	};*/
 
+	/*
 	struct GPUTexture : public GPUResource
 	{
 		std::string name;
 		GPUTextureDesc desc;
 	};
+	*/
 
 	struct DescriptorInfo
 	{
-		GPUResource* resource;
+		union {
+			BufferHandle buffer;
+			// @TODO Refactor this
+			TextureHandle* texture;
+		};
+
 		uint32_t offset = 0;
 		union {
 			uint32_t size = 0;
@@ -397,12 +380,29 @@ namespace gfx
 		};
 		DescriptorType type = DescriptorType::StorageBuffer;
 		uint32_t totalSize = 64;
-	};
 
-	struct Framebuffer : public GraphicsDeviceResource
-	{
-		std::vector<GPUTexture> attachments;
-		uint32_t depthAttachmentIndex = ~0u;
+		DescriptorInfo() = default;
+
+		DescriptorInfo(BufferHandle handle, uint32_t offset, uint32_t size, DescriptorType type, uint32_t totalSize = 64) : 
+			buffer(handle),
+			offset(offset),
+			size(size),
+			type(type),
+			totalSize(totalSize)
+		{
+
+		}
+
+		DescriptorInfo(TextureHandle* texture, uint32_t offset, uint32_t mipLevel, DescriptorType type, uint32_t totalSize = 64) :
+			texture(texture),
+			offset(offset),
+			mipLevel(mipLevel),
+			type(type),
+			totalSize(totalSize)
+		{
+
+		}
+
 	};
 
 	struct DrawIndirectCommand

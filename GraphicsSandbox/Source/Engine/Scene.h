@@ -2,11 +2,11 @@
 
 #include "ECS.h"
 #include "Components.h"
-#include "GpuMemoryAllocator.h"
 #include "EnvironmentMap.h"
 #include "Camera.h"
 
 #include <string_view>
+#include <vector>
 
 class Scene
 {
@@ -54,7 +54,8 @@ public:
 
 	std::vector<ecs::Entity> FindChildren(ecs::Entity entity);
 
-	~Scene(); 
+	void Shutdown();
+	virtual ~Scene() = default; 
 
 
 private:
@@ -71,6 +72,7 @@ private:
 
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;
+	std::vector<gfx::BufferHandle> mAllocatedBuffers;
 
 	void UpdateTransform();
 	void UpdateHierarchy();
@@ -79,8 +81,8 @@ private:
 
 	struct StagingMeshData : public MeshData
 	{
-		std::shared_ptr<gfx::GPUBuffer> vertexBuffer;
-		std::shared_ptr<gfx::GPUBuffer> indexBuffer;
+		gfx::BufferHandle vertexBuffer;
+		gfx::BufferHandle indexBuffer;
 	};
 
 	ecs::Entity CreateMeshEntity(uint32_t nodeIndex,

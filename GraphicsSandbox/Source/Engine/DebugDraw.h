@@ -3,13 +3,13 @@
 #include "GlmIncludes.h"
 
 namespace gfx {
-	struct RenderPass;
+	struct RenderPassHandle;
 	struct CommandList;
 }
 
 namespace DebugDraw
 {
-	void Initialize(gfx::RenderPass* renderPass);
+	void Initialize(gfx::RenderPassHandle renderPass);
 
 	void SetEnable(bool state);
 
@@ -24,6 +24,6 @@ namespace DebugDraw
 
 	void Draw(gfx::CommandList* commandList, glm::mat4 VP);
 
-	void Free();
+	void Shutdown();
 
 }

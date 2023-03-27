@@ -26,12 +26,13 @@ public:
 
 	gfx::DescriptorInfo GetCascadeBufferDescriptor()
 	{
-		return gfx::DescriptorInfo{ mBuffer.get(), 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
+		return gfx::DescriptorInfo{ mBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
 	}
 
+	// @TODO Remove the temporary variable to prevent returning of local ptr
 	gfx::DescriptorInfo GetShadowMapDescriptor()
 	{
-		return gfx::DescriptorInfo{ &mFramebuffer->attachments[0], 0, 0, gfx::DescriptorType::Image};
+		return gfx::DescriptorInfo{ &mAttachment0, 0, 0, gfx::DescriptorType::Image};
 	}
 
 	void SetShadowDistance(float distance)
@@ -39,14 +40,16 @@ public:
 		this->kShadowDistance = distance;
 	}
 
-	~CascadedShadowMap() = default;
+	void Shutdown();
+	virtual ~CascadedShadowMap() = default;
 
 private:
-	std::unique_ptr<gfx::Pipeline> mPipeline;
-	std::unique_ptr<gfx::Pipeline> mSkinnedPipeline;
-	std::unique_ptr<gfx::RenderPass> mRenderPass;
-	std::unique_ptr<gfx::Framebuffer> mFramebuffer;
-	std::unique_ptr<gfx::GPUBuffer> mBuffer;
+	gfx::PipelineHandle mPipeline = gfx::INVALID_PIPELINE;
+	gfx::PipelineHandle mSkinnedPipeline = gfx::INVALID_PIPELINE;
+	gfx::RenderPassHandle mRenderPass = gfx::INVALID_RENDERPASS;
+	gfx::FramebufferHandle mFramebuffer = gfx::INVALID_FRAMEBUFFER;
+	gfx::BufferHandle mBuffer;
+	gfx::TextureHandle mAttachment0;
 
 	const int kNumCascades = 5;
 	const int kShadowDims = 4096;

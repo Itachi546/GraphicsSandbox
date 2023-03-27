@@ -29,9 +29,10 @@ public:
 		return gfx::DescriptorInfo{ mBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
 	}
 
+	// @TODO Remove the temporary variable to prevent returning of local ptr
 	gfx::DescriptorInfo GetShadowMapDescriptor()
 	{
-		return gfx::DescriptorInfo{ &mFramebuffer->attachments[0], 0, 0, gfx::DescriptorType::Image };
+		return gfx::DescriptorInfo{ &mAttachment0, 0, 0, gfx::DescriptorType::Image};
 	}
 
 	void SetShadowDistance(float distance)
@@ -43,11 +44,12 @@ public:
 	virtual ~CascadedShadowMap() = default;
 
 private:
-	gfx::PipelineHandle mPipeline = { K_INVALID_RESOURCE_HANDLE };
-	gfx::PipelineHandle mSkinnedPipeline = { K_INVALID_RESOURCE_HANDLE };
-	gfx::RenderPassHandle mRenderPass = { K_INVALID_RESOURCE_HANDLE };
-	std::unique_ptr<gfx::Framebuffer> mFramebuffer;
+	gfx::PipelineHandle mPipeline = gfx::INVALID_PIPELINE;
+	gfx::PipelineHandle mSkinnedPipeline = gfx::INVALID_PIPELINE;
+	gfx::RenderPassHandle mRenderPass = gfx::INVALID_RENDERPASS;
+	gfx::FramebufferHandle mFramebuffer = gfx::INVALID_FRAMEBUFFER;
 	gfx::BufferHandle mBuffer;
+	gfx::TextureHandle mAttachment0;
 
 	const int kNumCascades = 5;
 	const int kShadowDims = 4096;

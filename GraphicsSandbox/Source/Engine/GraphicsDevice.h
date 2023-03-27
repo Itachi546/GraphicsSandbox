@@ -16,14 +16,14 @@ namespace gfx
 		virtual PipelineHandle CreateComputePipeline(const PipelineDesc* desc) = 0;
 		virtual BufferHandle CreateBuffer(const GPUBufferDesc* desc) = 0;
 		virtual TextureHandle CreateTexture(const GPUTextureDesc* desc) = 0;
+		virtual FramebufferHandle CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount) = 0;
+		virtual void CreateSemaphore(Semaphore* out) = 0;
+		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
 		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
 		virtual void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0) = 0;
 		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
-		virtual void CreateSemaphore(Semaphore* out) = 0;
-		virtual void CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount) = 0;
-		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 		
 		virtual void* GetMappedDataPtr(BufferHandle buffer) = 0;
 		virtual uint32_t GetBufferSize(BufferHandle handle) = 0;
@@ -47,7 +47,7 @@ namespace gfx
 
 		virtual void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore) = 0;
 		virtual CommandList BeginCommandList() = 0;
-		virtual void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, Framebuffer* fb) = 0;
+		virtual void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb) = 0;
 		virtual void EndRenderPass(CommandList* commandList) = 0;
 		virtual void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore = nullptr) = 0;
 		virtual void Present(Semaphore* waitSemaphore) = 0;
@@ -63,6 +63,8 @@ namespace gfx
 		virtual void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ) = 0;
 
 		virtual void PrepareSwapchainForPresent(CommandList* commandList) = 0;
+
+		virtual TextureHandle GetFramebufferAttachment(FramebufferHandle framebuffer, uint32_t index) = 0;
 		/*
 		* This function is used to determine whether the swapchain is 
 		* ready or not. When window is minimized the width and height is
@@ -75,6 +77,7 @@ namespace gfx
 		virtual void Destroy(PipelineHandle pipeline) = 0;
 		virtual void Destroy(BufferHandle buffer) = 0;
 		virtual void Destroy(TextureHandle texture) = 0;
+		virtual void Destroy(FramebufferHandle framebuffer) = 0;
 
 		virtual void Shutdown() = 0;
 

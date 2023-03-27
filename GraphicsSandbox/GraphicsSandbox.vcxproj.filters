@@ -193,6 +193,7 @@
     <ClInclude Include="Source\Engine\TransformComponent.h" />
     <ClInclude Include="Source\Engine\ResourcePool.h" />
     <ClInclude Include="Source\Engine\VulkanResources.h" />
+    <ClInclude Include="Source\Engine\Resource.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

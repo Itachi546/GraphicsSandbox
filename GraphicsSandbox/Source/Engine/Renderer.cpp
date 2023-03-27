@@ -52,9 +52,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	desc.attachments = attachments;
 	desc.hasDepthAttachment = true;
 	mHdrRenderPass = mDevice->CreateRenderPass(&desc);
-
-	mHdrFramebuffer = std::make_shared<gfx::Framebuffer>();
-	mDevice->CreateFramebuffer(mHdrRenderPass, mHdrFramebuffer.get(), 1);
+	mHdrFramebuffer = mDevice->CreateFramebuffer(mHdrRenderPass, 1);
 
 	mMeshPipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
 	mSkinnedMeshPipeline = loadHDRPipeline(StringConstants::SKINNED_VERT_PATH, StringConstants::SKINNED_FRAG_PATH);
@@ -219,7 +217,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		DrawShadowMap(commandList);
 
 		gfx::ImageBarrierInfo shadowBarrier = {
-				gfx::ImageBarrierInfo{gfx::AccessFlag::DepthStencilWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mShadowMap->mFramebuffer->attachments[0]},
+				gfx::ImageBarrierInfo{gfx::AccessFlag::DepthStencilWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mDevice->GetFramebufferAttachment(mShadowMap->mFramebuffer, 0)}
 		};
 		gfx::PipelineBarrierInfo barrier = { &shadowBarrier, 1, gfx::PipelineStage::LateFramentTest, gfx::PipelineStage::FragmentShader};
 		mDevice->PipelineBarrier(commandList, &barrier);
@@ -228,9 +226,9 @@ void Renderer::Render(gfx::CommandList* commandList)
 	// Begin HDR RenderPass
 	{
 		gfx::ImageBarrierInfo barriers[] = {
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mHdrFramebuffer->attachments[0]},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mHdrFramebuffer->attachments[1]},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mHdrFramebuffer->attachments[2]},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0)},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 1)},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 2)},
 		};
 
 		gfx::PipelineBarrierInfo colorAttachmentBarrier = { barriers, 2, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput };
@@ -239,7 +237,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		mDevice->PipelineBarrier(commandList, &depthAttachmentBarrier);
 
 		auto hdrPass = Profiler::StartRangeGPU(commandList, "HDR Pass");
-		mDevice->BeginRenderPass(commandList, mHdrRenderPass, mHdrFramebuffer.get());
+		mDevice->BeginRenderPass(commandList, mHdrRenderPass, mHdrFramebuffer);
 
 		/*
 		* TODO: Currently PerObjectData is extracted from the
@@ -284,8 +282,8 @@ void Renderer::Render(gfx::CommandList* commandList)
 	{
 		auto bloomPass = Profiler::StartRangeGPU(commandList, "Bloom Pass");
 		// Bloom Pass
-		mBloomFX->Generate(commandList, mHdrFramebuffer->attachments[1], mBloomBlurRadius);
-		mBloomFX->Composite(commandList, mHdrFramebuffer->attachments[0], mBloomStrength);
+		mBloomFX->Generate(commandList, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 1), mBloomBlurRadius);
+		mBloomFX->Composite(commandList, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0), mBloomStrength);
 		Profiler::EndRangeGPU(commandList, bloomPass);
 	}
 }
@@ -295,16 +293,16 @@ gfx::TextureHandle Renderer::GetOutputTexture(OutputTextureType colorTextureType
 	switch (colorTextureType)
 	{
 	case OutputTextureType::HDROutput:
-		return mHdrFramebuffer->attachments[0];
+		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0);
 	case OutputTextureType::HDRBrightTexture:
-		return mHdrFramebuffer->attachments[1];
+		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 1);
 	case OutputTextureType::BloomUpSample:
 		return mBloomFX->GetTexture();
 	case OutputTextureType::HDRDepth:
-		return mHdrFramebuffer->attachments[2];
+		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 2);
 	default:
 		assert(!"Undefined output texture");
-		return gfx::TextureHandle{ K_INVALID_RESOURCE_HANDLE };
+		return gfx::INVALID_TEXTURE;
 	}
 }
 
@@ -556,7 +554,7 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 		return lhs.vertexBuffer.buffer.handle < rhs.vertexBuffer.buffer.handle;
 	});
 
-	gfx::BufferHandle lastBuffer = { K_INVALID_RESOURCE_HANDLE };
+	gfx::BufferHandle lastBuffer = gfx::INVALID_BUFFER;
 	RenderBatch* activeBatch = nullptr;
 	if (drawDatas.size() > 0)
 	{
@@ -654,6 +652,7 @@ void Renderer::Shutdown()
 	mDevice->Destroy(mMaterialBuffer);
 	mDevice->Destroy(mSkinnedMatrixBuffer);
 	mDevice->Destroy(mHdrRenderPass);
+	mDevice->Destroy(mHdrFramebuffer);
 
 	mBloomFX->Shutdown();
 	mShadowMap->Shutdown();

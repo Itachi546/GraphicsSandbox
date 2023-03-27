@@ -605,6 +605,7 @@ void Scene::Shutdown()
 	for (gfx::BufferHandle buffer : mAllocatedBuffers)
 		device->Destroy(buffer);
 
+	mEnvMap->Shutdown();
 	ecs::Destroy(mComponentManager.get());
 }
 

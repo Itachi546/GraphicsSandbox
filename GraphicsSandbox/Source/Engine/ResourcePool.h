@@ -5,10 +5,6 @@
 #include <stdint.h>
 #include <vector>
 
-static constexpr uint32_t K_INVALID_RESOURCE_HANDLE = 0xffffffff;
-
-typedef uint32_t ResourceHandle;
-
 template<typename T>
 struct ResourcePool
 {
@@ -55,7 +51,7 @@ struct ResourcePool
 		}
 
 		Logger::Error("Resource space unavailable");
-		return K_INVALID_RESOURCE_HANDLE;
+		return gfx::K_INVALID_RESOURCE_HANDLE;
 	}
 
 	/*
@@ -79,7 +75,7 @@ struct ResourcePool
 	* to the resource
 	*/
 	T* AccessResource(uint32_t handle) {
-		if (handle != K_INVALID_RESOURCE_HANDLE)
+		if (handle != gfx::K_INVALID_RESOURCE_HANDLE)
 			return &resourceMemory[handle];
 		return nullptr;
 	}

@@ -1330,6 +1330,7 @@ namespace gfx {
         pipelines.Initialize(128);
         buffers.Initialize(256);
         textures.Initialize(1024);
+        framebuffers.Initialize(64);
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -1437,18 +1438,17 @@ namespace gfx {
         return handle;
     }
 
-    void VulkanGraphicsDevice::CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount)
+    FramebufferHandle VulkanGraphicsDevice::CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)
     {
         auto rp = renderPasses.AccessResource(renderPass.handle);
-        auto vkFramebuffer = std::make_shared<VulkanFramebuffer>();
-
-        uint32_t attachmentCount = rp->desc.attachmentCount;
+        FramebufferHandle fbHandle = { framebuffers.ObtainResource() };
+        VulkanFramebuffer* vkFramebuffer = framebuffers.AccessResource(fbHandle.handle);
+		uint32_t attachmentCount = attachmentCount = rp->desc.attachmentCount;
 
         uint32_t width = rp->desc.width;
 		uint32_t height = rp->desc.height;
 
         std::vector<VkImageView> imageViews(attachmentCount);
-        out->attachments.resize(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
         {
             Attachment* attachment = (rp->desc.attachments + i);
@@ -1457,17 +1457,20 @@ namespace gfx {
             attachment->desc.height = height;
 
             assert(attachment->desc.arrayLayers == layerCount);
-            TextureHandle& texture = out->attachments[index];
-            texture.handle = textures.ObtainResource();
-			texture = CreateTexture(&attachment->desc);
-            imageViews[index] = textures.AccessResource(texture.handle)->imageViews[0];
+            TextureHandle texture = CreateTexture(&attachment->desc);
 
+            imageViews[index] = textures.AccessResource(texture.handle)->imageViews[0];
             if (attachment->desc.imageAspect == ImageAspect::Depth)
-                out->depthAttachmentIndex = attachment->index;
+                vkFramebuffer->depthAttachmentIndex = attachment->index;
+
+            vkFramebuffer->attachments[index] = texture;
         }
 
+        vkFramebuffer->width = width;
+        vkFramebuffer->height = height;
+        vkFramebuffer->attachmentCount = attachmentCount;
         vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), attachmentCount, width, height, layerCount);
-        out->internalState = vkFramebuffer;
+        return fbHandle;
     }
     void VulkanGraphicsDevice::CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)
     {
@@ -1834,7 +1837,7 @@ namespace gfx {
         vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
     }
 
-    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, Framebuffer* framebuffer)
+    void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle framebuffer)
     {
         VulkanRenderPass* vkRenderpass = renderPasses.AccessResource(renderPass.handle);
 
@@ -1849,10 +1852,13 @@ namespace gfx {
         uint32_t height = swapchain_->desc.height;
 
         uint32_t attachmentCount = vkRenderpass->desc.attachmentCount;
-        if (framebuffer)
+        if (framebuffer.handle != K_INVALID_RESOURCE_HANDLE)
         {
-            vkFramebuffer = std::static_pointer_cast<VulkanFramebuffer>(framebuffer->internalState)->framebuffer;
-            fbDepthAttachmentIndex = framebuffer->depthAttachmentIndex;
+
+            VulkanFramebuffer* internalState = framebuffers.AccessResource(framebuffer.handle);
+            fbDepthAttachmentIndex = internalState->depthAttachmentIndex;
+            vkFramebuffer = internalState->framebuffer;
+
             width  = vkRenderpass->desc.width;
             height = vkRenderpass->desc.height;
         }
@@ -2180,7 +2186,7 @@ namespace gfx {
         bufferDesc.usage = gfx::Usage::Upload;
         bufferDesc.size = imageDataSize;
 
-        gfx::BufferHandle stagingBuffer = CreateBuffer(&bufferDesc);
+        BufferHandle stagingBuffer = CreateBuffer(&bufferDesc);
         VulkanBuffer* buffer = buffers.AccessResource(stagingBuffer.handle);
         std::memcpy(buffer->mappedDataPtr, src, sizeInByte);
 
@@ -2367,10 +2373,10 @@ namespace gfx {
                 else if (info.type == DescriptorType::ImageArray)
                     totalSize = info.size;
 
-                gfx::TextureHandle* inputTextures = (gfx::TextureHandle*)(info.texture);
+                TextureHandle* inputTextures = (TextureHandle*)(info.texture);
                 for (uint32_t imageIndex = 0; imageIndex < totalSize; ++imageIndex)
                 {
-                    gfx::TextureHandle texture = inputTextures[imageIndex];
+                    TextureHandle texture = inputTextures[imageIndex];
                     VulkanDescriptorInfo descriptorInfo = {};
                     auto vkTexture = textures.AccessResource(texture.handle);
 					descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
@@ -2485,13 +2491,31 @@ namespace gfx {
         textures.ReleaseResource(texture.handle);
     }
 
+    void VulkanGraphicsDevice::Destroy(FramebufferHandle framebuffer)
+    {
+        VulkanFramebuffer* vkFramebuffer = framebuffers.AccessResource(framebuffer.handle);
+        gAllocationHandler.destroyedFramebuffers_.push_back(vkFramebuffer->framebuffer);
+        for (uint32_t i = 0; i < vkFramebuffer->attachmentCount; ++i)
+            Destroy(vkFramebuffer->attachments[i]);
+        framebuffers.ReleaseResource(framebuffer.handle);
+    }
+
+    TextureHandle VulkanGraphicsDevice::GetFramebufferAttachment(FramebufferHandle handle, uint32_t index)
+    {
+        VulkanFramebuffer* framebuffer = framebuffers.AccessResource(handle.handle);
+        if (index >= framebuffer->attachmentCount)
+            return INVALID_TEXTURE;
+        return framebuffer->attachments[index];
+    }
+
     void VulkanGraphicsDevice::Shutdown()
     {
         // Release resources
+        framebuffers.Shutdown();
+        renderPasses.Shutdown();
         buffers.Shutdown();
         textures.Shutdown();
         pipelines.Shutdown();
-        renderPasses.Shutdown();
 
         gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), swapchain_->imageViews.begin(), swapchain_->imageViews.end());
         swapchain_->images.clear();

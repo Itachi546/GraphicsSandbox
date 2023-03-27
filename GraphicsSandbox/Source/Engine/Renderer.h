@@ -4,7 +4,9 @@
 #include "Graphics.h"
 #include "GraphicsDevice.h"
 #include "Components.h"
+#include "Resource.h"
 #include <vector>
+
 
 class Scene;
 class CascadedShadowMap;
@@ -104,7 +106,7 @@ private:
 	gfx::BufferHandle mSkinnedMatrixBuffer;
 
 	gfx::RenderPassHandle mHdrRenderPass;
-	std::shared_ptr<gfx::Framebuffer> mHdrFramebuffer;
+	gfx::FramebufferHandle mHdrFramebuffer;
 	
 	gfx::Format mHDRDepthFormat = gfx::Format::D32_SFLOAT;
 	gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;

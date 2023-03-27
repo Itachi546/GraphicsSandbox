@@ -4,8 +4,8 @@
 #include "Utils.h"
 
 bool gEnableDebugDraw = true;
-gfx::PipelineHandle gPipeline;
-gfx::BufferHandle gBuffer;
+gfx::PipelineHandle gPipeline = gfx::INVALID_PIPELINE;
+gfx::BufferHandle gBuffer = gfx::INVALID_BUFFER;
 uint32_t gDataOffset = 0;
 const uint32_t kMaxDebugData = 10'000;
 struct DebugData

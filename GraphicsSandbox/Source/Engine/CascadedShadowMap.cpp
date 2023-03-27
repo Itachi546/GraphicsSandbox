@@ -71,8 +71,7 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 	}
 
 	{
-		mFramebuffer = std::make_unique<gfx::Framebuffer>();
-		mDevice->CreateFramebuffer(mRenderPass, mFramebuffer.get(), kNumCascades);
+		mFramebuffer = mDevice->CreateFramebuffer(mRenderPass, kNumCascades);
 	}
 
 	{
@@ -82,6 +81,8 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		bufferDesc.usage = gfx::Usage::Upload;
 		mBuffer = mDevice->CreateBuffer(&bufferDesc);
 	}
+
+	mAttachment0 = mDevice->GetFramebufferAttachment(mFramebuffer, 0);
 }
 
 std::array<glm::vec3, 8> CalculateFrustumCorners(glm::mat4 VP)
@@ -156,13 +157,13 @@ void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 void CascadedShadowMap::BeginRender(gfx::CommandList* commandList)
 {
 	gfx::ImageBarrierInfo barrierInfos[] = {
-		{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mFramebuffer->attachments[0]},
+		{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mAttachment0},
 	};
 
 	gfx::PipelineBarrierInfo depthBarrier = { &barrierInfos[0], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest};
 	mDevice->PipelineBarrier(commandList, &depthBarrier);
 
-	mDevice->BeginRenderPass(commandList, mRenderPass, mFramebuffer.get());
+	mDevice->BeginRenderPass(commandList, mRenderPass, mFramebuffer);
 	mDevice->BeginDebugMarker(commandList, "ShadowPass");
 }
 
@@ -179,6 +180,7 @@ void CascadedShadowMap::Shutdown()
 	mDevice->Destroy(mSkinnedPipeline);
 	mDevice->Destroy(mRenderPass);
 	mDevice->Destroy(mBuffer);
+	mDevice->Destroy(mFramebuffer);
 }
 
 void CascadedShadowMap::CalculateSplitDistance(Camera* camera)

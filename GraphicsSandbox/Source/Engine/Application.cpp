@@ -106,7 +106,7 @@ void Application::render_()
 	mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
 	mDevice->CopyToSwapchain(&commandList, sceneDepthTexture, gfx::ImageLayout::DepthStencilAttachmentOptimal);
 
-	mDevice->BeginRenderPass(&commandList, mSwapchainRP, nullptr);
+	mDevice->BeginRenderPass(&commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
 	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
 	mDevice->UpdateDescriptor(mSwapchainPipeline, &descriptorInfo, 1);
 	mDevice->BindPipeline(&commandList, mSwapchainPipeline);

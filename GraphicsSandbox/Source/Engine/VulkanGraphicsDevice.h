@@ -10,6 +10,7 @@
 #include "Utils.h"
 #include "EventDispatcher.h"
 #include "VulkanResources.h"
+#include "ResourcePool.h"
 #include <assert.h>
 
 #define VK_CHECK(result)\
@@ -27,15 +28,15 @@ namespace gfx
 		VulkanGraphicsDevice(const VulkanGraphicsDevice&) = delete;
 		void operator=(const VulkanGraphicsDevice&) = delete;
 
-		bool             CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
-		RenderPassHandle CreateRenderPass(const RenderPassDesc* desc)                                      override;
-		PipelineHandle   CreateGraphicsPipeline(const PipelineDesc* desc)                                  override;
-		PipelineHandle   CreateComputePipeline(const PipelineDesc* desc)                                   override;
-		BufferHandle     CreateBuffer(const GPUBufferDesc* desc)                                           override;
-		TextureHandle    CreateTexture(const GPUTextureDesc* desc)                                         override;
-		void             CreateSemaphore(Semaphore* out)                                                   override;
-		void             CreateFramebuffer(RenderPassHandle renderPass, Framebuffer* out, uint32_t layerCount)  override;
-		void             CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                        override;
+		bool               CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
+		RenderPassHandle   CreateRenderPass(const RenderPassDesc* desc)                                      override;
+		PipelineHandle     CreateGraphicsPipeline(const PipelineDesc* desc)                                  override;
+		PipelineHandle     CreateComputePipeline(const PipelineDesc* desc)                                   override;
+		BufferHandle       CreateBuffer(const GPUBufferDesc* desc)                                           override;
+		TextureHandle      CreateTexture(const GPUTextureDesc* desc)                                         override;
+		void               CreateSemaphore(Semaphore* out)                                                   override;
+		FramebufferHandle  CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)               override;
+		void               CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
 		void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)                   override;
 
@@ -60,7 +61,7 @@ namespace gfx
 		CommandList BeginCommandList()                                                         override;
 
 		void PrepareSwapchain(CommandList* commandList, Semaphore* acquireSemaphore)             override;
-		void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, Framebuffer* fb)  override;
+		void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb)  override;
 		void EndRenderPass(CommandList* commandList)                                             override;
 		void SubmitCommandList(CommandList* commandList, Semaphore* signalSemaphore)             override;
 		void Present(Semaphore* waitSemaphore)                                                   override;
@@ -99,6 +100,9 @@ namespace gfx
 		void Destroy(PipelineHandle pipeline) override;
 		void Destroy(BufferHandle buffer) override;
 		void Destroy(TextureHandle texture) override;
+		void Destroy(FramebufferHandle framebuffer) override;
+
+		TextureHandle GetFramebufferAttachment(FramebufferHandle, uint32_t index) override;
 
 		void Shutdown() override;
 		virtual ~VulkanGraphicsDevice() = default;
@@ -168,5 +172,6 @@ namespace gfx
 		ResourcePool<VulkanPipeline> pipelines;
 		ResourcePool<VulkanBuffer> buffers;
 		ResourcePool<VulkanTexture> textures;
+		ResourcePool<VulkanFramebuffer> framebuffers;
 	};
 };

@@ -107,7 +107,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 void EnvironmentMap::CalculateIrradiance()
 {
 	Logger::Debug("Generating Irradiance Texture");
-	assert(mCubemapTexture.handle != K_INVALID_RESOURCE_HANDLE);
+	assert(mCubemapTexture.handle != gfx::K_INVALID_RESOURCE_HANDLE);
 
 	gfx::GPUTextureDesc irrDesc{};
 	irrDesc.width = irrDesc.height = mIrrTexDims;
@@ -156,7 +156,7 @@ void EnvironmentMap::CalculateIrradiance()
 void EnvironmentMap::Prefilter()
 {
 	Logger::Debug("Generating Prefiltered Environment Texture");
-	assert(mCubemapTexture.handle != K_INVALID_RESOURCE_HANDLE);
+	assert(mCubemapTexture.handle != gfx::K_INVALID_RESOURCE_HANDLE);
 
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mPrefilterDims;
@@ -214,7 +214,7 @@ void EnvironmentMap::Prefilter()
 void EnvironmentMap::CalculateBRDFLUT()
 {
 	Logger::Debug("Generating BRDF LUT");
-	assert(mCubemapTexture.handle != K_INVALID_RESOURCE_HANDLE);
+	assert(mCubemapTexture.handle != gfx::K_INVALID_RESOURCE_HANDLE);
 
 	gfx::GPUTextureDesc desc{};
 	desc.width = desc.height = mBRDFDims;

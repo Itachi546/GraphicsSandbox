@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "CommonInclude.h"
-#include "ResourcePool.h"
+#include "Resource.h"
 
 namespace gfx
 {
@@ -160,26 +160,7 @@ namespace gfx
 		float x, y, w, h, minDepth, maxDepth;
 	};
 
-	struct RenderPassHandle {
-		ResourceHandle handle;
-	};
-
-	struct BufferHandle {
-		ResourceHandle handle;
-	};
-
-	struct TextureHandle {
-		ResourceHandle handle;
-	};
-
-	struct PipelineHandle {
-		ResourceHandle handle;
-	};
-
-	struct DescriptorSetHandle {
-		ResourceHandle handle;
-	};
-
+	
 	struct GraphicsDeviceResource {
 		std::shared_ptr<void> internalState;
 		bool IsValid() { return internalState != nullptr; }
@@ -458,13 +439,13 @@ namespace gfx
 		}
 
 	};
-
+	/*
 	struct Framebuffer : public GraphicsDeviceResource
 	{
 		std::vector<TextureHandle> attachments;
 		uint32_t depthAttachmentIndex = ~0u;
 	};
-
+	*/
 	struct DrawIndirectCommand
 	{
 		uint32_t    indexCount;

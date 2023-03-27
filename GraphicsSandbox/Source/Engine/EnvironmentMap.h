@@ -40,8 +40,8 @@ private:
 	const uint32_t nMaxMipLevel   = 6;
 	const uint32_t mBRDFDims      = 512;
 
-	gfx::TextureHandle mCubemapTexture = { K_INVALID_RESOURCE_HANDLE };
-	gfx::TextureHandle mIrradianceTexture = { K_INVALID_RESOURCE_HANDLE };
-	gfx::TextureHandle mPrefilterTexture = { K_INVALID_RESOURCE_HANDLE };
-	gfx::TextureHandle mBRDFTexture = { K_INVALID_RESOURCE_HANDLE };
+	gfx::TextureHandle mCubemapTexture = gfx::INVALID_TEXTURE;
+	gfx::TextureHandle mIrradianceTexture = gfx::INVALID_TEXTURE;
+	gfx::TextureHandle mPrefilterTexture = gfx::INVALID_TEXTURE;
+	gfx::TextureHandle mBRDFTexture = gfx::INVALID_TEXTURE;
 };

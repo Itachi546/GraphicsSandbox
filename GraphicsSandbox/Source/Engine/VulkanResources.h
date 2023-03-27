@@ -9,6 +9,8 @@
 #include <vector>
 #include <memory>
 
+// @TODO Remove dependency on upper layer
+
 struct VulkanShader
 {
 	VkShaderModule module;
@@ -100,6 +102,12 @@ struct VulkanTexture
 struct VulkanFramebuffer
 {
 	VkFramebuffer framebuffer;
+
+	uint32_t attachmentCount;
+	uint32_t depthAttachmentIndex;
+	gfx::TextureHandle attachments[16];
+	uint32_t width;
+	uint32_t height;
 
 	~VulkanFramebuffer()
 	{

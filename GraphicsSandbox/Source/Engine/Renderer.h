@@ -6,6 +6,7 @@
 #include "Components.h"
 #include "Resource.h"
 #include <vector>
+#include <array>
 
 
 class Scene;
@@ -114,12 +115,12 @@ private:
 	void initializeBuffers();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
 	void DrawShadowMap(gfx::CommandList* commandList);
-	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline);
-	void DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset);
-	void DrawSkinnedShadow(gfx::CommandList* commandList);
-
+	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass = false);
+	void DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, gfx::PipelineHandle pipeline, bool shadowPass = false);
 	void CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch);
-	void DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& renderBatch, gfx::PipelineHandle pipeline, uint32_t lastOffset);
+	uint32_t addUnique(std::array<gfx::TextureHandle, 64>& textures, uint32_t& lastIndex, gfx::TextureHandle texture);
+
+
 
 	// Bloom Settings
 	bool mEnableBloom = false;

@@ -116,74 +116,6 @@ void Renderer::Update(float dt)
 	mDevice->CopyToBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
 }
 
-void Renderer::DrawShadowBatch(gfx::CommandList* commandList, RenderBatch& batch, gfx::PipelineHandle pipeline, uint32_t lastOffset)
-{
-	auto cascadeInfoBuffer = mShadowMap->mBuffer;
-	gfx::BufferView& vbView = batch.vertexBuffer;
-	gfx::BufferView& ibView = batch.indexBuffer;
-
-	gfx::BufferHandle vb = vbView.buffer;
-	gfx::BufferHandle ib = ibView.buffer;
-
-	gfx::DescriptorInfo descriptorInfos[3] = {};
-	descriptorInfos[0] = { cascadeInfoBuffer, 0, mDevice->GetBufferSize(cascadeInfoBuffer),gfx::DescriptorType::UniformBuffer};
-	descriptorInfos[1] = { vb, 0, mDevice->GetBufferSize(vb), gfx::DescriptorType::StorageBuffer };
-	descriptorInfos[2] = { mTransformBuffer, (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
-
-	mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-	mDevice->BindPipeline(commandList, pipeline);
-
-	mDevice->BindIndexBuffer(commandList, ib);
-	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer, lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
-}
-
-void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
-{
-	std::vector<DrawData> drawDatas;
-	mScene->GenerateSkinnedMeshDrawData(drawDatas);
-
-	gfx::PipelineHandle pipeline = mShadowMap->mSkinnedPipeline;
-	auto cascadeInfoBuffer = mShadowMap->mBuffer;
-
-	auto compMgr = mScene->GetComponentManager();
-	// @TODO Maybe we can reuse the same data that is already uploaded to GPU for shadow pass
-	// in the main rendering pass also.
-	uint32_t skinnedBufferOffset = 0;
-	for (auto& drawData : drawDatas)
-	{
-		gfx::BufferView& vbView = drawData.vertexBuffer;
-		gfx::BufferView& ibView = drawData.indexBuffer;
-
-		auto& vb = vbView.buffer;
-		auto& ib = ibView.buffer;
-
-		auto skinnedMeshComp = compMgr->GetComponent<SkinnedMeshRenderer>(drawData.entity);
-		std::vector<glm::mat4> skinnedMatrix;
-		skinnedMeshComp->skeleton.GetAnimatedPose().GetMatrixPallete(skinnedMatrix);
-
-		for (uint32_t i = 0; i < skinnedMatrix.size(); ++i)
-			skinnedMatrix[i] = drawData.worldTransform * skinnedMatrix[i] * skinnedMeshComp->skeleton.GetInvBindPose(i);
-
-		assert(skinnedMatrix.size() <= MAX_BONE_COUNT);
-
-		uint32_t dataSize = static_cast<uint32_t>(skinnedMatrix.size() * sizeof(glm::mat4));
-		mDevice->CopyToBuffer(mSkinnedMatrixBuffer, skinnedMatrix.data(), skinnedBufferOffset, dataSize);
-
-		// TODO: Define static Descriptor beforehand
-		gfx::DescriptorInfo descriptorInfos[3] = {};
-		descriptorInfos[0] = { cascadeInfoBuffer, 0, mDevice->GetBufferSize(cascadeInfoBuffer),gfx::DescriptorType::UniformBuffer };
-		descriptorInfos[1] = { vb, 0, mDevice->GetBufferSize(vb), gfx::DescriptorType::StorageBuffer};
-		descriptorInfos[2] = { mSkinnedMatrixBuffer, skinnedBufferOffset, dataSize,gfx::DescriptorType::UniformBuffer };
-
-		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-		mDevice->BindPipeline(commandList, pipeline);
-
-		mDevice->BindIndexBuffer(commandList, ib);
-		mDevice->DrawIndexed(commandList, drawData.indexCount, 1, drawData.indexBuffer.offset);
-
-		skinnedBufferOffset += dataSize;
-	}
-}
 
 void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 {
@@ -195,11 +127,11 @@ void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 	auto pipeline = mShadowMap->mPipeline;
 	for (auto& batch : mRenderBatches)
 	{
-		DrawShadowBatch(commandList, batch, pipeline, lastOffset);
+		DrawBatch(commandList, batch, lastOffset, pipeline, true);
 		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
 
-	DrawSkinnedShadow(commandList);
+	DrawSkinnedMesh(commandList, 0, mShadowMap->mSkinnedPipeline, true);
 
 	mShadowMap->EndRender(commandList);
 	Profiler::EndRangeGPU(commandList, rangeId);
@@ -258,7 +190,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		}
 
 		// Draw Skinned Mesh
-		DrawSkinnedMesh(commandList, offset);
+		DrawSkinnedMesh(commandList, offset, mSkinnedMeshPipeline);
 
 		mDevice->EndDebugMarker(commandList);
 
@@ -392,7 +324,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.offset / sizeof(uint32_t));
 }
 
-void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline)
+void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)
 {
 	gfx::BufferView& vbView = batch.vertexBuffer;
 	gfx::BufferView& ibView = batch.indexBuffer;
@@ -400,107 +332,128 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	auto vb = vbView.buffer;
 	auto ib = ibView.buffer;
 
-	auto& envMap = mScene->GetEnvironmentMap();
 
 	// TODO: Define static Descriptor beforehand
 	gfx::DescriptorInfo descriptorInfos[10] = {};
-
-	descriptorInfos[0] = { mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 
 	descriptorInfos[1] = { vb, 0, mDevice->GetBufferSize(vb), gfx::DescriptorType::StorageBuffer};
 
 	descriptorInfos[2] = { mTransformBuffer, (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer};
 
-	descriptorInfos[3] = { mMaterialBuffer, (uint32_t)(lastOffset * sizeof(MaterialComponent)), (uint32_t)(batch.materials.size() * (uint32_t)sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer};
+	uint32_t descriptorCount = 3;
+	if (shadowPass)
+	{
+		auto cascadeInfoBuffer = mShadowMap->mBuffer;
+		descriptorInfos[0] = { cascadeInfoBuffer, 0, mDevice->GetBufferSize(cascadeInfoBuffer),gfx::DescriptorType::UniformBuffer };
+	}
+	else
+	{
+		descriptorInfos[0] = { mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+		auto& envMap = mScene->GetEnvironmentMap();
+		descriptorInfos[3] = { mMaterialBuffer, (uint32_t)(lastOffset * sizeof(MaterialComponent)), (uint32_t)(batch.materials.size() * (uint32_t)sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer };
 
-	gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
-	descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
+		gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
+		descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
 
-	gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
-	descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
+		gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
+		descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
 
-	gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
-	descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
+		gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
+		descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
 
-	descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
-	descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
+		descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
+		descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
 
-	gfx::DescriptorInfo imageArrInfo = {};
-	imageArrInfo.texture = batch.textures.data();
-	imageArrInfo.offset = 0;
-	imageArrInfo.size = 64;
-	imageArrInfo.type = gfx::DescriptorType::ImageArray;
-	descriptorInfos[9] = imageArrInfo;
+		gfx::DescriptorInfo imageArrInfo = {};
+		imageArrInfo.texture = batch.textures.data();
+		imageArrInfo.offset = 0;
+		imageArrInfo.size = 64;
+		imageArrInfo.type = gfx::DescriptorType::ImageArray;
+		descriptorInfos[9] = imageArrInfo;
+		descriptorCount += 7;
+	}
 
-	mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+	mDevice->UpdateDescriptor(pipeline, descriptorInfos, descriptorCount);
 	mDevice->BindPipeline(commandList, pipeline);
 
 	mDevice->BindIndexBuffer(commandList, ib);
 	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer, lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 }
 
+// Add unique texture to array
+uint32_t Renderer::addUnique(std::array<gfx::TextureHandle, 64>& textures, uint32_t& lastIndex, gfx::TextureHandle texture)
+{
+	auto found = std::find_if(textures.begin(), textures.end(), [texture](const gfx::TextureHandle& current) {
+		return texture.handle == current.handle;
+		});
+
+	if (found != textures.end())
+		return (uint32_t)(std::distance(textures.begin(), found));
+
+	textures[lastIndex++] = texture;
+	return lastIndex - 1;
+}
+
+
+
 // Offset parameter is used to reuse the Material Buffer
-void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset)
+void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, gfx::PipelineHandle pipeline, bool shadowPass)
 {
 	std::vector<DrawData> drawDatas;
 	mScene->GenerateSkinnedMeshDrawData(drawDatas);
 
-	gfx::PipelineHandle pipeline = mSkinnedMeshPipeline;
 	auto compMgr = mScene->GetComponentManager();
 
-	// Copy Materials
-	std::array<gfx::TextureHandle, 64> textures;
-	std::fill(textures.begin(), textures.end(), TextureCache::GetDefaultTexture());
-
-	std::vector<MaterialComponent> materials;
-	uint32_t textureIndex = 0;
-	auto addUnique = [&textures, &textureIndex](gfx::TextureHandle texture) -> uint32_t {
-		auto found = std::find_if(textures.begin(), textures.end(), [texture](const gfx::TextureHandle& current) {
-			return texture.handle == current.handle;
-			});
-
-		if (found != textures.end())
-			return (uint32_t)(std::distance(textures.begin(), found));
-
-		textures[textureIndex++] = texture;
-		return textureIndex - 1;
-	};
-
-	for (auto& drawData : drawDatas)
-	{
-		MaterialComponent material = *drawData.material;
-		for (int i = 0; i < std::size(material.textures); ++i)
-		{
-			if (IsTextureValid(material.textures[i]))
-				material.textures[i] = addUnique(TextureCache::GetByIndex(material.textures[i]));
-		}
-		materials.push_back(std::move(material));
-	}
-
-	uint32_t materialCount = (uint32_t)materials.size();
-	mDevice->CopyToBuffer(mMaterialBuffer, materials.data(), offset * sizeof(MaterialComponent), materialCount * sizeof(MaterialComponent));
-
-	auto& envMap = mScene->GetEnvironmentMap();
-
-
 	gfx::DescriptorInfo descriptorInfos[10] = {};
-	descriptorInfos[0] = { mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+	uint32_t descriptorCount = 3;
+	if (!shadowPass)
+	{
+		// Copy Materials
+		std::array<gfx::TextureHandle, 64> textures;
+		std::fill(textures.begin(), textures.end(), TextureCache::GetDefaultTexture());
 
-	gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
-	descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
-	gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
-	descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
-	gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
-	descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
+		std::vector<MaterialComponent> materials;
+		uint32_t textureIndex = 0;
 
-	descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
-	descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
-	gfx::DescriptorInfo imageArrInfo = {};
-	imageArrInfo.texture = textures.data();
-	imageArrInfo.offset = 0;
-	imageArrInfo.size = 64;
-	imageArrInfo.type = gfx::DescriptorType::ImageArray;
-	descriptorInfos[9] = imageArrInfo;
+		for (auto& drawData : drawDatas)
+		{
+			MaterialComponent material = *drawData.material;
+			for (int i = 0; i < std::size(material.textures); ++i)
+			{
+				if (IsTextureValid(material.textures[i]))
+					material.textures[i] = addUnique(textures, textureIndex, TextureCache::GetByIndex(material.textures[i]));
+			}
+			materials.push_back(std::move(material));
+		}
+
+		uint32_t materialCount = (uint32_t)materials.size();
+		mDevice->CopyToBuffer(mMaterialBuffer, materials.data(), offset * sizeof(MaterialComponent), materialCount * sizeof(MaterialComponent));
+
+		auto& envMap = mScene->GetEnvironmentMap();
+
+		descriptorInfos[0] = { mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+		gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
+		descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
+		gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
+		descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
+		gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
+		descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
+
+		descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
+		descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
+		gfx::DescriptorInfo imageArrInfo = {};
+		imageArrInfo.texture = textures.data();
+		imageArrInfo.offset = 0;
+		imageArrInfo.size = 64;
+		imageArrInfo.type = gfx::DescriptorType::ImageArray;
+		descriptorInfos[9] = imageArrInfo;
+
+		descriptorCount += 7;
+	}
+	else {
+		gfx::BufferHandle cascadeBuffer = mShadowMap->mBuffer;
+		descriptorInfos[0] = { cascadeBuffer, 0, mDevice->GetBufferSize(cascadeBuffer),gfx::DescriptorType::UniformBuffer };
+	}
 
 	uint32_t skinnedBufferOffset = 0;
 	uint32_t materialOffset = offset;
@@ -526,9 +479,10 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset)
 		// TODO: Define static Descriptor beforehand
 		descriptorInfos[1] = { vb, 0, mDevice->GetBufferSize(vb), gfx::DescriptorType::StorageBuffer };
 		descriptorInfos[2] = { mSkinnedMatrixBuffer, skinnedBufferOffset, dataSize, gfx::DescriptorType::UniformBuffer };
-		descriptorInfos[3] = { mMaterialBuffer, (uint32_t)(materialOffset * sizeof(MaterialComponent)), (uint32_t)sizeof(MaterialComponent), gfx::DescriptorType::StorageBuffer };
+		if(!shadowPass)
+			descriptorInfos[3] = { mMaterialBuffer, (uint32_t)(materialOffset * sizeof(MaterialComponent)), (uint32_t)sizeof(MaterialComponent), gfx::DescriptorType::StorageBuffer };
 
-		mDevice->UpdateDescriptor(pipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+		mDevice->UpdateDescriptor(pipeline, descriptorInfos, descriptorCount);
 		mDevice->BindPipeline(commandList, pipeline);
 
 		mDevice->BindIndexBuffer(commandList, ib);
@@ -553,19 +507,6 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 	RenderBatch* activeBatch = nullptr;
 	if (drawDatas.size() > 0)
 	{
-		auto addUnique = [](RenderBatch* activeBatch, gfx::TextureHandle texture) -> uint32_t {
-			std::array<gfx::TextureHandle, 64>& textureList = activeBatch->textures;
-			uint32_t& textureCount = activeBatch->textureCount;
-			auto found = std::find_if(textureList.begin(), textureList.end(), [texture](const gfx::TextureHandle& current) {
-				return texture.handle == current.handle;
-				});
-			if (found != textureList.end())
-				return (uint32_t)(std::distance(textureList.begin(), found));
-
-			textureList[textureCount++] = texture;
-			return textureCount - 1;
-		};
-
 		for (auto& drawData : drawDatas)
 		{
 			/* The maximum texture limit for each DrawIndirect Invocation is 64.
@@ -593,7 +534,7 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 			for (int i = 0; i < std::size(material.textures); ++i)
 			{
 				if (IsTextureValid(material.textures[i]))
-					material.textures[i] = addUnique(activeBatch, TextureCache::GetByIndex(material.textures[i]));
+					material.textures[i] = addUnique(activeBatch->textures, activeBatch->textureCount, TextureCache::GetByIndex(material.textures[i]));
 			}
 			activeBatch->materials.push_back(std::move(material));
 

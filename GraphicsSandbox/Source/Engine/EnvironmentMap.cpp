@@ -32,6 +32,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	hdriDesc.imageViewType = gfx::ImageViewType::IV2D;
 	hdriDesc.format = gfx::Format::R32B32G32A32_SFLOAT;
 	hdriDesc.bCreateSampler = true;
+	hdriDesc.addToBindless = false;
 	gfx::TextureHandle hdriTexture = mDevice->CreateTexture(&hdriDesc);
 
 	// Create Staging buffer to transfer hdri data

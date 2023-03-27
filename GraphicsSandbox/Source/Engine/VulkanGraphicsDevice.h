@@ -130,6 +130,7 @@ namespace gfx
 		VkDescriptorPool bindlessDescriptorPool_;
 		VkDescriptorSetLayout bindlessDescriptorLayout_;
 		VkDescriptorSet bindlessDescriptorSet_;
+		std::vector<TextureHandle> textureToUpdateBindless_;
 
 		struct VulkanQueryPool
 		{

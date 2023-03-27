@@ -189,7 +189,6 @@ void Renderer::DrawSkinnedShadow(gfx::CommandList* commandList)
 	}
 }
 
-
 void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 {
 	// BeginShadow Pass

@@ -1857,6 +1857,9 @@ namespace gfx {
             texture->sampler = sampler;
         }
 
+        if (desc->addToBindless)
+            textureToUpdateBindless_.push_back(textureHandle);
+
         texture->image = image;
         texture->allocation = allocation;
         return textureHandle;
@@ -1891,6 +1894,33 @@ namespace gfx {
         CommandList commandList = {};
         commandList.internalState = commandList_.get();
 
+        // Update bindless descriptors
+        uint32_t descriptorCount = static_cast<uint32_t>(textureToUpdateBindless_.size());
+        if (supportBindless && descriptorCount > 0)
+        {
+            std::vector<VkWriteDescriptorSet> descriptorWrites(descriptorCount);
+            std::vector<VkDescriptorImageInfo> descriptorImageInfo(descriptorCount);
+            for (uint32_t i = 0; i < descriptorWrites.size(); ++i)
+            {
+                VulkanTexture* texture = textures.AccessResource(textureToUpdateBindless_[i].handle);
+                VkWriteDescriptorSet& descriptorWrite = descriptorWrites[i];
+                descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+                descriptorWrite.dstSet = bindlessDescriptorSet_;
+                descriptorWrite.dstBinding = kBindlessTextureBinding;
+                descriptorWrite.dstArrayElement = textureToUpdateBindless_[i].handle;
+                descriptorWrite.descriptorCount = 1;
+                descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+                VkDescriptorImageInfo& imageInfo = descriptorImageInfo[i];
+                imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                imageInfo.imageView = texture->imageViews[0];
+                imageInfo.sampler = texture->sampler;
+                descriptorWrite.pImageInfo = &imageInfo;
+            }
+
+            vkUpdateDescriptorSets(device_, descriptorCount, descriptorWrites.data(), 0, nullptr);
+            textureToUpdateBindless_.clear();
+        }
 
         VulkanCommandList* cmdList = GetCommandList(&commandList);
 		VK_CHECK(vkResetCommandPool(device_, cmdList->commandPool, 0));

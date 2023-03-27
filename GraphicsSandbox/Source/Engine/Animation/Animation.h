@@ -147,7 +147,7 @@ public:
 		return mJoints[index];
 	}
 
-	void GetMatrixPallete(std::vector<glm::mat4>& out)
+	void UpdateMatrixPallete()
 	{
 		if (mDirty)
 		{
@@ -162,10 +162,12 @@ public:
 			TransformComponent rootTransform = {};
 			for (uint32_t i = 0; i < mJoints.size(); ++i)
 				mMatrixPallete[i] = GetGlobalTransform(i).CalculateWorldMatrix();
-
-			//CalculateMatrixPallete(rootBone, rootTransform);
 			mDirty = false;
 		}
+	}
+
+	void GetMatrixPallete(std::vector<glm::mat4>& out)
+	{
 		out = mMatrixPallete;
 	}
 

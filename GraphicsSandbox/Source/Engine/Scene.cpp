@@ -616,6 +616,12 @@ void Scene::UpdateTransform()
 		transform.CalculateWorldMatrix();
 	});
 
+	auto skinnedMeshComp = mComponentManager->GetComponentArray<SkinnedMeshRenderer>();
+	std::for_each(std::execution::par, skinnedMeshComp->components.begin(), skinnedMeshComp->components.end(), [](SkinnedMeshRenderer& skinnedMesh) {
+		skinnedMesh.skeleton.GetAnimatedPose().UpdateMatrixPallete();
+		});
+
+
 	//for (auto& transform : transforms->components)
 	//transform.CalculateWorldMatrix();
 }

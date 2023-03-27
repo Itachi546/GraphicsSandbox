@@ -90,8 +90,8 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	}
 	ImGui::End();
 
-	static bool enableDebugDraw = false;
-	static bool enableFrustumCulling = false;
+	static bool enableDebugDraw = true;
+	static bool enableFrustumCulling = true;
 	static bool freezeFrustum = false;
 	static bool showBoundingBox = mScene.GetShowBoundingBox();
 	static float blurRadius = 1.0f;
@@ -273,7 +273,7 @@ void EditorApplication::InitializeScene()
 	//character = mScene.CreateMesh("Assets/Models/character2.sbox");
 
 	character = mScene.CreateMesh("Assets/Models/michelle.sbox");
-	compMgr->GetComponent<TransformComponent>(character)->position = glm::vec3(4.0f, 0.0f, 6.0f);
+	compMgr->GetComponent<TransformComponent>(character)->position = glm::vec3(5.0f, 0.0f, 6.0f);
 	ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/ortiz.sbox");
 
 	ecs::Entity plane = mScene.CreatePlane("Plane00");

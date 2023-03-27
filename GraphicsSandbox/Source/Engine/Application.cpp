@@ -224,8 +224,13 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 Application::~Application()
 {
-	TextureCache::Free();
-	DebugDraw::Free();
+	mDevice->Destroy(mSwapchainRP);
+	mDevice->Destroy(mSwapchainPipeline);
+	TextureCache::Shutdown();
+	DebugDraw::Shutdown();
+	mScene.Shutdown();
+	mRenderer->Shutdown();
+	mDevice->Shutdown();
 }
 
 bool Application::windowResizeEvent(const Event& evt)

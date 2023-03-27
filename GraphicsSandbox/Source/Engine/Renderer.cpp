@@ -641,3 +641,20 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 		}
 	}
 }
+
+void Renderer::Shutdown()
+{
+	mDevice->Destroy(mMeshPipeline);
+	mDevice->Destroy(mSkinnedMeshPipeline);
+	mDevice->Destroy(mCubemapPipeline);
+
+	mDevice->Destroy(mGlobalUniformBuffer);
+	mDevice->Destroy(mTransformBuffer);
+	mDevice->Destroy(mDrawIndirectBuffer);
+	mDevice->Destroy(mMaterialBuffer);
+	mDevice->Destroy(mSkinnedMatrixBuffer);
+	mDevice->Destroy(mHdrRenderPass);
+
+	mBloomFX->Shutdown();
+	mShadowMap->Shutdown();
+}

@@ -19,5 +19,5 @@ namespace TextureCache
 
 	gfx::DescriptorInfo GetDescriptorInfo();
 
-	void Free();
+	void Shutdown();
 }

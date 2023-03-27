@@ -74,9 +74,6 @@ struct VulkanBuffer
 
 	~VulkanBuffer()
 	{
-		/*
-		gAllocationHandler.destroyedBuffers_.push_back(std::make_pair(buffer, allocation));
-		*/
 	}
 };
 

@@ -76,6 +76,8 @@ namespace gfx
 		virtual void Destroy(BufferHandle buffer) = 0;
 		virtual void Destroy(TextureHandle texture) = 0;
 
+		virtual void Shutdown() = 0;
+
 	protected:
 		ValidationMode mValidationMode = ValidationMode::Enabled;
 	};

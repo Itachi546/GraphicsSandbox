@@ -267,3 +267,16 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mDevice->WaitForGPU();
 	Logger::Debug("BRDF LUT Generated");
 }
+
+void EnvironmentMap::Shutdown()
+{
+	mDevice->Destroy(mHdriToCubemap);
+	mDevice->Destroy(mIrradiancePipeline);
+	mDevice->Destroy(mPrefilterPipeline);
+	mDevice->Destroy(mBRDFPipeline);
+
+	mDevice->Destroy(mCubemapTexture);
+	mDevice->Destroy(mIrradianceTexture);
+	mDevice->Destroy(mPrefilterTexture);
+	mDevice->Destroy(mBRDFTexture);
+}

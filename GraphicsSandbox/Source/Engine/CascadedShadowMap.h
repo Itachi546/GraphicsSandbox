@@ -39,7 +39,8 @@ public:
 		this->kShadowDistance = distance;
 	}
 
-	~CascadedShadowMap() = default;
+	void Shutdown();
+	virtual ~CascadedShadowMap() = default;
 
 private:
 	gfx::PipelineHandle mPipeline = { K_INVALID_RESOURCE_HANDLE };

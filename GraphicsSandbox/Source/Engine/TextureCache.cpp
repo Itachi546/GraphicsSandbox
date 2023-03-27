@@ -106,7 +106,7 @@ namespace TextureCache
 		return gfx::DescriptorInfo{gAllTextures.data(), 0,  (uint32_t)gAllTextures.size(), gfx::DescriptorType::ImageArray};
 	}
 
-	void Free()
+	void Shutdown()
 	{
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		device->Destroy(gSolidTexture);

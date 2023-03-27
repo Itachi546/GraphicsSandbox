@@ -24,6 +24,6 @@ namespace DebugDraw
 
 	void Draw(gfx::CommandList* commandList, glm::mat4 VP);
 
-	void Free();
+	void Shutdown();
 
 }

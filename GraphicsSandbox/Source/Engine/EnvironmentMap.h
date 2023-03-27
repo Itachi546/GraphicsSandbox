@@ -25,7 +25,8 @@ public:
 	inline gfx::TextureHandle GetPrefilterMap() { return mPrefilterTexture; }
 	inline gfx::TextureHandle GetBRDFLUT() { return mBRDFTexture; }
 
-	~EnvironmentMap() = default;
+	void Shutdown();
+	virtual ~EnvironmentMap() = default;
 private:
 	gfx::PipelineHandle mHdriToCubemap;
 	gfx::PipelineHandle mIrradiancePipeline;

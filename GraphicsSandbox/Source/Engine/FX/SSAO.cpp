@@ -41,6 +41,14 @@ namespace fx
 		mDevice->EndDebugMarker(commandList);
 	}
 
+	void SSAO::Shutdown()
+	{
+		mDevice->Destroy(mPipeline);
+		mDevice->Destroy(mTexture);
+		mDevice->Destroy(mNoiseTexture);
+		mDevice->Destroy(mKernelBuffer);
+	}
+
 	void SSAO::Initialize()
 	{
 		// Generate random vector around the hemisphere

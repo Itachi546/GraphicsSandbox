@@ -173,6 +173,13 @@ void CascadedShadowMap::EndRender(gfx::CommandList* commandList)
 	mDevice->EndRenderPass(commandList);
 }
 
+void CascadedShadowMap::Shutdown()
+{
+	mDevice->Destroy(mPipeline);
+	mDevice->Destroy(mSkinnedPipeline);
+	mDevice->Destroy(mRenderPass);
+	mDevice->Destroy(mBuffer);
+}
 
 void CascadedShadowMap::CalculateSplitDistance(Camera* camera)
 {

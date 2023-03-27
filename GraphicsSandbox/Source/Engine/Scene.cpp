@@ -529,10 +529,12 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	bufferDesc.usage = gfx::Usage::Default;
 	bufferDesc.size = header.vertexDataSize;
 	stagingMeshData.vertexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
+	mAllocatedBuffers.push_back(stagingMeshData.vertexBuffer);
 
 	bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
 	bufferDesc.size = header.indexDataSize;
 	stagingMeshData.indexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
+	mAllocatedBuffers.push_back(stagingMeshData.indexBuffer);
 
 	gfxDevice->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize);
 	gfxDevice->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize);
@@ -596,10 +598,14 @@ std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 	return children;
 }
 
-Scene::~Scene()
+void Scene::Shutdown()
 {
+	gfx::GraphicsDevice* device = gfx::GetDevice();
+
+	for (gfx::BufferHandle buffer : mAllocatedBuffers)
+		device->Destroy(buffer);
+
 	ecs::Destroy(mComponentManager.get());
-	//gfx::GpuMemoryAllocator::GetInstance()->FreeMemory();
 }
 
 void Scene::UpdateTransform()
@@ -682,12 +688,14 @@ void Scene::InitializePrimitiveMeshes()
 
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		gfx::BufferHandle vertexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(vertexBuffer);
 
 		// Allocate Index Buffer
 		uint32_t indexBufferIndex = 0;
 		bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
 		bufferDesc.size = indexCount * static_cast<uint32_t>(sizeof(uint32_t));
 		gfx::BufferHandle indexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(indexBuffer);
 
 		MeshRenderer* cubeMesh = mComponentManager->GetComponent<MeshRenderer>(mCube);
 		uint32_t vertexOffset = 0;

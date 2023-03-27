@@ -60,6 +60,14 @@ namespace fx
 		Profiler::EndRangeGPU(commandList, compositeId);
 	}
 
+	void Bloom::Shutdown()
+	{
+		mDevice->Destroy(mDownSampleTexture);
+		mDevice->Destroy(mDownSamplePipeline);
+		mDevice->Destroy(mUpSamplePipeline);
+		mDevice->Destroy(mCompositePipeline);
+	}
+
 	void Bloom::GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture)
 	{
 		mDevice->BeginDebugMarker(commandList, "Bloom Downsample");

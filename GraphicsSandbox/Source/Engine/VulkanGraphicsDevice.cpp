@@ -2077,6 +2077,7 @@ namespace gfx {
             VulkanBuffer* vkBuffer = buffers.AccessResource(stagingBuffer.handle);
             std::memcpy(vkBuffer->mappedDataPtr, data, size);
             CopyBuffer(handle, stagingBuffer, offset);
+            Destroy(stagingBuffer);
         }
     }
 
@@ -2195,6 +2196,7 @@ namespace gfx {
         // else the imagelayout is transitioned to shader attachment optimal
         if(generateMipMap)
 			GenerateMipmap(dst, dstTexture->mipLevels);
+        Destroy(stagingBuffer);
     }
 
     void VulkanGraphicsDevice::GenerateMipmap(TextureHandle src, uint32_t mipCount)
@@ -2483,7 +2485,7 @@ namespace gfx {
         textures.ReleaseResource(texture.handle);
     }
 
-    VulkanGraphicsDevice::~VulkanGraphicsDevice()
+    void VulkanGraphicsDevice::Shutdown()
     {
         // Release resources
         buffers.Shutdown();
@@ -2510,8 +2512,8 @@ namespace gfx {
 
         vmaDestroyAllocator(vmaAllocator_);
 
-        for(auto& descriptorPool:  descriptorPools_)
-			vkDestroyDescriptorPool(device_, descriptorPool, nullptr);
+        for (auto& descriptorPool : descriptorPools_)
+            vkDestroyDescriptorPool(device_, descriptorPool, nullptr);
 
         for (auto& queryPool : queryPools_)
             vkDestroyQueryPool(device_, queryPool, nullptr);
@@ -2536,7 +2538,6 @@ namespace gfx {
         vkDestroyInstance(instance_, nullptr);
 
     }
-
 
     void VulkanGraphicsDevice::BeginDebugMarker(CommandList* commandList, const char* name, float r, float g, float b, float a)
     {

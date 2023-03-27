@@ -52,6 +52,7 @@ public:
 		mGlobalUniformData.enabledNormalMapping = int(state);
 	}
 
+	void Shutdown();
 	virtual ~Renderer() = default;
 private:
 

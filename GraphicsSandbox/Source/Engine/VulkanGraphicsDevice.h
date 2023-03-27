@@ -100,8 +100,8 @@ namespace gfx
 		void Destroy(BufferHandle buffer) override;
 		void Destroy(TextureHandle texture) override;
 
-
-		~VulkanGraphicsDevice();
+		void Shutdown() override;
+		virtual ~VulkanGraphicsDevice() = default;
 	private:
 		VkInstance instance_ = VK_NULL_HANDLE;
 		VkDebugUtilsMessengerEXT messenger_ = VK_NULL_HANDLE;

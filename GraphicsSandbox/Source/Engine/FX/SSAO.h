@@ -18,6 +18,7 @@ namespace fx
 
 		void Generate(gfx::CommandList* commandList, gfx::TextureHandle depthTexture, float blurRadius);
 
+		void Shutdown();
 	private:
 		uint32_t mWidth, mHeight;
 		gfx::GraphicsDevice* mDevice;

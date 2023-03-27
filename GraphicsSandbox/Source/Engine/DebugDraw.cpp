@@ -136,6 +136,8 @@ void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP)
 	gDataOffset = 0;
 }
 
-void DebugDraw::Free()
+void DebugDraw::Shutdown()
 {
+	gfx::GetDevice()->Destroy(gBuffer);
+	gfx::GetDevice()->Destroy(gPipeline);
 }

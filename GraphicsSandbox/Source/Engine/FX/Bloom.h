@@ -21,6 +21,8 @@ namespace fx
 		void Composite(gfx::CommandList* commandList, gfx::TextureHandle hdrTexture, float bloomStrength);
 		gfx::TextureHandle GetTexture() { return mDownSampleTexture; }
 
+		void Shutdown();
+
 	private:
 
 		gfx::Format mFormat;

@@ -127,6 +127,7 @@ namespace gfx
 		// Bindless Resources
 		const uint32_t kMaxBindlessResources = 16536;
 		const uint32_t kBindlessTextureBinding = 10;
+		const uint32_t kBindlessSet = 1;
 		VkDescriptorPool bindlessDescriptorPool_;
 		VkDescriptorSetLayout bindlessDescriptorLayout_;
 		VkDescriptorSet bindlessDescriptorSet_;
@@ -171,7 +172,7 @@ namespace gfx
 			VkPipelineCache pipelineCache,
 			VkRenderPass renderPass);
 
-		VkPipelineLayout createPipelineLayout(VkDescriptorSetLayout setLayout, const std::vector<VkPushConstantRange>& ranges);
+		VkPipelineLayout createPipelineLayout(VkDescriptorSetLayout* setLayout, uint32_t setLayoutCount, const std::vector<VkPushConstantRange>& ranges);
 
 
 		VkRenderPass createDefaultRenderPass(VkFormat colorFormat);

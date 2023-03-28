@@ -173,6 +173,7 @@ namespace fx
 		textureDesc.mipLevels = kMaxMipLevel;
 		textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 		textureDesc.format = mFormat;
+		textureDesc.bAddToBindless = false;
 		mDownSampleTexture = mDevice->CreateTexture(&textureDesc);
 	}
 };

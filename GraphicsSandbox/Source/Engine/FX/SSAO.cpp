@@ -96,6 +96,7 @@ namespace fx
 			textureDesc.height = 4;
 			textureDesc.bindFlag = gfx::BindFlag::ShaderResource;
 			textureDesc.format = gfx::Format::R16B16G16_SFLOAT;
+			textureDesc.bAddToBindless = false;
 			mNoiseTexture = mDevice->CreateTexture(&textureDesc);
 
 			uint32_t imageDataSize = static_cast<uint32_t>(sizeof(glm::vec3) * sampleRotation.size());
@@ -113,6 +114,7 @@ namespace fx
 			textureDesc.height = mHeight;
 			textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
 			textureDesc.format = gfx::Format::R16_SFLOAT;
+			textureDesc.bAddToBindless = false;
 			mTexture = mDevice->CreateTexture(&textureDesc);
 		}
 

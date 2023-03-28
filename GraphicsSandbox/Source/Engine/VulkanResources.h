@@ -52,6 +52,7 @@ struct VulkanRenderPass
 	gfx::RenderPassDesc desc;
 };
 
+constexpr uint32_t K_MAX_DESCRIPTOR_SET = 8;
 struct VulkanPipeline
 {
 	VkPipeline pipeline;
@@ -64,6 +65,7 @@ struct VulkanPipeline
 	// the pools. It is not created as per pipeline basis but dynamically
 	// allocated every frame
 	VkDescriptorSet descriptorSet;
+	bool hasBindless = false;
 };
 
 struct VulkanBuffer

@@ -32,7 +32,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	hdriDesc.imageViewType = gfx::ImageViewType::IV2D;
 	hdriDesc.format = gfx::Format::R32B32G32A32_SFLOAT;
 	hdriDesc.bCreateSampler = true;
-	hdriDesc.addToBindless = false;
+	hdriDesc.bAddToBindless = false;
 	gfx::TextureHandle hdriTexture = mDevice->CreateTexture(&hdriDesc);
 
 	// Create Staging buffer to transfer hdri data
@@ -65,6 +65,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	cubemapDesc.arrayLayers = 6;
 	cubemapDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
 	cubemapDesc.bCreateSampler = true;
+	cubemapDesc.bAddToBindless = false;
 	mCubemapTexture = mDevice->CreateTexture(&cubemapDesc); 
 
 	// Begin Compute Shader
@@ -117,6 +118,7 @@ void EnvironmentMap::CalculateIrradiance()
 	irrDesc.arrayLayers = 6;
 	irrDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
 	irrDesc.bCreateSampler = true;
+	irrDesc.bAddToBindless = false;
 	mIrradianceTexture = mDevice->CreateTexture(&irrDesc);
 
 	// Begin Compute Shader
@@ -167,6 +169,7 @@ void EnvironmentMap::Prefilter()
 	desc.mipLevels = nMaxMipLevel;
 	desc.format = gfx::Format::R16B16G16A16_SFLOAT;
 	desc.bCreateSampler = true;
+	desc.bAddToBindless = false;
 	mPrefilterTexture = mDevice->CreateTexture(&desc);
 
 	// Begin Compute Shader
@@ -224,6 +227,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 	desc.format = gfx::Format::R16G16_SFLOAT;
 	desc.imageAspect = gfx::ImageAspect::Color;
 	desc.bCreateSampler = true;
+	desc.bAddToBindless = false;
 	mBRDFTexture = mDevice->CreateTexture(&desc);
 
 	// Begin Compute Shader

@@ -331,7 +331,7 @@ namespace gfx
 		ImageAspect imageAspect = ImageAspect::Color;
 		ImageViewType imageViewType = ImageViewType::IV2D;
 		Format format = Format::R8G8B8A8_UNORM;
-		bool addToBindless = true;
+		bool bAddToBindless = true;
 	};
 
 	struct Attachment

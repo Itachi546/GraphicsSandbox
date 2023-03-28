@@ -367,6 +367,7 @@
     <CustomBuild Include="..\Assets\Shaders\animated.vert.glsl" />
     <CustomBuild Include="..\Assets\Shaders\shadow-skinned.vert.glsl" />
     <CustomBuild Include="..\Assets\Shaders\animated.frag.glsl" />
+    <CustomBuild Include="..\Assets\Shaders\bindless.frag.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Assets\Shaders\mesh.glsl">

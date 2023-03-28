@@ -90,8 +90,8 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	}
 	ImGui::End();
 
-	static bool enableDebugDraw = true;
-	static bool enableFrustumCulling = true;
+	static bool enableDebugDraw = false;
+	static bool enableFrustumCulling = false;
 	static bool freezeFrustum = false;
 	static bool showBoundingBox = mScene.GetShowBoundingBox();
 	static float blurRadius = 1.0f;

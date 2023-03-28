@@ -1141,11 +1141,11 @@ namespace gfx {
         return shaderModule;
     }
 
-    VkPipelineLayout VulkanGraphicsDevice::createPipelineLayout(VkDescriptorSetLayout setLayout, const std::vector<VkPushConstantRange>& ranges)
+    VkPipelineLayout VulkanGraphicsDevice::createPipelineLayout(VkDescriptorSetLayout* setLayout, uint32_t setLayoutCount, const std::vector<VkPushConstantRange>& ranges)
     {
         VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-        createInfo.setLayoutCount = 1;
-        createInfo.pSetLayouts = &setLayout;
+        createInfo.setLayoutCount = setLayoutCount;
+        createInfo.pSetLayouts = setLayout;
 		createInfo.pushConstantRangeCount = static_cast<uint32_t>(ranges.size());
 		createInfo.pPushConstantRanges = ranges.data();
 
@@ -1689,9 +1689,23 @@ namespace gfx {
         dynamicState.pDynamicStates = dynamicStates;
         createInfo.pDynamicState = &dynamicState;
 
-		vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderReflection.descriptorSetLayoutBinding, shaderReflection.descriptorSetLayoutCount);
+        bool hasBindless = shaderReflection.descriptorSetLayoutBinding[kBindlessTextureBinding].descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        std::vector<VkDescriptorSetLayout> descriptorSetLayouts(1);
+        if (hasBindless)
+        {
+            // Swap the last binding with the bindless and decrease count
+            uint32_t& descriptorCount = shaderReflection.descriptorSetLayoutCount;
+            descriptorCount -= 1;
+            if(descriptorCount != kBindlessTextureBinding)
+				shaderReflection.descriptorSetLayoutBinding[kBindlessTextureBinding] = shaderReflection.descriptorSetLayoutBinding[descriptorCount];
+            vkPipeline->hasBindless = true;
+            descriptorSetLayouts.push_back(bindlessDescriptorLayout_);
+        }
 
-		VkPipelineLayout pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderReflection.pushConstantRanges);
+        vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderReflection.descriptorSetLayoutBinding, shaderReflection.descriptorSetLayoutCount);
+        descriptorSetLayouts[0] = vkPipeline->setLayout;
+
+		VkPipelineLayout pipelineLayout = createPipelineLayout(descriptorSetLayouts.data(), (uint32_t)descriptorSetLayouts.size(), shaderReflection.pushConstantRanges);
         createInfo.layout = pipelineLayout;
 
 		createInfo.renderPass = renderPasses.AccessResource(desc->renderPass.handle)->renderPass;
@@ -1728,7 +1742,7 @@ namespace gfx {
         shaderStage.pName = "main";
         vkPipeline->shaderModules.push_back(shaderModule);
         vkPipeline->setLayout = CreateDescriptorSetLayout(device_, shaderRefl.descriptorSetLayoutBinding, shaderRefl.descriptorSetLayoutCount);
-        vkPipeline->pipelineLayout = createPipelineLayout(vkPipeline->setLayout, shaderRefl.pushConstantRanges);
+        vkPipeline->pipelineLayout = createPipelineLayout(&vkPipeline->setLayout, 1, shaderRefl.pushConstantRanges);
 
         VkComputePipelineCreateInfo createInfo = {VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO};
         createInfo.stage = shaderStage;
@@ -1857,7 +1871,7 @@ namespace gfx {
             texture->sampler = sampler;
         }
 
-        if (desc->addToBindless)
+        if (desc->bAddToBindless)
             textureToUpdateBindless_.push_back(textureHandle);
 
         texture->image = image;
@@ -2015,6 +2029,10 @@ namespace gfx {
         auto vkPipeline = pipelines.AccessResource(pipeline.handle);
         vkCmdBindPipeline(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipeline);
 		vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
+        if (vkPipeline->hasBindless)
+        {
+            vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, kBindlessSet, 1, &bindlessDescriptorSet_, 0, 0);
+        }
     }
 
     void VulkanGraphicsDevice::Draw(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)

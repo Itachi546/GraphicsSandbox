@@ -319,6 +319,9 @@
     <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="..\Assets\Shaders\bindless.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />
     <None Include="..\Assets\Shaders\material.glsl" />
     <None Include="..\Assets\Shaders\mesh.glsl">

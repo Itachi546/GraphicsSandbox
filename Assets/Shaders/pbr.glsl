@@ -117,7 +117,7 @@ vec3 CalculateColor(in Material material)
 	vec4 albedo = material.albedo;
 
 	if(material.albedoMap != INVALID_TEXTURE)
-       albedo = texture(uTextures[material.albedoMap], fs_in.uv);
+       albedo = texture(uTextures[nonuniformEXT(material.albedoMap)], fs_in.uv);
 
 	if(albedo.a < 0.5f)
 	  discard;
@@ -131,15 +131,15 @@ vec3 CalculateColor(in Material material)
 	if(material.metallicMap != INVALID_TEXTURE)
 	{
 	   if(material.metallicMap == material.roughnessMap)
-    	   GetMetallicRoughness(uTextures[material.metallicMap], fs_in.uv, metallic, roughness);
+    	   GetMetallicRoughness(uTextures[nonuniformEXT(material.metallicMap)], fs_in.uv, metallic, roughness);
 		else {
-           metallic = texture(uTextures[material.metallicMap], fs_in.uv).r;
-		   roughness = texture(uTextures[material.roughnessMap], fs_in.uv).r;
+           metallic = texture(uTextures[nonuniformEXT(material.metallicMap)], fs_in.uv).r;
+		   roughness = texture(uTextures[nonuniformEXT(material.roughnessMap)], fs_in.uv).r;
 		}
 	}
 
 	if(material.ambientOcclusionMap != INVALID_TEXTURE)
-       ao = texture(uTextures[material.ambientOcclusionMap], fs_in.uv).r * globalAOMultiplier;
+       ao = texture(uTextures[nonuniformEXT(material.ambientOcclusionMap)], fs_in.uv).r * globalAOMultiplier;
 
     vec3 n = normalize(fs_in.normal);
 	if(globals.enableNormalMapping > 0)
@@ -211,7 +211,7 @@ vec3 CalculateColor(in Material material)
 	vec3 emissive = material.emissive * albedo.rgb;
 
 	if(material.emissiveMap != INVALID_TEXTURE)
-	   emissive = texture(uTextures[material.emissiveMap], fs_in.uv).rgb * material.emissive;
+	   emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb * material.emissive;
 
 	Lo += ambient + emissive;
 

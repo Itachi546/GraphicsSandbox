@@ -52,4 +52,5 @@ layout(binding = 2) readonly buffer TransformData
    layout(binding = 6) uniform sampler2D   uBRDFLUT;
    #extension GL_EXT_nonuniform_qualifier : enable
    layout (set = 1, binding = 10) uniform sampler2D uTextures[];
+   layout (set = 1, binding = 10 )	uniform	sampler3D uTextures3D[];
 #endif

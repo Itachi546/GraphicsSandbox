@@ -1283,6 +1283,7 @@ namespace gfx {
         features12_.hostQueryReset = true;
         features12_.uniformAndStorageBuffer8BitAccess = true;
         features12_.separateDepthStencilLayouts = true;
+        features12_.shaderSampledImageArrayNonUniformIndexing = true;
 
         if (supportBindless)
         {

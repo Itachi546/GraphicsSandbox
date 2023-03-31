@@ -6,7 +6,7 @@ namespace StringConstants
 	constexpr const char* MAIN_VERT_PATH = "Assets/SPIRV/main.vert.spv";
 	constexpr const char* SKINNED_VERT_PATH = "Assets/SPIRV/animated.vert.spv";
 	constexpr const char* SKINNED_FRAG_PATH = "Assets/SPIRV/animated.frag.spv";
-	constexpr const char* MAIN_FRAG_PATH = "Assets/SPIRV/bindless.frag.spv";
+	constexpr const char* MAIN_FRAG_PATH = "Assets/SPIRV/main.frag.spv";
 
 	constexpr const char* CUBEMAP_VERT_PATH = "Assets/SPIRV/cubemap.vert.spv";
 	constexpr const char* CUBEMAP_FRAG_PATH = "Assets/SPIRV/cubemap.frag.spv";

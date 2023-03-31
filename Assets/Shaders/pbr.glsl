@@ -97,7 +97,7 @@ void GetMetallicRoughness(sampler2D metallicMap, vec2 uv, inout float metallic, 
 
 vec3 GetNormalFromNormalMap(uint normalMapIndex, mat3 tbn)
 {
-    vec3 normal = texture(uTextures[normalMapIndex], fs_in.uv).rgb * 2.0f - 1.0f;
+    vec3 normal = texture(uTextures[nonuniformEXT(normalMapIndex)], fs_in.uv).rgb * 2.0f - 1.0f;
 	return normalize(tbn * normal);
 }
 

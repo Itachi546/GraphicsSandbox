@@ -15,10 +15,9 @@
 */
 namespace TextureCache
 {
-	std::vector<gfx::TextureHandle> gAllTextures;
-	std::unordered_map<std::string, uint32_t> gAllTextureIndex;
+	std::vector<gfx::TextureHandle> gAllTextures(1024);
+	std::unordered_map<std::string, gfx::TextureHandle> gAllTextureIndex;
 	std::vector<std::string> gAllTextureName(1024);
-	uint32_t nTexture = 0;
 	gfx::TextureHandle gSolidTexture;
 	const uint32_t kMaxMipLevel = 6;
 
@@ -66,7 +65,7 @@ namespace TextureCache
 	{
 		auto found = gAllTextureIndex.find(filename);
 		if (found != gAllTextureIndex.end())
-			return found->second;
+			return found->second.handle;
 
 		Logger::Debug("Loading Texture: " + filename);
 		int width, height, nChannel;
@@ -82,11 +81,10 @@ namespace TextureCache
 		gfx::TextureHandle texture = CreateTexture(pixels, width, height, nChannel, generateMipmap);
 		gAllTextureName[texture.handle] = filename;
 
-		uint32_t nTexture = static_cast<uint32_t>(gAllTextures.size());
-		gAllTextures.push_back(texture);
-		gAllTextureIndex[filename] = nTexture;
+		gAllTextures[texture.handle] = texture;
+		gAllTextureIndex[filename] = texture;
 		Utils::ImageLoader::Free(pixels);
-		return nTexture++;
+		return texture.handle;
 	}
 
 	std::string GetTextureName(uint32_t index)
@@ -110,7 +108,10 @@ namespace TextureCache
 	{
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		device->Destroy(gSolidTexture);
-		for (auto& tex : gAllTextures)
-			device->Destroy(tex);
+		for (auto& [key, val] : gAllTextureIndex)
+			device->Destroy(val);
+		gAllTextures.clear();
+		gAllTextureName.clear();
+		gAllTextureIndex.clear();
 	}
 }

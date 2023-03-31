@@ -367,13 +367,8 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 		descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
 		descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
 
-		gfx::DescriptorInfo imageArrInfo = {};
-		imageArrInfo.texture = batch.textures.data();
-		imageArrInfo.offset = 0;
-		imageArrInfo.size = 64;
-		imageArrInfo.type = gfx::DescriptorType::ImageArray;
-		descriptorInfos[9] = imageArrInfo;
-		descriptorCount += 7;
+		descriptorCount += 6;
+
 	}
 
 	mDevice->UpdateDescriptor(pipeline, descriptorInfos, descriptorCount);
@@ -382,22 +377,6 @@ void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint
 	mDevice->BindIndexBuffer(commandList, ib);
 	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer, lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
 }
-
-// Add unique texture to array
-uint32_t Renderer::addUnique(std::array<gfx::TextureHandle, 64>& textures, uint32_t& lastIndex, gfx::TextureHandle texture)
-{
-	auto found = std::find_if(textures.begin(), textures.end(), [texture](const gfx::TextureHandle& current) {
-		return texture.handle == current.handle;
-		});
-
-	if (found != textures.end())
-		return (uint32_t)(std::distance(textures.begin(), found));
-
-	textures[lastIndex++] = texture;
-	return lastIndex - 1;
-}
-
-
 
 // Offset parameter is used to reuse the Material Buffer
 void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, gfx::PipelineHandle pipeline, bool shadowPass)
@@ -422,11 +401,6 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 		for (auto& drawData : drawDatas)
 		{
 			MaterialComponent material = *drawData.material;
-			for (int i = 0; i < std::size(material.textures); ++i)
-			{
-				if (IsTextureValid(material.textures[i]))
-					material.textures[i] = addUnique(textures, textureIndex, TextureCache::GetByIndex(material.textures[i]));
-			}
 			materials.push_back(std::move(material));
 		}
 
@@ -445,14 +419,7 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 
 		descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
 		descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
-		gfx::DescriptorInfo imageArrInfo = {};
-		imageArrInfo.texture = textures.data();
-		imageArrInfo.offset = 0;
-		imageArrInfo.size = 64;
-		imageArrInfo.type = gfx::DescriptorType::ImageArray;
-		descriptorInfos[9] = imageArrInfo;
-
-		descriptorCount += 7;
+		descriptorCount += 6;
 	}
 	else {
 		gfx::BufferHandle cascadeBuffer = mShadowMap->mBuffer;
@@ -513,21 +480,13 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 	{
 		for (auto& drawData : drawDatas)
 		{
-			/* The maximum texture limit for each DrawIndirect Invocation is 64.
-			* We created batch according to that and mesh buffer. If the
-			* textureCount that needs to be added to the batch is greater than
-			* we can accomodate then we create new batch
-			*/
 			uint32_t texInBatch = activeBatch == nullptr ? 0 : activeBatch->textureCount;
-			uint32_t texInMat = drawData.material->GetTextureCount();
 
 			gfx::BufferHandle buffer = drawData.vertexBuffer.buffer;
-			if (buffer.handle != lastBuffer.handle || activeBatch == nullptr || (texInBatch + texInMat) > 64)
+			if (buffer.handle != lastBuffer.handle || activeBatch == nullptr)
 			{
 				renderBatch.push_back(RenderBatch{});
 				activeBatch = &renderBatch.back();
-				// Initialize by default texture
-				std::fill(activeBatch->textures.begin(), activeBatch->textures.end(), TextureCache::GetDefaultTexture());
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
 				activeBatch->indexBuffer = drawData.indexBuffer;
 				lastBuffer = buffer;
@@ -535,11 +494,6 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 
 			// Find texture and assign new index
 			MaterialComponent material = *drawData.material;
-			for (int i = 0; i < std::size(material.textures); ++i)
-			{
-				if (IsTextureValid(material.textures[i]))
-					material.textures[i] = addUnique(activeBatch->textures, activeBatch->textureCount, TextureCache::GetByIndex(material.textures[i]));
-			}
 			activeBatch->materials.push_back(std::move(material));
 
 			// Update transform Data

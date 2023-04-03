@@ -113,13 +113,17 @@ namespace gfx
 		VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 		VkDevice device_ = VK_NULL_HANDLE;
 		VkQueue mainQueue_ = VK_NULL_HANDLE;
-		//VkQueue transferQueue_ = VK_NULL_HANDLE;
+		VkQueue transferQueue_ = VK_NULL_HANDLE;
 		VkSurfaceKHR surface_ = VK_NULL_HANDLE;
 		bool debugMarkerEnabled_ = false;
 		bool supportBindless = false;
 
-		VkCommandPool* commandPool_ = nullptr;
-		VkCommandBuffer* commandBuffer_ = nullptr;
+		std::vector<VkCommandPool> commandPool_;
+		std::vector<VkCommandBuffer> commandBuffer_;
+
+		std::vector<VkCommandPool> transferCommandPool_;
+		std::vector<VkCommandBuffer> transferCommandBuffer_;
+
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
 

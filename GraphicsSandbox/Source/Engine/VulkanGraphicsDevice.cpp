@@ -1267,10 +1267,20 @@ namespace gfx {
         }
 
         float queuePriorities = 1.0f;
-        VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
-        queueCreateInfo.pQueuePriorities = &queuePriorities;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.queueFamilyIndex = mainQueueIndex_;
+        VkDeviceQueueCreateInfo queueCreateInfos[2];
+		queueCreateInfos[0] = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+        queueCreateInfos[0].pQueuePriorities = &queuePriorities;
+        queueCreateInfos[0].queueCount = 1;
+        queueCreateInfos[0].queueFamilyIndex = mainQueueIndex_;
+
+        if (transferQueueIndex_ != VK_QUEUE_FAMILY_IGNORED)
+        {
+            queueCreateInfos[1] = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+            queueCreateInfos[1].pQueuePriorities = &queuePriorities;
+            queueCreateInfos[1].queueCount = 1;
+            queueCreateInfos[1].queueFamilyIndex = transferQueueIndex_;
+        }
+
 
         // Enable required features
         features2_.features.multiDrawIndirect = true;
@@ -1303,8 +1313,8 @@ namespace gfx {
 
         // Create logical device
         VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-        deviceCreateInfo.queueCreateInfoCount = 1;
-        deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
+        deviceCreateInfo.queueCreateInfoCount = transferQueueIndex_ == VK_QUEUE_FAMILY_IGNORED ? 1 : 2;
+        deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
         deviceCreateInfo.pEnabledFeatures = nullptr;
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
         deviceCreateInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
@@ -1315,6 +1325,8 @@ namespace gfx {
 
         // Get device Queue
         vkGetDeviceQueue(device_, mainQueueIndex_, 0, &mainQueue_);
+        if (transferQueueIndex_ != VK_QUEUE_FAMILY_IGNORED)
+            vkGetDeviceQueue(device_, transferQueueIndex_, 0, &transferQueue_);
 
         stagingCmdPool_   = CreateCommandPool(device_, mainQueueIndex_);
         stagingCmdBuffer_ = CreateCommandBuffer(device_, stagingCmdPool_);
@@ -1436,14 +1448,23 @@ namespace gfx {
         assert(vkRenderPass != nullptr);
 		createSwapchainInternal(vkRenderPass->renderPass);
 
-        if (commandPool_ == nullptr)
+        if (commandPool_.size() == 0)
         {
-            commandPool_ = new VkCommandPool[swapchain_->imageCount];
-            commandBuffer_ = new VkCommandBuffer[swapchain_->imageCount];
+            commandPool_.resize(swapchain_->imageCount);
+            commandBuffer_.resize(swapchain_->imageCount);
+            transferCommandPool_.resize(swapchain_->imageCount);
+            transferCommandBuffer_.resize(swapchain_->imageCount);
+
             for (uint32_t i = 0; i < swapchain_->imageCount; ++i)
             {
+                // Create main command buffers/pools
                 commandPool_[i] = CreateCommandPool(device_, mainQueueIndex_);
                 commandBuffer_[i] = CreateCommandBuffer(device_, commandPool_[i]);
+
+                // Create transfer command buffers/pools
+                transferCommandPool_[i] = CreateCommandPool(device_, transferQueueIndex_);
+                transferCommandBuffer_[i] = CreateCommandBuffer(device_, transferCommandPool_[i]);
+
             }
         }
         else {
@@ -2696,9 +2717,10 @@ namespace gfx {
         {
             vkFreeCommandBuffers(device_, commandPool_[i], 1, &commandBuffer_[i]);
             vkDestroyCommandPool(device_, commandPool_[i], nullptr);
+
+            vkFreeCommandBuffers(device_, transferCommandPool_[i], 1, &transferCommandBuffer_[i]);
+            vkDestroyCommandPool(device_, transferCommandPool_[i], nullptr);
         }
-        delete[] commandPool_;
-        delete[] commandBuffer_;
 
         vkFreeCommandBuffers(device_, stagingCmdPool_, 1, &stagingCmdBuffer_);
         vkDestroyCommandPool(device_, stagingCmdPool_, nullptr);

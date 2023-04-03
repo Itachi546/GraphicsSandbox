@@ -46,6 +46,7 @@ namespace gfx {
         std::vector<std::pair<VkDescriptorSet, VkDescriptorPool>> destroyedDescriptorSet_;
         std::vector<VkSampler> destroyedSamplers_;
         std::vector<VkSemaphore> destroyedSemaphore_;
+        std::vector<VkFence> destroyedFences_;
 
         void destroyReleasedResource(VkDevice device, VmaAllocator vmaAllocator)
         {
@@ -93,6 +94,10 @@ namespace gfx {
             for (auto& semaphore : destroyedSemaphore_)
                 vkDestroySemaphore(device, semaphore, nullptr);
 
+            for (auto& fence : destroyedFences_)
+                vkDestroyFence(device, fence, nullptr);
+
+            destroyedFences_.clear();
             destroyedSemaphore_.clear();
             destroyedSamplers_.clear();
             destroyedDescriptorSet_.clear();
@@ -106,6 +111,7 @@ namespace gfx {
             destroyedPipelineLayout_.clear();
             destroyedShaders_.clear();
             destroyedBuffers_.clear();
+
         }
     }  gAllocationHandler;
 
@@ -1328,8 +1334,8 @@ namespace gfx {
         if (transferQueueIndex_ != VK_QUEUE_FAMILY_IGNORED)
             vkGetDeviceQueue(device_, transferQueueIndex_, 0, &transferQueue_);
 
-        stagingCmdPool_   = CreateCommandPool(device_, mainQueueIndex_);
-        stagingCmdBuffer_ = CreateCommandBuffer(device_, stagingCmdPool_);
+		//stagingCmdPool_ = CreateCommandPool(device_, mainQueueIndex_);
+		//stagingCmdBuffer_ = CreateCommandBuffer(device_, stagingCmdPool_);
 
         commandList_ = std::make_shared<VulkanCommandList>();
 
@@ -1370,6 +1376,7 @@ namespace gfx {
         textures.Initialize(1024);
         framebuffers.Initialize(64);
         semaphores.Initialize(64);
+        fences.Initialize(32);
 
         if (supportBindless)
         {
@@ -1915,6 +1922,17 @@ namespace gfx {
         return semaphoreHandle;
     }
 
+    FenceHandle VulkanGraphicsDevice::CreateFence()
+    {
+        FenceHandle fenceHandle = { fences.ObtainResource() };
+        VkFence* fence = fences.AccessResource(fenceHandle.handle);
+
+        VkFenceCreateInfo createInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+        vkCreateFence(device_, &createInfo, nullptr, fence);
+        return fenceHandle;
+    }
+
     CommandList VulkanGraphicsDevice::BeginCommandList()
     {
         // Initialize Descriptor Pools
@@ -2095,6 +2113,18 @@ namespace gfx {
         return true;
     }
 
+    bool VulkanGraphicsDevice::IsFenceSignalled(FenceHandle fence)
+    {
+        VkFence* vkFence = fences.AccessResource(fence.handle);
+        return vkGetFenceStatus(device_, *vkFence) == VK_SUCCESS;
+    }
+
+    void VulkanGraphicsDevice::ResetFence(FenceHandle fence)
+    {
+        VkFence* vkFence = fences.AccessResource(fence.handle);
+		vkResetFences(device_, 1, vkFence);
+    }
+
     void VulkanGraphicsDevice::BindIndexBuffer(CommandList* commandList, BufferHandle buffer)
     {
         auto cmd = GetCommandList(commandList);
@@ -2257,22 +2287,23 @@ namespace gfx {
             std::memcpy(dstBuffer->mappedDataPtr, srcBuffer->mappedDataPtr, copySize);
         else 
         {
-
-			VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
+            uint32_t currentIndex = swapchain_->currentImageIndex;
+			VK_CHECK(vkResetCommandPool(device_, transferCommandPool_[currentIndex], 0));
             VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
             beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-			VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
+            VkCommandBuffer commandBuffer = transferCommandBuffer_[currentIndex];
+			VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
             VkBufferCopy region = {0, dstOffset, VkDeviceSize(copySize)};
-			vkCmdCopyBuffer(stagingCmdBuffer_, srcBuffer->buffer, dstBuffer->buffer, 1, &region);
+			vkCmdCopyBuffer(commandBuffer, srcBuffer->buffer, dstBuffer->buffer, 1, &region);
             
-			VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));
+			VK_CHECK(vkEndCommandBuffer(commandBuffer));
             VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
             submitInfo.commandBufferCount = 1;
-            submitInfo.pCommandBuffers = &stagingCmdBuffer_;
-            VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
-            vkQueueWaitIdle(mainQueue_);
+            submitInfo.pCommandBuffers = &commandBuffer;
+            VK_CHECK(vkQueueSubmit(transferQueue_, 1, &submitInfo, VK_NULL_HANDLE));
+            vkQueueWaitIdle(transferQueue_);
         }
     }
 
@@ -2284,11 +2315,13 @@ namespace gfx {
         assert(from != nullptr);
         assert(to != nullptr);
 
-        VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
+        uint32_t currentIndex = swapchain_->currentImageIndex;
+        VK_CHECK(vkResetCommandPool(device_, transferCommandPool_[currentIndex], 0));
         VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-        VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
+        VkCommandBuffer commandBuffer = transferCommandBuffer_[currentIndex];
+        VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
         VkBufferImageCopy region = {};
         region.bufferOffset = 0;
@@ -2318,19 +2351,19 @@ namespace gfx {
                 barriers->barrierInfo->mipCount,
                 barriers->barrierInfo->layerCount);
 
-            vkCmdPipelineBarrier(stagingCmdBuffer_,
+            vkCmdPipelineBarrier(commandBuffer,
                 _ConvertPipelineStageFlags(barriers->srcStage),
                 _ConvertPipelineStageFlags(barriers->dstStage),
                 0, 0, 0, 0, 0, 1, &barrier);
             to->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         }
 
-        vkCmdCopyBufferToImage(stagingCmdBuffer_, from->buffer, to->image, to->layout, 1, &region);
-        VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));
+        vkCmdCopyBufferToImage(commandBuffer, from->buffer, to->image, to->layout, 1, &region);
+        VK_CHECK(vkEndCommandBuffer(commandBuffer));
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &stagingCmdBuffer_;
-        VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
+        submitInfo.pCommandBuffers = &commandBuffer;
+        VK_CHECK(vkQueueSubmit(transferQueue_, 1, &submitInfo, VK_NULL_HANDLE));
         vkDeviceWaitIdle(device_);
     }
 
@@ -2367,10 +2400,13 @@ namespace gfx {
 
     void VulkanGraphicsDevice::GenerateMipmap(TextureHandle src, uint32_t mipCount)
     {
-        VK_CHECK(vkResetCommandPool(device_, stagingCmdPool_, 0));
+        uint32_t currentIndex = swapchain_->currentImageIndex;
+        VK_CHECK(vkResetCommandPool(device_, commandPool_[currentIndex], 0));
         VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        VK_CHECK(vkBeginCommandBuffer(stagingCmdBuffer_, &beginInfo));
+
+        VkCommandBuffer commandBuffer = commandBuffer_[currentIndex];
+        VK_CHECK(vkBeginCommandBuffer(commandBuffer, &beginInfo));
 
         VulkanTexture* vkImage = textures.AccessResource(src.handle);
         if (mipCount > 1)
@@ -2386,7 +2422,7 @@ namespace gfx {
                     vkImage->layout,
                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, i, 0, 1);
 
-                vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                     VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo);
 
                 VkImageBlit blitRegion = {};
@@ -2401,7 +2437,7 @@ namespace gfx {
                 blitRegion.srcOffsets[1] = { width, height, 1 };
                 blitRegion.dstOffsets[0] = { 0, 0, 0 };
                 blitRegion.dstOffsets[1] = { width >> 1, height >> 1, 1 };
-                vkCmdBlitImage(stagingCmdBuffer_, vkImage->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vkImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+                vkCmdBlitImage(commandBuffer, vkImage->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, vkImage->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
                 width = width >> 1;
                 height = height >> 1;
             }
@@ -2422,10 +2458,10 @@ namespace gfx {
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
 			};
 
-            vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo[0]);
 
-            vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo[1]);
 
         }
@@ -2438,15 +2474,15 @@ namespace gfx {
                 vkImage->layout,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-            vkCmdPipelineBarrier(stagingCmdBuffer_, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &barrierInfo);
         }
 
         vkImage->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        VK_CHECK(vkEndCommandBuffer(stagingCmdBuffer_));
+        VK_CHECK(vkEndCommandBuffer(commandBuffer));
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &stagingCmdBuffer_;
+        submitInfo.pCommandBuffers = &commandBuffer;
         VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
         vkDeviceWaitIdle(device_);
     }
@@ -2667,6 +2703,13 @@ namespace gfx {
         semaphores.ReleaseResource(semaphore.handle);
     }
 
+    void VulkanGraphicsDevice::Destroy(FenceHandle fence)
+    {
+        VkFence* vkFence = fences.AccessResource(fence.handle);
+        gAllocationHandler.destroyedFences_.push_back(*vkFence);
+        fences.ReleaseResource(fence.handle);
+    }
+
     TextureHandle VulkanGraphicsDevice::GetFramebufferAttachment(FramebufferHandle handle, uint32_t index)
     {
         VulkanFramebuffer* framebuffer = framebuffers.AccessResource(handle.handle);
@@ -2684,6 +2727,7 @@ namespace gfx {
         textures.Shutdown();
         pipelines.Shutdown();
         semaphores.Shutdown();
+        fences.Shutdown();
 
         gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), swapchain_->imageViews.begin(), swapchain_->imageViews.end());
         swapchain_->images.clear();
@@ -2722,8 +2766,8 @@ namespace gfx {
             vkDestroyCommandPool(device_, transferCommandPool_[i], nullptr);
         }
 
-        vkFreeCommandBuffers(device_, stagingCmdPool_, 1, &stagingCmdBuffer_);
-        vkDestroyCommandPool(device_, stagingCmdPool_, nullptr);
+		//vkFreeCommandBuffers(device_, stagingCmdPool_, 1, &stagingCmdBuffer_);
+		//vkDestroyCommandPool(device_, stagingCmdPool_, nullptr);
         vkDestroySwapchainKHR(device_, swapchain_->swapchain, nullptr);
         vkDestroySurfaceKHR(instance_, swapchain_->surface, nullptr);
         vkDestroySurfaceKHR(instance_, surface_, nullptr);

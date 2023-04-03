@@ -194,6 +194,9 @@
     <ClInclude Include="Source\Engine\ResourcePool.h" />
     <ClInclude Include="Source\Engine\VulkanResources.h" />
     <ClInclude Include="Source\Engine\Resource.h" />
+    <ClInclude Include="Source\Engine\AsynchronousLoader.h" />
+    <ClInclude Include="Source\Engine\enkiTS\LockLessMultiReadPipe.h" />
+    <ClInclude Include="Source\Engine\enkiTS\TaskScheduler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -308,6 +311,12 @@
       <Filter>SOURCE</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\FX\SSAO.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\enkiTS\TaskScheduler.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\AsynchronousLoader.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>

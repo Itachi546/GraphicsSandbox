@@ -18,6 +18,7 @@ namespace gfx
 		virtual TextureHandle CreateTexture(const GPUTextureDesc* desc) = 0;
 		virtual FramebufferHandle CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount) = 0;
 		virtual SemaphoreHandle CreateSemaphore() = 0;
+		virtual FenceHandle CreateFence() = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
 		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
@@ -72,6 +73,8 @@ namespace gfx
 		* the frame.
 		*/
 		virtual bool IsSwapchainReady(RenderPassHandle rp) = 0;
+		virtual bool IsFenceSignalled(FenceHandle fence) = 0;
+		virtual void ResetFence(FenceHandle fence) = 0;
 
 		virtual void Destroy(RenderPassHandle renderPass) = 0;
 		virtual void Destroy(PipelineHandle pipeline) = 0;
@@ -79,6 +82,7 @@ namespace gfx
 		virtual void Destroy(TextureHandle texture) = 0;
 		virtual void Destroy(FramebufferHandle framebuffer) = 0;
 		virtual void Destroy(SemaphoreHandle semaphore) = 0;
+		virtual void Destroy(FenceHandle fence) = 0;
 		virtual void Shutdown() = 0;
 
 	protected:

@@ -35,6 +35,7 @@ namespace gfx
 		BufferHandle       CreateBuffer(const GPUBufferDesc* desc)                                           override;
 		TextureHandle      CreateTexture(const GPUTextureDesc* desc)                                         override;
 		SemaphoreHandle    CreateSemaphore()                                                                 override;
+		FenceHandle        CreateFence()                                                                     override;
 		FramebufferHandle  CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)               override;
 		void               CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
@@ -85,6 +86,8 @@ namespace gfx
 		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;
 
 		bool IsSwapchainReady(RenderPassHandle rp) override;
+		bool IsFenceSignalled(FenceHandle fence) override;
+		void ResetFence(FenceHandle fence) override;
 
 		VkInstance GetInstance() { return instance_; }
 		VkDevice GetDevice() { return device_; }
@@ -102,7 +105,7 @@ namespace gfx
 		void Destroy(TextureHandle texture) override;
 		void Destroy(FramebufferHandle framebuffer) override;
 		void Destroy(SemaphoreHandle semaphore) override;
-
+		void Destroy(FenceHandle fence);
 		TextureHandle GetFramebufferAttachment(FramebufferHandle, uint32_t index) override;
 
 		void Shutdown() override;
@@ -124,8 +127,8 @@ namespace gfx
 		std::vector<VkCommandPool> transferCommandPool_;
 		std::vector<VkCommandBuffer> transferCommandBuffer_;
 
-		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
-		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
+		//VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
+		//VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
 
 		std::vector<VkDescriptorPool> descriptorPools_;
 
@@ -193,5 +196,6 @@ namespace gfx
 		ResourcePool<VulkanTexture> textures;
 		ResourcePool<VulkanFramebuffer> framebuffers;
 		ResourcePool<VulkanSemaphore> semaphores;
+		ResourcePool<VkFence> fences;
 	};
 };

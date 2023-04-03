@@ -32,6 +32,10 @@ namespace gfx {
 		ResourceHandle handle;
 	};
 
+	struct FenceHandle {
+		ResourceHandle handle;
+	};
+
 	static RenderPassHandle INVALID_RENDERPASS = { K_INVALID_RESOURCE_HANDLE };
 	static TextureHandle INVALID_TEXTURE = { K_INVALID_RESOURCE_HANDLE };
 	static BufferHandle INVALID_BUFFER = { K_INVALID_RESOURCE_HANDLE };
@@ -39,4 +43,5 @@ namespace gfx {
 	static FramebufferHandle INVALID_FRAMEBUFFER = { K_INVALID_RESOURCE_HANDLE };
 	static DescriptorSetHandle INVALID_DESCRIPTOR_SET = { K_INVALID_RESOURCE_HANDLE };
 	static SemaphoreHandle INVALID_SEMAPHORE = { K_INVALID_RESOURCE_HANDLE };
+	static SemaphoreHandle INVALID_FENCE = { K_INVALID_RESOURCE_HANDLE };
 }

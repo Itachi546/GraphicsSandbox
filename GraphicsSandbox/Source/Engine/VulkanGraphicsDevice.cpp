@@ -2307,7 +2307,7 @@ namespace gfx {
         }
     }
 
-    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barriers, uint32_t arrayLevel, uint32_t mipLevel)
+    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barriers, FenceHandle fence, uint32_t arrayLevel, uint32_t mipLevel)
     {
         VulkanBuffer* from = buffers.AccessResource(src.handle);
         VulkanTexture* to = textures.AccessResource(dst.handle);
@@ -2363,11 +2363,16 @@ namespace gfx {
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
-        VK_CHECK(vkQueueSubmit(transferQueue_, 1, &submitInfo, VK_NULL_HANDLE));
+
+        VkFence vkFence = VK_NULL_HANDLE;
+        if (fence.handle != K_INVALID_RESOURCE_HANDLE)
+			vkFence = *fences.AccessResource(fence.handle);
+
+        VK_CHECK(vkQueueSubmit(transferQueue_, 1, &submitInfo, vkFence));
         vkDeviceWaitIdle(device_);
     }
 
-    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
+    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
     {
         VulkanTexture* dstTexture = textures.AccessResource(dst.handle);
 
@@ -2390,7 +2395,7 @@ namespace gfx {
             gfx::PipelineStage::TransferBit,
             gfx::PipelineStage::TransferBit
         };
-        CopyTexture(dst, stagingBuffer, &transferBarrierInfo, 0, 0);
+        CopyTexture(dst, stagingBuffer, &transferBarrierInfo, fence, 0, 0);
         // If miplevels is greater than  1 the mip are generated
         // else the imagelayout is transitioned to shader attachment optimal
         if(generateMipMap)

@@ -100,7 +100,7 @@ namespace fx
 			mNoiseTexture = mDevice->CreateTexture(&textureDesc);
 
 			uint32_t imageDataSize = static_cast<uint32_t>(sizeof(glm::vec3) * sampleRotation.size());
-			mDevice->CopyTexture(mNoiseTexture, sampleRotation.data(), imageDataSize, 0, 0);
+			mDevice->CopyTexture(mNoiseTexture, sampleRotation.data(), imageDataSize);
 		}
 
 		mPipeline = gfx::CreateComputePipeline(StringConstants::SSAO_COMP_PATH, mDevice);

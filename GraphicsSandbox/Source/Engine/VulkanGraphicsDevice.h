@@ -50,8 +50,8 @@ namespace gfx
 
 		void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) override;
 		void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0)                override;
-		void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
-		void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
+		void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
+		void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 
 		void* GetMappedDataPtr(BufferHandle buffer) override;

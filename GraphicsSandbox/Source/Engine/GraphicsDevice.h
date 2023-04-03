@@ -23,8 +23,8 @@ namespace gfx
 
 		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
 		virtual void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0) = 0;
-		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
-		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
+		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
+		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
 		
 		virtual void* GetMappedDataPtr(BufferHandle buffer) = 0;
 		virtual uint32_t GetBufferSize(BufferHandle handle) = 0;

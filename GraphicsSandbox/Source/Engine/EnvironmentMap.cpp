@@ -51,7 +51,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 		gfx::PipelineStage::TransferBit,
 		gfx::PipelineStage::TransferBit
 	};
-	mDevice->CopyTexture(hdriTexture, stagingBuffer, &transferBarrierInfo, 0, 0);
+	mDevice->CopyTexture(hdriTexture, stagingBuffer, &transferBarrierInfo);
 	Utils::ImageLoader::Free(hdriData);
 
 	// Destroy intermediate resources

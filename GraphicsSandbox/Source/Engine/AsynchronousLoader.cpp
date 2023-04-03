@@ -39,7 +39,7 @@ void AsynchronousLoader::Update()
 		if (uploadRequest.texture.handle != gfx::K_INVALID_RESOURCE_HANDLE)
 		{
 			// Process texture upload
-			mDevice->CopyTexture(uploadRequest.texture, uploadRequest.data, uploadRequest.sizeInBytes);
+			mDevice->CopyTexture(uploadRequest.texture, uploadRequest.data, uploadRequest.sizeInBytes, mTransferFence);
 		}
 	}
 

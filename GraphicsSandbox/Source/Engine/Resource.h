@@ -43,5 +43,5 @@ namespace gfx {
 	static FramebufferHandle INVALID_FRAMEBUFFER = { K_INVALID_RESOURCE_HANDLE };
 	static DescriptorSetHandle INVALID_DESCRIPTOR_SET = { K_INVALID_RESOURCE_HANDLE };
 	static SemaphoreHandle INVALID_SEMAPHORE = { K_INVALID_RESOURCE_HANDLE };
-	static SemaphoreHandle INVALID_FENCE = { K_INVALID_RESOURCE_HANDLE };
+	static FenceHandle INVALID_FENCE = { K_INVALID_RESOURCE_HANDLE };
 }

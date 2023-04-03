@@ -45,7 +45,7 @@ namespace TextureCache
 
 		gfx::TextureHandle texture = device->CreateTexture(&desc);
 		const uint32_t imageDataSize = width * height * nChannel * sizeof(uint8_t);
-		device->CopyTexture(texture, pixels, imageDataSize, 0, 0, true);
+		device->CopyTexture(texture, pixels, imageDataSize, gfx::INVALID_FENCE, 0, 0, true);
 		return texture;
 	}
 

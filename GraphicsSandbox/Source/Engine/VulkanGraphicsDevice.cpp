@@ -496,26 +496,26 @@ namespace gfx {
                 format == VK_FORMAT_D24_UNORM_S8_UINT );
     }
 
-    uint32_t FindGraphicsQueueIndex(VkPhysicalDevice physicalDevice)
+    void VulkanGraphicsDevice::FindSuitableQueueIndex()
     {
         // Find suitable graphics queue
         uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, nullptr);
         std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamilyCount, queueFamilyProperties.data());
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice_, &queueFamilyCount, queueFamilyProperties.data());
 
-        uint32_t familyIndex = 0;
-        for (const auto& queueFamily : queueFamilyProperties)
+        VkQueueFlags allFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_TRANSFER_BIT | VK_QUEUE_COMPUTE_BIT;
+        for (uint32_t familyIndex = 0; familyIndex < queueFamilyProperties.size(); ++familyIndex)
         {
-            if (queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                return familyIndex;
-                break;
-            }
-            familyIndex++;
-        }
+            VkQueueFamilyProperties& queueFamily = queueFamilyProperties[familyIndex];
+            if (queueFamily.queueCount == 0)
+                continue;
 
-        return 0;
+			if ((queueFamily.queueFlags & allFlags) == allFlags)
+				mainQueueIndex_ = familyIndex;
+			else if ((queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) && (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) == 0)
+				transferQueueIndex_ = familyIndex;
+        }
     }
 
     VkBool32 CheckPhysicalDevicePresentationSupport(VkInstance instance, VkPhysicalDevice physicalDevice, uint32_t queueFamily)
@@ -938,7 +938,7 @@ namespace gfx {
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         createInfo.queueFamilyIndexCount = 1;
-        createInfo.pQueueFamilyIndices = &queueFamilyIndices_;
+        createInfo.pQueueFamilyIndices = &mainQueueIndex_;
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         createInfo.compositeAlpha = surfaceComposite;
         createInfo.presentMode = presentMode;
@@ -1252,10 +1252,15 @@ namespace gfx {
 
         Logger::Debug("Selected Physical Device: " + std::string(properties2_.properties.deviceName));
 
-        queueFamilyIndices_ = FindGraphicsQueueIndex(physicalDevice_);
+        FindSuitableQueueIndex();
+        if (mainQueueIndex_ == transferQueueIndex_)
+            Logger::Info("Same Queue Family Index for Transfer and Graphics: " + std::to_string(mainQueueIndex_));
+        else
+            Logger::Info("Different Queue Family Index for Transfer(" + std::to_string(transferQueueIndex_) +
+                        ") and Graphics(" + std::to_string(mainQueueIndex_) + ")");
 
         // TODO Check presentation support at the time of choosing physical device
-        if (!CheckPhysicalDevicePresentationSupport(instance_, physicalDevice_, queueFamilyIndices_))
+        if (!CheckPhysicalDevicePresentationSupport(instance_, physicalDevice_, mainQueueIndex_))
         {
             Utils::ShowMessageBox("Device Doesn't Support Presentation", "Error", MessageType::Error);
             exit(EXIT_ERROR);
@@ -1265,7 +1270,7 @@ namespace gfx {
         VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
         queueCreateInfo.pQueuePriorities = &queuePriorities;
         queueCreateInfo.queueCount = 1;
-        queueCreateInfo.queueFamilyIndex = queueFamilyIndices_;
+        queueCreateInfo.queueFamilyIndex = mainQueueIndex_;
 
         // Enable required features
         features2_.features.multiDrawIndirect = true;
@@ -1309,9 +1314,9 @@ namespace gfx {
         volkLoadDevice(device_);
 
         // Get device Queue
-        vkGetDeviceQueue(device_, queueFamilyIndices_, 0, &queue_);
+        vkGetDeviceQueue(device_, mainQueueIndex_, 0, &mainQueue_);
 
-        stagingCmdPool_   = CreateCommandPool(device_, queueFamilyIndices_);
+        stagingCmdPool_   = CreateCommandPool(device_, mainQueueIndex_);
         stagingCmdBuffer_ = CreateCommandBuffer(device_, stagingCmdPool_);
 
         commandList_ = std::make_shared<VulkanCommandList>();
@@ -1424,7 +1429,7 @@ namespace gfx {
         {
 			swapchain_ = std::make_shared<VulkanSwapchain>();
             swapchain_->desc = *swapchainDesc;
-			swapchain_->surface = CreateSurface(instance_, physicalDevice_, queueFamilyIndices_, window);
+			swapchain_->surface = CreateSurface(instance_, physicalDevice_, mainQueueIndex_, window);
         }
 
         VulkanRenderPass* vkRenderPass = renderPasses.AccessResource(swapchainDesc->renderPass.handle);
@@ -1437,7 +1442,7 @@ namespace gfx {
             commandBuffer_ = new VkCommandBuffer[swapchain_->imageCount];
             for (uint32_t i = 0; i < swapchain_->imageCount; ++i)
             {
-                commandPool_[i] = CreateCommandPool(device_, queueFamilyIndices_);
+                commandPool_[i] = CreateCommandPool(device_, mainQueueIndex_);
                 commandBuffer_[i] = CreateCommandBuffer(device_, commandPool_[i]);
             }
         }
@@ -1789,7 +1794,7 @@ namespace gfx {
         createInfo.usage = usage;
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         createInfo.queueFamilyIndexCount = 1;
-        createInfo.pQueueFamilyIndices = &queueFamilyIndices_;
+        createInfo.pQueueFamilyIndices = &mainQueueIndex_;
 
         VK_CHECK(vmaCreateBuffer(vmaAllocator_, &createInfo, &allocCreateInfo, &buffer->buffer, &buffer->allocation, nullptr));
         if (desc->usage == Usage::ReadBack || desc->usage == Usage::Upload)
@@ -2154,7 +2159,7 @@ namespace gfx {
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
         submitInfo.signalSemaphoreCount = (uint32_t)cmdList->signalSemaphore.size();
         submitInfo.pSignalSemaphores = cmdList->signalSemaphore.data();
-        vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
     void VulkanGraphicsDevice::Present(SemaphoreHandle waitSemaphore)
@@ -2168,7 +2173,7 @@ namespace gfx {
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain_->swapchain;
 
-        VK_CHECK(vkQueuePresentKHR(queue_, &presentInfo));
+        VK_CHECK(vkQueuePresentKHR(mainQueue_, &presentInfo));
 
         commandList_->signalSemaphore.clear();
         commandList_->waitSemaphore.clear();
@@ -2245,8 +2250,8 @@ namespace gfx {
             VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
             submitInfo.commandBufferCount = 1;
             submitInfo.pCommandBuffers = &stagingCmdBuffer_;
-            VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
-            vkQueueWaitIdle(queue_);
+            VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
+            vkQueueWaitIdle(mainQueue_);
         }
     }
 
@@ -2304,7 +2309,7 @@ namespace gfx {
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &stagingCmdBuffer_;
-        VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
+        VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
         vkDeviceWaitIdle(device_);
     }
 
@@ -2421,7 +2426,7 @@ namespace gfx {
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &stagingCmdBuffer_;
-        VK_CHECK(vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE));
+        VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
         vkDeviceWaitIdle(device_);
     }
 

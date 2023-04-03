@@ -89,7 +89,7 @@ namespace gfx
 		VkInstance GetInstance() { return instance_; }
 		VkDevice GetDevice() { return device_; }
 		VkPhysicalDevice GetPhysicalDevice() { return physicalDevice_; }
-		VkQueue GetQueue() { return queue_; }
+		VkQueue GetQueue() { return mainQueue_; }
 		uint32_t GetSwapchainImageCount() { return swapchain_->imageCount; }
 
 		VkRenderPass Get(RenderPassHandle rp);
@@ -112,7 +112,8 @@ namespace gfx
 		VkDebugUtilsMessengerEXT messenger_ = VK_NULL_HANDLE;
 		VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 		VkDevice device_ = VK_NULL_HANDLE;
-		VkQueue queue_ = VK_NULL_HANDLE;
+		VkQueue mainQueue_ = VK_NULL_HANDLE;
+		//VkQueue transferQueue_ = VK_NULL_HANDLE;
 		VkSurfaceKHR surface_ = VK_NULL_HANDLE;
 		bool debugMarkerEnabled_ = false;
 		bool supportBindless = false;
@@ -146,7 +147,8 @@ namespace gfx
 		VkPhysicalDeviceVulkan11Features features11_ = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
 		VkPhysicalDeviceVulkan12Features features12_ = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
 
-		uint32_t queueFamilyIndices_ = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t mainQueueIndex_ = VK_QUEUE_FAMILY_IGNORED;
+		uint32_t transferQueueIndex_ = VK_QUEUE_FAMILY_IGNORED;
 
 		struct CommandQueue
 		{
@@ -177,6 +179,8 @@ namespace gfx
 
 		VkRenderPass createDefaultRenderPass(VkFormat colorFormat);
 		inline VulkanCommandList* GetCommandList(CommandList* commandList) { return (VulkanCommandList*)commandList->internalState; }
+		void FindSuitableQueueIndex();
+
 
 		// Resource Pools
 		ResourcePool<VulkanRenderPass> renderPasses;

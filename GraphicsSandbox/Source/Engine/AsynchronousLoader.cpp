@@ -60,6 +60,7 @@ void AsynchronousLoader::Update()
 			Logger::Warn("Failed to load texture: " + filename);
 		}
 		else {
+			Logger::Info("Processing Load request " + filename);
 			UploadRequest uploadRequest;
 			uploadRequest.data = pixels;
 			uploadRequest.sizeInBytes = width * height * nChannel * sizeof(uint8_t);

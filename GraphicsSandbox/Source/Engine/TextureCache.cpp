@@ -10,6 +10,8 @@
 #include <unordered_map>
 #include <algorithm>
 
+#include "stb_image.h"
+
 /*
 * @TODO maybe we don't need this anymore
 */
@@ -20,13 +22,14 @@ namespace TextureCache
 	std::vector<std::string> gAllTextureName(1024);
 	gfx::TextureHandle gSolidTexture;
 	const uint32_t kMaxMipLevel = 6;
+	AsynchronousLoader* gAsyncLoader = nullptr;
 
 	gfx::TextureHandle GetDefaultTexture()
 	{
 		return gSolidTexture;
 	}
 
-	gfx::TextureHandle CreateTexture(unsigned char* pixels, int width, int height, int nChannel, bool generateMipmap)
+	gfx::TextureHandle CreateTexture(int width, int height, int nChannel, bool generateMipmap)
 	{
 		gfx::GPUTextureDesc desc;
 		desc.width = width;
@@ -44,8 +47,6 @@ namespace TextureCache
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 
 		gfx::TextureHandle texture = device->CreateTexture(&desc);
-		const uint32_t imageDataSize = width * height * nChannel * sizeof(uint8_t);
-		device->CopyTexture(texture, pixels, imageDataSize, gfx::INVALID_FENCE, 0, 0, true);
 		return texture;
 	}
 
@@ -53,12 +54,16 @@ namespace TextureCache
 	{
 		std::vector<uint8_t> pixels(width * height * 4);
 		std::fill(pixels.begin(), pixels.end(), 255);
-		return CreateTexture(pixels.data(), width, height, 4, false);
+		gfx::TextureHandle texture = CreateTexture(width, height, 4, false);
+		gfx::GetDevice()->CopyTexture(texture, pixels.data(), (uint32_t)(pixels.size() * sizeof(uint8_t)));
+		//return CreateTexture(pixels.data(), width, height, 4, false);
+		return texture;
 	}
 	
-	void Initialize()
+	void Initialize(AsynchronousLoader* loader)
 	{
 		gSolidTexture = CreateSolidRGBATexture(512, 512);
+		gAsyncLoader = loader;
 	}
 
 	uint32_t LoadTexture(const std::string& filename, bool generateMipmap)
@@ -67,6 +72,12 @@ namespace TextureCache
 		if (found != gAllTextureIndex.end())
 			return found->second.handle;
 
+		int comp, width, height;
+		stbi_info(filename.c_str(), &width, &height, &comp);
+
+		gfx::TextureHandle texture = CreateTexture(width, height, comp, true);
+		gAsyncLoader->RequestTextureData(filename, texture);
+		/*
 		Logger::Debug("Loading Texture: " + filename);
 		int width, height, nChannel;
 		
@@ -79,12 +90,13 @@ namespace TextureCache
 		assert(nChannel == 4);
 		//texture.name = filename;
 		gfx::TextureHandle texture = CreateTexture(pixels, width, height, nChannel, generateMipmap);
+		Utils::ImageLoader::Free(pixels);
+		*/
 		gAllTextureName[texture.handle] = filename;
-
 		gAllTextures[texture.handle] = texture;
 		gAllTextureIndex[filename] = texture;
-		Utils::ImageLoader::Free(pixels);
 		return texture.handle;
+
 	}
 
 	std::string GetTextureName(uint32_t index)

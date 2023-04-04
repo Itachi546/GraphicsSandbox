@@ -2369,7 +2369,6 @@ namespace gfx {
 			vkFence = *fences.AccessResource(fence.handle);
 
         VK_CHECK(vkQueueSubmit(transferQueue_, 1, &submitInfo, vkFence));
-        vkDeviceWaitIdle(device_);
     }
 
     void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
@@ -2489,7 +2488,6 @@ namespace gfx {
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &commandBuffer;
         VK_CHECK(vkQueueSubmit(mainQueue_, 1, &submitInfo, VK_NULL_HANDLE));
-        vkDeviceWaitIdle(device_);
     }
 
 
@@ -2626,7 +2624,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::WaitForGPU()
     {
-        VK_CHECK(vkDeviceWaitIdle(device_));
+		VK_CHECK(vkDeviceWaitIdle(device_));
     }
 
     void VulkanGraphicsDevice::PrepareSwapchainForPresent(CommandList* commandList)

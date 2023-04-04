@@ -4,6 +4,7 @@
 #include "Components.h"
 #include "EnvironmentMap.h"
 #include "Camera.h"
+#include "AsynchronousLoader.h"
 
 #include <string_view>
 #include <vector>
@@ -58,6 +59,7 @@ public:
 	virtual ~Scene() = default; 
 
 
+	AsynchronousLoader mAsyncLoader;
 private:
 	// Default Entities
 	ecs::Entity mCube;
@@ -73,6 +75,10 @@ private:
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;
 	std::vector<gfx::BufferHandle> mAllocatedBuffers;
+
+	// Asynchronous Loader task
+	enki::TaskScheduler mTaskScheduler;
+	AsynchronousLoadTask mAsyncLoadTask;
 
 	void UpdateTransform();
 	void UpdateHierarchy();

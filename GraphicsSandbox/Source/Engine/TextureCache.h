@@ -4,10 +4,11 @@
 #include <string>
 
 #include "Graphics.h"
+#include "AsynchronousLoader.h"
 
 namespace TextureCache
 {
-	void Initialize();
+	void Initialize(AsynchronousLoader* loader);
 
 	uint32_t LoadTexture(const std::string& filename, bool generateMipmap = false);
 

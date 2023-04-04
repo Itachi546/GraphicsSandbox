@@ -26,10 +26,11 @@ void Application::initialize_()
 
 	Logger::Initialize();
 	Input::Initialize(mWindow);
-	TextureCache::Initialize();
+
 	DebugDraw::Initialize(mSwapchainRP);
 
    	mScene.Initialize();
+	TextureCache::Initialize(&mScene.mAsyncLoader);
 	mScene.SetSize(mWidth, mHeight);
 
 	mRenderer = std::make_unique<Renderer>();

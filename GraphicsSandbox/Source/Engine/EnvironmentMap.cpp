@@ -43,6 +43,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	bufferDesc.size = imageDataSize;
 	gfx::BufferHandle stagingBuffer = mDevice->CreateBuffer(&bufferDesc);
 	mDevice->CopyToBuffer(stagingBuffer, hdriData, 0, imageDataSize);
+	Utils::ImageLoader::Free(hdriData);
 
 	// Copy from staging buffer to hdri texture
 	gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
@@ -51,8 +52,11 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 		gfx::PipelineStage::TransferBit,
 		gfx::PipelineStage::TransferBit
 	};
-	mDevice->CopyTexture(hdriTexture, stagingBuffer, &transferBarrierInfo);
-	Utils::ImageLoader::Free(hdriData);
+
+	gfx::FenceHandle fence = mDevice->CreateFence();
+	mDevice->ResetFence(fence);
+	mDevice->CopyTexture(hdriTexture, stagingBuffer, &transferBarrierInfo, fence);
+	while (!mDevice->IsFenceSignalled(fence));
 
 	// Destroy intermediate resources
 	mDevice->Destroy(stagingBuffer);

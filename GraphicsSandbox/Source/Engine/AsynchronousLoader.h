@@ -2,7 +2,7 @@
 
 #include "enkiTS/TaskScheduler.h"
 #include "GraphicsDevice.h"
-
+#include "Logger.h"
 
 struct FileLoadRequest {
 	std::string path;
@@ -43,3 +43,19 @@ private:
 
 	std::atomic_size_t mStagingBufferOffset;
 };
+
+
+struct AsynchronousLoadTask : enki::IPinnedTask
+{
+	void Execute() override {
+		while (execute)
+		{
+			asyncLoader->Update();
+		}
+	}
+
+	AsynchronousLoader* asyncLoader;
+	enki::TaskScheduler* scheduler;
+	bool execute = true;
+};
+

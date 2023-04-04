@@ -29,6 +29,17 @@ void Scene::Initialize()
 	mEnvMap->CalculateIrradiance();
 	mEnvMap->Prefilter();
 	mEnvMap->CalculateBRDFLUT();
+
+	enki::TaskSchedulerConfig config;
+	config.numTaskThreadsToCreate += 1;
+	mTaskScheduler.Initialize(config);
+	mAsyncLoader.Initialize(gfx::GetDevice(), &mTaskScheduler);
+	
+	mAsyncLoadTask.scheduler = &mTaskScheduler;
+	mAsyncLoadTask.asyncLoader = &mAsyncLoader;
+	mAsyncLoadTask.threadNum = mTaskScheduler.GetNumTaskThreads() - 1;
+
+	mTaskScheduler.AddPinnedTask(&mAsyncLoadTask);
 }
 
 void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out)
@@ -359,17 +370,17 @@ void Scene::UpdateEntity(ecs::Entity parent,
 				// sample it like base mip level. But for now, I don't know any other 
 				// ways to remove the normal map aliasing artifacts other than using mipmap.
 				if (material.albedoMap != INVALID_TEXTURE)
-					material.albedoMap = TextureCache::LoadTexture(textures[material.albedoMap], true);
+					material.albedoMap = TextureCache::LoadTexture(textures[material.albedoMap], false);
 				if (material.normalMap != INVALID_TEXTURE)
-					material.normalMap = TextureCache::LoadTexture(textures[material.normalMap], true);
+					material.normalMap = TextureCache::LoadTexture(textures[material.normalMap], false);
 				if (material.emissiveMap != INVALID_TEXTURE)
 					material.emissiveMap = TextureCache::LoadTexture(textures[material.emissiveMap]);
 				if (material.metallicMap != INVALID_TEXTURE)
-					material.metallicMap = TextureCache::LoadTexture(textures[material.metallicMap], true);
+					material.metallicMap = TextureCache::LoadTexture(textures[material.metallicMap], false);
 				if (material.roughnessMap != INVALID_TEXTURE)
-					material.roughnessMap = TextureCache::LoadTexture(textures[material.roughnessMap], true);
+					material.roughnessMap = TextureCache::LoadTexture(textures[material.roughnessMap], false);
 				if (material.ambientOcclusionMap != INVALID_TEXTURE)
-					material.ambientOcclusionMap = TextureCache::LoadTexture(textures[material.ambientOcclusionMap], true);
+					material.ambientOcclusionMap = TextureCache::LoadTexture(textures[material.ambientOcclusionMap], false);
 				if (material.opacityMap != INVALID_TEXTURE)
 					material.opacityMap = TextureCache::LoadTexture(textures[material.opacityMap]);
 			}
@@ -601,6 +612,10 @@ std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 void Scene::Shutdown()
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
+
+	mAsyncLoader.Shutdown();
+	mAsyncLoadTask.execute = false;
+	mTaskScheduler.WaitforAllAndShutdown();
 
 	for (gfx::BufferHandle buffer : mAllocatedBuffers)
 		device->Destroy(buffer);

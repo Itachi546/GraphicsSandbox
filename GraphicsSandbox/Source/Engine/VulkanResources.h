@@ -45,8 +45,7 @@ struct VulkanSwapchain
 	// Acquire Semaphore
 	VkSemaphore acquireSemaphore;
 	std::vector<VkSemaphore> signalSemaphores;
-
-
+	std::vector<VkFence> inFlightFences;
 };
 
 struct VulkanRenderPass

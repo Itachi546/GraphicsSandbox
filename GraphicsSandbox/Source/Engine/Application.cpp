@@ -85,11 +85,13 @@ void Application::render_()
 	if (!mDevice->IsSwapchainReady(mSwapchainRP))
 		return;
 
+	mDevice->BeginFrame();
 	gfx::CommandList commandList = mDevice->BeginCommandList();
-	Profiler::BeginFrameGPU(&commandList);
-	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 
+	Profiler::BeginFrameGPU(&commandList);
 	mDevice->PrepareSwapchain(&commandList);
+
+	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 	mRenderer->Render(&commandList);
 
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
@@ -127,7 +129,6 @@ void Application::render_()
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 
 	mDevice->Present(&commandList);
-	mDevice->WaitForGPU();
 
 	Profiler::EndRangeCPU(cpuRenderTime);
 }
@@ -220,6 +221,8 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 Application::~Application()
 {
+	// Wait for rendering to finish
+	mDevice->WaitForGPU();
 	mDevice->Destroy(mSwapchainRP);
 	mDevice->Destroy(mSwapchainPipeline);
 

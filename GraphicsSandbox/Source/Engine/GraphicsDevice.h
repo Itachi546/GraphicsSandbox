@@ -45,6 +45,7 @@ namespace gfx
 		virtual void EndDebugMarker(CommandList* commandList) = 0;
 
 
+		virtual void BeginFrame() = 0;
 		virtual void PrepareSwapchain(CommandList* commandList) = 0;
 		virtual CommandList BeginCommandList() = 0;
 		virtual void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb) = 0;

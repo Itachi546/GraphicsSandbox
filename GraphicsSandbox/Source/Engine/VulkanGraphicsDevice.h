@@ -60,6 +60,7 @@ namespace gfx
 
 		CommandList BeginCommandList()                                                         override;
 
+		void BeginFrame() override;
 		void PrepareSwapchain(CommandList* commandList)             override;
 		void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb)  override;
 		void EndRenderPass(CommandList* commandList)                                             override;
@@ -121,6 +122,7 @@ namespace gfx
 		VkCommandBuffer* commandBuffer_ = nullptr;
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
+		VkFence mComputeFence_ = VK_NULL_HANDLE;
 
 		std::vector<VkDescriptorPool> descriptorPools_;
 

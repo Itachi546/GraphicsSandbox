@@ -46,6 +46,7 @@ namespace gfx {
         std::vector<std::pair<VkDescriptorSet, VkDescriptorPool>> destroyedDescriptorSet_;
         std::vector<VkSampler> destroyedSamplers_;
         std::vector<VkSemaphore> destroyedSemaphore_;
+        std::vector<VkFence> destroyedFences_;
 
         void destroyReleasedResource(VkDevice device, VmaAllocator vmaAllocator)
         {
@@ -93,6 +94,10 @@ namespace gfx {
             for (auto& semaphore : destroyedSemaphore_)
                 vkDestroySemaphore(device, semaphore, nullptr);
 
+            for (auto& fence : destroyedFences_)
+                vkDestroyFence(device, fence, nullptr);
+
+            destroyedFences_.clear();
             destroyedSemaphore_.clear();
             destroyedSamplers_.clear();
             destroyedDescriptorSet_.clear();
@@ -1416,6 +1421,11 @@ namespace gfx {
             count_info.pDescriptorCounts = &maxBindings;
             VK_CHECK(vkAllocateDescriptorSets(device_, &alloc_info, &bindlessDescriptorSet_));
         }
+
+        // Create compute fence
+        VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+		VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &mComputeFence_));
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
@@ -1434,11 +1444,17 @@ namespace gfx {
         if (swapchain_->signalSemaphores.size() == 0)
         {
             VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-            vkCreateSemaphore(device_, &createInfo, nullptr, &swapchain_->acquireSemaphore);
+			VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &swapchain_->acquireSemaphore));
 
             swapchain_->signalSemaphores.resize(swapchain_->imageCount);
-            for (auto& signalSemaphore : swapchain_->signalSemaphores)
-                vkCreateSemaphore(device_, &createInfo, nullptr, &signalSemaphore);
+			for (auto& signalSemaphore : swapchain_->signalSemaphores)
+				VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &signalSemaphore));
+
+            swapchain_->inFlightFences.resize(swapchain_->imageCount);
+            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+			fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            for (auto& fence : swapchain_->inFlightFences)
+				VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &fence));
         }
 
         if (commandPool_ == nullptr)
@@ -1912,7 +1928,7 @@ namespace gfx {
         // Reset Next Descriptor Pool
         uint32_t imageCount = swapchain_->imageCount;
         uint32_t currentIndex = swapchain_->currentImageIndex;
-        vkResetDescriptorPool(device_, descriptorPools_[(currentIndex + 1) % imageCount], 0);
+        vkResetDescriptorPool(device_, descriptorPools_[currentIndex], 0);
 
         commandList_->commandBuffer = commandBuffer_[currentIndex];
         commandList_->commandPool = commandPool_[currentIndex];
@@ -1957,15 +1973,28 @@ namespace gfx {
         return commandList;
     }
 
-    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList)
+    void VulkanGraphicsDevice::BeginFrame()
     {
-        auto vkCmdList = GetCommandList(commandList);
-
         uint32_t imageIndex = 0;
         VkSemaphore acquireSemaphore = swapchain_->acquireSemaphore;
         VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
         swapchain_->currentImageIndex = imageIndex;
 
+        VkFence currentFence[2] = { swapchain_->inFlightFences[imageIndex], mComputeFence_ };
+        uint32_t fenceCount = 2;
+
+        if (vkGetFenceStatus(device_, mComputeFence_) == VK_SUCCESS)
+            fenceCount = 1;
+
+        vkWaitForFences(device_, fenceCount, currentFence, VK_TRUE, UINT64_MAX);
+        vkResetFences(device_, fenceCount, currentFence);
+    }
+
+    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList)
+    {
+        auto vkCmdList = GetCommandList(commandList);
+
+        uint32_t imageIndex = swapchain_->currentImageIndex;
         std::vector<VkImageMemoryBarrier> renderBeginBarrier = {
             CreateImageBarrier(swapchain_->images[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
         };
@@ -2073,7 +2102,10 @@ namespace gfx {
     {
 		VulkanRenderPass* vkRenderpass = renderPasses.AccessResource(rp.handle);
         if (isSwapchainResized())
-			return createSwapchainInternal(vkRenderpass->renderPass);
+        {
+            vkDeviceWaitIdle(device_);
+            return createSwapchainInternal(vkRenderpass->renderPass);
+        }
         return true;
     }
 
@@ -2145,6 +2177,9 @@ namespace gfx {
 
     void VulkanGraphicsDevice::SubmitComputeLoad(CommandList* commandList)
     {
+        while (vkGetFenceStatus(device_, mComputeFence_) != VK_SUCCESS);
+        vkResetFences(device_, 1, &mComputeFence_);
+
         VulkanCommandList* cmdList = GetCommandList(commandList);
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
@@ -2156,7 +2191,7 @@ namespace gfx {
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
         submitInfo.signalSemaphoreCount = 0;
         submitInfo.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueSubmit(queue_, 1, &submitInfo, mComputeFence_);
     }
 
     void VulkanGraphicsDevice::Present(CommandList* commandList)
@@ -2174,7 +2209,9 @@ namespace gfx {
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &signalSemaphore; 
-        vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
+
+        VkFence renderEndFence = swapchain_->inFlightFences[imageIndex];
+        vkQueueSubmit(queue_, 1, &submitInfo, renderEndFence);
 
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.pImageIndices = &imageIndex;
@@ -2684,7 +2721,9 @@ namespace gfx {
         }
 
         gAllocationHandler.destroyedSemaphore_.push_back(swapchain_->acquireSemaphore);
+        gAllocationHandler.destroyedFences_.push_back(mComputeFence_);
         gAllocationHandler.destroyedSemaphore_.insert(gAllocationHandler.destroyedSemaphore_.end(), swapchain_->signalSemaphores.begin(), swapchain_->signalSemaphores.end());
+        gAllocationHandler.destroyedFences_.insert(gAllocationHandler.destroyedFences_.end(), swapchain_->inFlightFences.begin(), swapchain_->inFlightFences.end());
 
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
         swapchain_->framebuffers.clear();

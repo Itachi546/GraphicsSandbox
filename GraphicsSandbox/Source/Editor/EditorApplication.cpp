@@ -377,6 +377,7 @@ void EditorApplication::DrawSkeleton()
 
 EditorApplication::~EditorApplication()
 {
+	mDevice->WaitForGPU();
 	ImGui_ImplVulkan_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImPlot::DestroyContext();

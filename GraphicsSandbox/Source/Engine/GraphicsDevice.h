@@ -45,12 +45,12 @@ namespace gfx
 		virtual void EndDebugMarker(CommandList* commandList) = 0;
 
 
-		virtual void PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore) = 0;
+		virtual void PrepareSwapchain(CommandList* commandList) = 0;
 		virtual CommandList BeginCommandList() = 0;
 		virtual void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb) = 0;
 		virtual void EndRenderPass(CommandList* commandList) = 0;
-		virtual void SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore = INVALID_SEMAPHORE) = 0;
-		virtual void Present(SemaphoreHandle waitSemaphore) = 0;
+		virtual void SubmitComputeLoad(CommandList* commandList) = 0;
+		virtual void Present(CommandList* commandList) = 0;
 		virtual void WaitForGPU() = 0;
 
 		//virtual void BindViewport(Viewport* viewports, int count, CommandList* commandList) = 0;

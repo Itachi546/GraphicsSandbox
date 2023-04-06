@@ -22,9 +22,6 @@ struct VulkanCommandList
 	VkCommandBuffer commandBuffer;
 	VkCommandPool commandPool;
 
-	std::vector<VkSemaphore> waitSemaphore;
-	std::vector<VkSemaphore> signalSemaphore;
-
 	std::vector<VkPipelineStageFlags> waitStages;
 };
 
@@ -44,6 +41,12 @@ struct VulkanSwapchain
 	VkSurfaceFormatKHR format;
 	uint32_t imageCount;
 	uint32_t currentImageIndex;
+
+	// Acquire Semaphore
+	VkSemaphore acquireSemaphore;
+	std::vector<VkSemaphore> signalSemaphores;
+
+
 };
 
 struct VulkanRenderPass

@@ -60,11 +60,11 @@ namespace gfx
 
 		CommandList BeginCommandList()                                                         override;
 
-		void PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore)             override;
+		void PrepareSwapchain(CommandList* commandList)             override;
 		void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb)  override;
 		void EndRenderPass(CommandList* commandList)                                             override;
-		void SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore)             override;
-		void Present(SemaphoreHandle waitSemaphore)                                                   override;
+		void SubmitComputeLoad(CommandList* commandList)                                         override;
+		void Present(CommandList* commandList)                                                   override;
 		void WaitForGPU()                                                                        override;
 		void PrepareSwapchainForPresent(CommandList* commandList)                                override;
 

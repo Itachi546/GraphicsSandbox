@@ -1431,6 +1431,16 @@ namespace gfx {
         assert(vkRenderPass != nullptr);
 		createSwapchainInternal(vkRenderPass->renderPass);
 
+        if (swapchain_->signalSemaphores.size() == 0)
+        {
+            VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            vkCreateSemaphore(device_, &createInfo, nullptr, &swapchain_->acquireSemaphore);
+
+            swapchain_->signalSemaphores.resize(swapchain_->imageCount);
+            for (auto& signalSemaphore : swapchain_->signalSemaphores)
+                vkCreateSemaphore(device_, &createInfo, nullptr, &signalSemaphore);
+        }
+
         if (commandPool_ == nullptr)
         {
             commandPool_ = new VkCommandPool[swapchain_->imageCount];
@@ -1947,15 +1957,13 @@ namespace gfx {
         return commandList;
     }
 
-    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore)
+    void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList)
     {
-        assert(acquireSemaphore.handle != K_INVALID_RESOURCE_HANDLE);
         auto vkCmdList = GetCommandList(commandList);
-        VulkanSemaphore* vkSemaphore = semaphores.AccessResource(acquireSemaphore.handle);
 
         uint32_t imageIndex = 0;
-        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, vkSemaphore->semaphore, VK_NULL_HANDLE, &imageIndex));
-        vkCmdList->waitSemaphore.push_back(vkSemaphore->semaphore);
+        VkSemaphore acquireSemaphore = swapchain_->acquireSemaphore;
+        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
         swapchain_->currentImageIndex = imageIndex;
 
         std::vector<VkImageMemoryBarrier> renderBeginBarrier = {
@@ -2135,43 +2143,47 @@ namespace gfx {
     }
 
 
-    void VulkanGraphicsDevice::SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore)
+    void VulkanGraphicsDevice::SubmitComputeLoad(CommandList* commandList)
     {
         VulkanCommandList* cmdList = GetCommandList(commandList);
-        if (signalSemaphore.handle != K_INVALID_RESOURCE_HANDLE)
-        {
-            VulkanSemaphore* vkSemaphore = semaphores.AccessResource(signalSemaphore.handle);
-            cmdList->signalSemaphore.push_back(vkSemaphore->semaphore);
-        }
-
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.waitSemaphoreCount = (uint32_t)cmdList->waitSemaphore.size();
-        submitInfo.pWaitSemaphores = cmdList->waitSemaphore.data();
+        submitInfo.waitSemaphoreCount = 0;
+        submitInfo.pWaitSemaphores = nullptr;
         submitInfo.pWaitDstStageMask = cmdList->waitStages.data();
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
-        submitInfo.signalSemaphoreCount = (uint32_t)cmdList->signalSemaphore.size();
-        submitInfo.pSignalSemaphores = cmdList->signalSemaphore.data();
+        submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores = nullptr;
         vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
     }
 
-    void VulkanGraphicsDevice::Present(SemaphoreHandle waitSemaphore)
+    void VulkanGraphicsDevice::Present(CommandList* commandList)
     {
-        assert(waitSemaphore.handle != K_INVALID_RESOURCE_HANDLE);
-        VulkanSemaphore* vkSemaphore = semaphores.AccessResource(waitSemaphore.handle);
+        VulkanCommandList* cmdList = GetCommandList(commandList);
+        uint32_t imageIndex = swapchain_->currentImageIndex;
+        VkSemaphore signalSemaphore = swapchain_->signalSemaphores[imageIndex];
+        VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &swapchain_->acquireSemaphore; 
+        submitInfo.pWaitDstStageMask = cmdList->waitStages.data();
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmdList->commandBuffer;
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &signalSemaphore; 
+        vkQueueSubmit(queue_, 1, &submitInfo, VK_NULL_HANDLE);
+
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-        presentInfo.pImageIndices = &swapchain_->currentImageIndex;
+        presentInfo.pImageIndices = &imageIndex;
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &vkSemaphore->semaphore;
+        presentInfo.pWaitSemaphores = &signalSemaphore;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain_->swapchain;
 
         VK_CHECK(vkQueuePresentKHR(queue_, &presentInfo));
-
-        commandList_->signalSemaphore.clear();
-        commandList_->waitSemaphore.clear();
         commandList_->waitStages.clear();
 
         destroyReleasedResources();
@@ -2670,6 +2682,9 @@ namespace gfx {
             swapchain_->depthImages.clear();
             swapchain_->depthImageViews.clear();
         }
+
+        gAllocationHandler.destroyedSemaphore_.push_back(swapchain_->acquireSemaphore);
+        gAllocationHandler.destroyedSemaphore_.insert(gAllocationHandler.destroyedSemaphore_.end(), swapchain_->signalSemaphores.begin(), swapchain_->signalSemaphores.end());
 
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
         swapchain_->framebuffers.clear();

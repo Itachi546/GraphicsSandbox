@@ -54,7 +54,8 @@ void EditorApplication::Initialize()
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	ImGui_ImplVulkan_CreateFontsTexture(vkDevice->Get(&commandList));
-	mDevice->SubmitCommandList(&commandList);
+	// @TODO placeholder
+	mDevice->SubmitComputeLoad(&commandList);
 	mDevice->WaitForGPU();
 	ImGui_ImplVulkan_DestroyFontUploadObjects();
 

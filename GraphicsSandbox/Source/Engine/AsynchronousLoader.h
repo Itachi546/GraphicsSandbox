@@ -37,6 +37,7 @@ private:
 	std::vector<UploadRequest> mUploadRequest;
 	
 	gfx::BufferHandle mStagingBuffer;
+	gfx::TextureHandle mTextureReady = gfx::INVALID_TEXTURE;
 
 	// 64 MB 
 	const uint32_t kSize = 64 * 1024 * 1024;

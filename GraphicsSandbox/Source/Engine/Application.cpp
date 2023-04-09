@@ -86,11 +86,13 @@ void Application::render_()
 	if (!mDevice->IsSwapchainReady(mSwapchainRP))
 		return;
 
+	mDevice->BeginFrame();
 	gfx::CommandList commandList = mDevice->BeginCommandList();
-	Profiler::BeginFrameGPU(&commandList);
-	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 
-	mDevice->PrepareSwapchain(&commandList, mAcquireSemaphore);
+	Profiler::BeginFrameGPU(&commandList);
+	mDevice->PrepareSwapchain(&commandList);
+
+	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 	mRenderer->Render(&commandList);
 
 	mDevice->BeginDebugMarker(&commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
@@ -127,9 +129,7 @@ void Application::render_()
 	mDevice->PrepareSwapchainForPresent(&commandList);
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 
-	mDevice->SubmitCommandList(&commandList, mReleaseSemaphore);
-	mDevice->Present(mReleaseSemaphore);
-	mDevice->WaitForGPU();
+	mDevice->Present(&commandList);
 
 	Profiler::EndRangeCPU(cpuRenderTime);
 }
@@ -193,9 +193,6 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	swapchainDesc.clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
 	mDevice->CreateSwapchain(&swapchainDesc, window);
 
-	mAcquireSemaphore = mDevice->CreateSemaphore();
-	mReleaseSemaphore = mDevice->CreateSemaphore();
-
     // Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
 	char* vertexCode = Utils::ReadFile(StringConstants::COPY_VERT_PATH, &vertexLen);
@@ -225,10 +222,10 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 Application::~Application()
 {
+	// Wait for rendering to finish
+	mDevice->WaitForGPU();
 	mDevice->Destroy(mSwapchainRP);
 	mDevice->Destroy(mSwapchainPipeline);
-	mDevice->Destroy(mAcquireSemaphore);
-	mDevice->Destroy(mReleaseSemaphore);
 
 	TextureCache::Shutdown();
 	DebugDraw::Shutdown();

@@ -25,6 +25,7 @@ namespace gfx
 		virtual void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0) = 0;
 		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
+		virtual void AddTextureToUpdate(TextureHandle texture) = 0;
 		
 		virtual void* GetMappedDataPtr(BufferHandle buffer) = 0;
 		virtual uint32_t GetBufferSize(BufferHandle handle) = 0;
@@ -46,12 +47,13 @@ namespace gfx
 		virtual void EndDebugMarker(CommandList* commandList) = 0;
 
 
-		virtual void PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore) = 0;
+		virtual void BeginFrame() = 0;
+		virtual void PrepareSwapchain(CommandList* commandList) = 0;
 		virtual CommandList BeginCommandList() = 0;
 		virtual void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb) = 0;
 		virtual void EndRenderPass(CommandList* commandList) = 0;
-		virtual void SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore = INVALID_SEMAPHORE) = 0;
-		virtual void Present(SemaphoreHandle waitSemaphore) = 0;
+		virtual void SubmitComputeLoad(CommandList* commandList) = 0;
+		virtual void Present(CommandList* commandList) = 0;
 		virtual void WaitForGPU() = 0;
 
 		//virtual void BindViewport(Viewport* viewports, int count, CommandList* commandList) = 0;

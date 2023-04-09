@@ -103,7 +103,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	mDevice->BindPipeline(&commandList, mHdriToCubemap);
 	mDevice->PushConstants(&commandList, mHdriToCubemap, gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
 	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mCubemapDims, 32), gfx::GetWorkSize(mCubemapDims, 32), 6);
-	mDevice->SubmitCommandList(&commandList);
+	mDevice->SubmitComputeLoad(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("HDRI Converted Successfully");
 
@@ -155,7 +155,7 @@ void EnvironmentMap::CalculateIrradiance()
 	mDevice->BindPipeline(&commandList, mIrradiancePipeline);
 	mDevice->PushConstants(&commandList, mHdriToCubemap, gfx::ShaderStage::Compute, shaderData, sizeof(float) * static_cast<uint32_t>(std::size(shaderData)));
 	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mIrrTexDims, 8), gfx::GetWorkSize(mIrrTexDims, 8), 6);
-	mDevice->SubmitCommandList(&commandList);
+	mDevice->SubmitComputeLoad(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("Irradiance Texture Generated");
 }
@@ -214,7 +214,7 @@ void EnvironmentMap::Prefilter()
 		mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(dims, 8), gfx::GetWorkSize(dims, 8), 6);
 		dims /= 2;
 	}
-	mDevice->SubmitCommandList(&commandList);
+	mDevice->SubmitComputeLoad(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("Prefiltered Environment Texture Generated");
 }
@@ -272,7 +272,7 @@ void EnvironmentMap::CalculateBRDFLUT()
 	};
 	mDevice->PipelineBarrier(&commandList, &computeBarrier2);
 
-	mDevice->SubmitCommandList(&commandList);
+	mDevice->SubmitComputeLoad(&commandList);
 	mDevice->WaitForGPU();
 	Logger::Debug("BRDF LUT Generated");
 }

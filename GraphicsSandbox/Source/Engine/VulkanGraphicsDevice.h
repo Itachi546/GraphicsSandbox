@@ -11,6 +11,8 @@
 #include "EventDispatcher.h"
 #include "VulkanResources.h"
 #include "ResourcePool.h"
+
+#include <mutex>
 #include <assert.h>
 
 #define VK_CHECK(result)\
@@ -53,6 +55,7 @@ namespace gfx
 		void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
 		void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
+		void AddTextureToUpdate(TextureHandle texture) override;
 
 		void* GetMappedDataPtr(BufferHandle buffer) override;
 		uint32_t GetBufferSize(BufferHandle handle) override;
@@ -61,11 +64,12 @@ namespace gfx
 
 		CommandList BeginCommandList()                                                         override;
 
-		void PrepareSwapchain(CommandList* commandList, SemaphoreHandle acquireSemaphore)             override;
+		void BeginFrame() override;
+		void PrepareSwapchain(CommandList* commandList)             override;
 		void BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle fb)  override;
 		void EndRenderPass(CommandList* commandList)                                             override;
-		void SubmitCommandList(CommandList* commandList, SemaphoreHandle signalSemaphore)             override;
-		void Present(SemaphoreHandle waitSemaphore)                                                   override;
+		void SubmitComputeLoad(CommandList* commandList)                                         override;
+		void Present(CommandList* commandList)                                                   override;
 		void WaitForGPU()                                                                        override;
 		void PrepareSwapchainForPresent(CommandList* commandList)                                override;
 
@@ -120,6 +124,13 @@ namespace gfx
 		VkSurfaceKHR surface_ = VK_NULL_HANDLE;
 		bool debugMarkerEnabled_ = false;
 		bool supportBindless = false;
+		VkFence mComputeFence_ = VK_NULL_HANDLE;
+
+		// Texture to update to main queue when it is loaded from
+		// transfe queue
+		std::vector<TextureHandle> texturesToUpdate_;
+		// Mutex to lock when adding texture to list
+		std::mutex textureUpdateMutex_;
 
 		std::vector<VkCommandPool> commandPool_;
 		std::vector<VkCommandBuffer> commandBuffer_;
@@ -188,6 +199,8 @@ namespace gfx
 		inline VulkanCommandList* GetCommandList(CommandList* commandList) { return (VulkanCommandList*)commandList->internalState; }
 		void FindSuitableQueueIndex();
 
+
+		void updateTextureOwnership(CommandList* commandList);
 
 		// Resource Pools
 		ResourcePool<VulkanRenderPass> renderPasses;

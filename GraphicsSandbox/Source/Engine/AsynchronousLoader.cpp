@@ -22,13 +22,17 @@ void AsynchronousLoader::Initialize(gfx::GraphicsDevice* device, enki::TaskSched
 
 void AsynchronousLoader::Update()
 {
-
 	// Process upload request
 	if (mUploadRequest.size() > 0)
 	{
 		// Wait for upload to finish
 		if (!mDevice->IsFenceSignalled(mTransferFence))
 			return;
+
+		// Check if last texture was uploaded to gpu
+		if (mTextureReady.handle != gfx::K_INVALID_RESOURCE_HANDLE)
+			mDevice->AddTextureToUpdate(mTextureReady);
+		mTextureReady = gfx::INVALID_TEXTURE;
 
 		// Reset the fences
 		mDevice->ResetFence(mTransferFence);
@@ -40,6 +44,7 @@ void AsynchronousLoader::Update()
 		{
 			// Process texture upload
 			mDevice->CopyTexture(uploadRequest.texture, uploadRequest.data, uploadRequest.sizeInBytes, mTransferFence);
+			mTextureReady = uploadRequest.texture;
 		}
 	}
 

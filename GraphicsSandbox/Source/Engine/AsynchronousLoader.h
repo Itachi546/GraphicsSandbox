@@ -12,9 +12,10 @@ struct FileLoadRequest {
 
 struct UploadRequest {
 	void* data = nullptr;
-	uint32_t sizeInBytes;
+	uint32_t sizeInBytes = 0;
 	gfx::TextureHandle texture = gfx::INVALID_TEXTURE;
-	gfx::BufferHandle buffer = gfx::INVALID_BUFFER;
+	gfx::BufferHandle gpuBuffer = gfx::INVALID_BUFFER;
+	gfx::BufferHandle cpuBuffer = gfx::INVALID_BUFFER;
 };
 
 class AsynchronousLoader
@@ -25,6 +26,12 @@ public:
 	void Update();
 
 	void RequestTextureData(const std::string& filename, gfx::TextureHandle textureHandle);
+
+	void RequestTextureCopy(void* data, uint32_t sizeInBytes, gfx::TextureHandle texture);
+
+	void RequestBufferUpload(void* data, uint32_t sizeInBytes, gfx::BufferHandle buffer);
+
+	void RequestBufferCopy(gfx::BufferHandle src, gfx::BufferHandle);
 
 	void Shutdown();
 private:

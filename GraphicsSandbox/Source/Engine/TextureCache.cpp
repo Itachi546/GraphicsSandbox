@@ -55,8 +55,7 @@ namespace TextureCache
 		std::vector<uint8_t> pixels(width * height * 4);
 		std::fill(pixels.begin(), pixels.end(), 255);
 		gfx::TextureHandle texture = CreateTexture(width, height, 4, false);
-		gfx::GetDevice()->CopyTexture(texture, pixels.data(), (uint32_t)(pixels.size() * sizeof(uint8_t)));
-		//return CreateTexture(pixels.data(), width, height, 4, false);
+		gAsyncLoader->RequestTextureCopy(pixels.data(), (uint32_t)(pixels.size() * sizeof(uint8_t)), texture);
 		return texture;
 	}
 	

@@ -50,10 +50,10 @@ namespace gfx
 
 		void CopyToSwapchain(CommandList* commandList, TextureHandle texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
 
-		void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) override;
+		void CopyToCPUBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) override;
 		void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0)                override;
-		void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) override;
-		void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
+		void CopyTexture(TextureHandle dst, BufferHandle src, uint32_t bufferOffset,FenceHandle fence = INVALID_FENCE) override;
+		//void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) override;
 		void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)          override;
 		void AddTextureToUpdate(TextureHandle texture) override;
 
@@ -167,6 +167,7 @@ namespace gfx
 
 		uint32_t mainQueueIndex_ = VK_QUEUE_FAMILY_IGNORED;
 		uint32_t transferQueueIndex_ = VK_QUEUE_FAMILY_IGNORED;
+		bool mUnifiedTransferGraphicsQueue = true;
 
 		struct CommandQueue
 		{

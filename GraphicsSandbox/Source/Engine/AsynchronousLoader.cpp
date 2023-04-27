@@ -18,6 +18,7 @@ void AsynchronousLoader::Initialize(gfx::GraphicsDevice* device, enki::TaskSched
 	mStagingBuffer = mDevice->CreateBuffer(&bufferDesc);
 
 	mTransferFence = mDevice->CreateFence();
+	mStagingBufferOffset = 0;
 }
 
 void AsynchronousLoader::Update()
@@ -43,7 +44,11 @@ void AsynchronousLoader::Update()
 		if (uploadRequest.texture.handle != gfx::K_INVALID_RESOURCE_HANDLE)
 		{
 			// Process texture upload
-			mDevice->CopyTexture(uploadRequest.texture, uploadRequest.data, uploadRequest.sizeInBytes, mTransferFence);
+			uint32_t dataSize = uploadRequest.sizeInBytes;
+			uint32_t bufferOffset = static_cast<uint32_t>(std::atomic_fetch_add(&mStagingBufferOffset, dataSize));
+
+			mDevice->CopyToCPUBuffer(mStagingBuffer, uploadRequest.data, bufferOffset, dataSize);
+			mDevice->CopyTexture(uploadRequest.texture, mStagingBuffer, bufferOffset, mTransferFence);
 			mTextureReady = uploadRequest.texture;
 		}
 	}
@@ -70,12 +75,35 @@ void AsynchronousLoader::Update()
 			uploadRequest.data = pixels;
 			uploadRequest.sizeInBytes = width * height * nChannel * sizeof(uint8_t);
 			uploadRequest.texture = loadRequest.texture;
-			uploadRequest.buffer = gfx::INVALID_BUFFER;
+			uploadRequest.cpuBuffer = gfx::INVALID_BUFFER;
 			mUploadRequest.push_back(uploadRequest);
 		}
 		Logger::Info("Reading file: " + filename + " took " + std::to_string(timer.elapsedSeconds()) + 's');
 	}
+
+	mStagingBufferOffset = 0;
 }
+
+void AsynchronousLoader::RequestTextureCopy(void* data, uint32_t sizeInBytes, gfx::TextureHandle texture)
+{
+	UploadRequest uploadRequest;
+	uploadRequest.sizeInBytes = sizeInBytes;
+	uploadRequest.data = data;
+	uploadRequest.cpuBuffer = gfx::INVALID_BUFFER;
+	uploadRequest.texture = texture;
+	uploadRequest.gpuBuffer = gfx::INVALID_BUFFER;
+}
+
+void AsynchronousLoader::RequestBufferUpload(void* data, uint32_t sizeInByte, gfx::BufferHandle buffer)
+{
+	UploadRequest uploadRequest;
+	uploadRequest.sizeInBytes = sizeInByte;
+	uploadRequest.data = data;
+	uploadRequest.cpuBuffer = buffer;
+	uploadRequest.texture = gfx::INVALID_TEXTURE;
+	uploadRequest.gpuBuffer = gfx::INVALID_BUFFER;
+}
+
 
 void AsynchronousLoader::RequestTextureData(const std::string& filename, gfx::TextureHandle textureHandle)
 {
@@ -84,6 +112,16 @@ void AsynchronousLoader::RequestTextureData(const std::string& filename, gfx::Te
 	request.path = filename;
 	request.buffer = gfx::INVALID_BUFFER;
 	mFileLoadRequest.push_back(request);
+}
+
+
+void AsynchronousLoader::RequestBufferCopy(gfx::BufferHandle src, gfx::BufferHandle dst)
+{
+	UploadRequest uploadRequest;
+	uploadRequest.data = nullptr;
+	uploadRequest.cpuBuffer = src;
+	uploadRequest.texture = gfx::INVALID_TEXTURE;
+	uploadRequest.gpuBuffer = dst;
 }
 
 void AsynchronousLoader::Shutdown()

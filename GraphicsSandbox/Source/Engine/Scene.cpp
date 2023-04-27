@@ -547,8 +547,9 @@ ecs::Entity Scene::CreateMesh(const char* file)
 	stagingMeshData.indexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
 	mAllocatedBuffers.push_back(stagingMeshData.indexBuffer);
 
-	gfxDevice->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize);
-	gfxDevice->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize);
+	gfxDevice->CopyToCPUBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize);
+	gfxDevice->CopyToCPUBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize);
+	//mAsyncLoader.RequestBufferUpload();
 	return TraverseNode(0, ecs::INVALID_ENTITY, stagingMeshData);
 }
 
@@ -722,35 +723,35 @@ void Scene::InitializePrimitiveMeshes()
 		MeshRenderer* cubeMesh = mComponentManager->GetComponent<MeshRenderer>(mCube);
 		uint32_t vertexOffset = 0;
 		uint32_t vertexSize = static_cast<uint32_t>(cubeMesh->vertices->size() * sizeof(Vertex));
-		device->CopyToBuffer(vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize);
+		device->CopyToCPUBuffer(vertexBuffer, cubeMesh->vertices->data(), vertexOffset, vertexSize);
 		cubeMesh->vertexBuffer = { vertexBuffer, vertexOffset, vertexSize };
 		vertexOffset += vertexSize;
 
 		uint32_t indexOffset = 0;
 		uint32_t indexSize = static_cast<uint32_t>(cubeMesh->indices->size() * sizeof(uint32_t));
-		device->CopyToBuffer(indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize);
+		device->CopyToCPUBuffer(indexBuffer, cubeMesh->indices->data(), indexOffset, indexSize);
 		cubeMesh->indexBuffer = { indexBuffer, indexOffset, indexSize };
 		indexOffset += indexSize;
 
 		MeshRenderer* sphereMesh = mComponentManager->GetComponent<MeshRenderer>(mSphere);
 		vertexSize = static_cast<uint32_t>(sphereMesh->vertices->size() * sizeof(Vertex));
-		device->CopyToBuffer(vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize);
+		device->CopyToCPUBuffer(vertexBuffer, sphereMesh->vertices->data(), vertexOffset, vertexSize);
 		sphereMesh->vertexBuffer = { vertexBuffer, vertexOffset, vertexSize };
 		vertexOffset += vertexSize;
 
 		indexSize = static_cast<uint32_t>(sphereMesh->indices->size() * sizeof(uint32_t));
-		device->CopyToBuffer(indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize);
+		device->CopyToCPUBuffer(indexBuffer, sphereMesh->indices->data(), indexOffset, indexSize);
 		sphereMesh->indexBuffer = { indexBuffer, indexOffset, indexSize };
 		indexOffset += indexSize;
 
 
 		MeshRenderer* planeMesh = mComponentManager->GetComponent<MeshRenderer>(mPlane);
 		vertexSize = static_cast<uint32_t>(planeMesh->vertices->size() * sizeof(Vertex));
-		device->CopyToBuffer(vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize);
+		device->CopyToCPUBuffer(vertexBuffer, planeMesh->vertices->data(), vertexOffset, vertexSize);
 		planeMesh->vertexBuffer = { vertexBuffer, vertexOffset, vertexSize };
 
 		indexSize = static_cast<uint32_t>(planeMesh->indices->size() * sizeof(uint32_t));
-		device->CopyToBuffer(indexBuffer, planeMesh->indices->data(), indexOffset, indexSize);
+		device->CopyToCPUBuffer(indexBuffer, planeMesh->indices->data(), indexOffset, indexSize);
 		planeMesh->indexBuffer = { indexBuffer, indexOffset, indexSize };
 	}
 }

@@ -113,7 +113,7 @@ void Renderer::Update(float dt)
 	uint32_t nLight = static_cast<uint32_t>(lights.size());
 	mGlobalUniformData.nLight = nLight;
 	//uint32_t uniformDataSize = sizeof(glm::mat4) * 3 + sizeof(float) * 4 + sizeof(int) + nLight * sizeof(LightData);
-	mDevice->CopyToBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
+	mDevice->CopyToCPUBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
 }
 
 
@@ -405,7 +405,7 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 		}
 
 		uint32_t materialCount = (uint32_t)materials.size();
-		mDevice->CopyToBuffer(mMaterialBuffer, materials.data(), offset * sizeof(MaterialComponent), materialCount * sizeof(MaterialComponent));
+		mDevice->CopyToCPUBuffer(mMaterialBuffer, materials.data(), offset * sizeof(MaterialComponent), materialCount * sizeof(MaterialComponent));
 
 		auto& envMap = mScene->GetEnvironmentMap();
 
@@ -445,7 +445,7 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 
 		assert(skinnedMatrix.size() <= MAX_BONE_COUNT);
 		uint32_t dataSize = static_cast<uint32_t>(skinnedMatrix.size()) * sizeof(glm::mat4);
-		mDevice->CopyToBuffer(mSkinnedMatrixBuffer, skinnedMatrix.data(), skinnedBufferOffset, dataSize);
+		mDevice->CopyToCPUBuffer(mSkinnedMatrixBuffer, skinnedMatrix.data(), skinnedBufferOffset, dataSize);
 
 		// TODO: Define static Descriptor beforehand
 		descriptorInfos[1] = { vb, 0, mDevice->GetBufferSize(vb), gfx::DescriptorType::StorageBuffer };
@@ -521,13 +521,13 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 		for (auto& batch : renderBatch)
 		{
 			uint32_t transformCount = (uint32_t)batch.transforms.size();
-			mDevice->CopyToBuffer(mTransformBuffer, batch.transforms.data(), lastOffset * sizeof(glm::mat4), transformCount * mat4Size);
+			mDevice->CopyToCPUBuffer(mTransformBuffer, batch.transforms.data(), lastOffset * sizeof(glm::mat4), transformCount * mat4Size);
 
 			uint32_t materialCount = (uint32_t)batch.materials.size();
-			mDevice->CopyToBuffer(mMaterialBuffer, batch.materials.data(), lastOffset * sizeof(MaterialComponent), materialCount * materialSize);
+			mDevice->CopyToCPUBuffer(mMaterialBuffer, batch.materials.data(), lastOffset * sizeof(MaterialComponent), materialCount * materialSize);
 
 			uint32_t drawCommandCount = (uint32_t)batch.drawCommands.size();
-			mDevice->CopyToBuffer(mDrawIndirectBuffer, batch.drawCommands.data(), lastOffset * sizeof(gfx::DrawIndirectCommand), drawCommandCount * dicSize);
+			mDevice->CopyToCPUBuffer(mDrawIndirectBuffer, batch.drawCommands.data(), lastOffset * sizeof(gfx::DrawIndirectCommand), drawCommandCount * dicSize);
 
 			lastOffset += (uint32_t)batch.transforms.size();
 		}

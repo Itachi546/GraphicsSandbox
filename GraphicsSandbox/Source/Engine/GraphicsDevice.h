@@ -21,10 +21,10 @@ namespace gfx
 		virtual FenceHandle CreateFence() = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
-		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
+		virtual void CopyToCPUBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
 		virtual void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0) = 0;
-		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
-		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
+		virtual void CopyTexture(TextureHandle dst, BufferHandle src, uint32_t bufferOffset, FenceHandle fence = INVALID_FENCE) = 0;
+		//virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence = INVALID_FENCE, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
 		virtual void AddTextureToUpdate(TextureHandle texture) = 0;
 		
 		virtual void* GetMappedDataPtr(BufferHandle buffer) = 0;

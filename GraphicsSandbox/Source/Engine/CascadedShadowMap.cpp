@@ -151,7 +151,7 @@ void CascadedShadowMap::Update(Camera* camera, const glm::vec3& lightDirection)
 
 	// Copy data to uniform buffer
 	mCascadeData.shadowDims = glm::vec4(kShadowDims, kShadowDims, kNumCascades, kNumCascades);
-	mDevice->CopyToBuffer(mBuffer, &mCascadeData, 0, sizeof(CascadeData));
+	mDevice->CopyToCPUBuffer(mBuffer, &mCascadeData, 0, sizeof(CascadeData));
 }
 
 void CascadedShadowMap::BeginRender(gfx::CommandList* commandList)

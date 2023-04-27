@@ -1080,18 +1080,25 @@ namespace gfx {
         if (mValidationMode == ValidationMode::Enabled)
         {
             requiredLayers.push_back("VK_LAYER_KHRONOS_validation");
+            requiredLayers.push_back("VK_LAYER_GOOGLE_threading");
+            requiredLayers.push_back("VK_LAYER_LUNARG_standard_validation");
         }
 
         for (auto required : requiredLayers)
         {
+            bool found = false;
             for (auto& layer : availableLayers)
             {
                 if (strcmp(layer.layerName, required) == 0)
                 {
                     outLayers.push_back(required);
+                    Logger::Info("Instance Layer found: " + std::string(layer.layerName));
+                    found = true;
                     break;
                 }
             }
+            if (!found)
+                Logger::Warn("Instance Layer not found: " + std::string(required));
         }
     }
 
@@ -1296,8 +1303,11 @@ namespace gfx {
         if (mainQueueIndex_ == transferQueueIndex_)
             Logger::Info("Same Queue Family Index for Transfer and Graphics: " + std::to_string(mainQueueIndex_));
         else
+        {
             Logger::Info("Different Queue Family Index for Transfer(" + std::to_string(transferQueueIndex_) +
-                        ") and Graphics(" + std::to_string(mainQueueIndex_) + ")");
+                ") and Graphics(" + std::to_string(mainQueueIndex_) + ")");
+            mUnifiedTransferGraphicsQueue = false;
+        }
 
         // TODO Check presentation support at the time of choosing physical device
         if (!CheckPhysicalDevicePresentationSupport(instance_, physicalDevice_, mainQueueIndex_))
@@ -1313,7 +1323,7 @@ namespace gfx {
         queueCreateInfos[0].queueCount = 1;
         queueCreateInfos[0].queueFamilyIndex = mainQueueIndex_;
 
-        if (transferQueueIndex_ != VK_QUEUE_FAMILY_IGNORED)
+        if (!mUnifiedTransferGraphicsQueue)
         {
             queueCreateInfos[1] = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
             queueCreateInfos[1].pQueuePriorities = &queuePriorities;
@@ -1353,7 +1363,7 @@ namespace gfx {
 
         // Create logical device
         VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-        deviceCreateInfo.queueCreateInfoCount = transferQueueIndex_ == VK_QUEUE_FAMILY_IGNORED ? 1 : 2;
+        deviceCreateInfo.queueCreateInfoCount = mUnifiedTransferGraphicsQueue ? 1 : 2;
         deviceCreateInfo.pQueueCreateInfos = queueCreateInfos;
         deviceCreateInfo.pEnabledFeatures = nullptr;
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
@@ -2314,7 +2324,7 @@ namespace gfx {
         destroyReleasedResources();
     }
 
-    void VulkanGraphicsDevice::CopyToBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)
+    void VulkanGraphicsDevice::CopyToCPUBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)
     {
         VulkanBuffer* buffer = buffers.AccessResource(handle.handle);
         if (data == nullptr)
@@ -2343,18 +2353,9 @@ namespace gfx {
             uint8_t* dstLoc = reinterpret_cast<uint8_t*>(ptr) + offset;
             std::memcpy(dstLoc, data, size);
         }
-        else
-        {
-            GPUBufferDesc bufferDesc = {};
-            bufferDesc.bindFlag = gfx::BindFlag::None;
-            bufferDesc.usage = gfx::Usage::Upload;
-            bufferDesc.size = size;
-            BufferHandle stagingBuffer = CreateBuffer(&bufferDesc);
-
-            VulkanBuffer* vkBuffer = buffers.AccessResource(stagingBuffer.handle);
-            std::memcpy(vkBuffer->mappedDataPtr, data, size);
-            CopyBuffer(handle, stagingBuffer, offset);
-			//Destroy(stagingBuffer);
+        else {
+            assert(0);
+            Logger::Warn("Buffer is not mapped: " + std::to_string(handle.handle));
         }
     }
 
@@ -2363,7 +2364,7 @@ namespace gfx {
         VulkanBuffer* srcBuffer = buffers.AccessResource(src.handle);
         VulkanBuffer* dstBuffer = buffers.AccessResource(dst.handle);
 
-        uint32_t copySize = static_cast<uint32_t>(std::min(dstBuffer->allocation->GetSize(), srcBuffer->allocation->GetSize()));
+        uint32_t copySize = static_cast<uint32_t>(std::min(dstBuffer->desc.size, srcBuffer->desc.size));
         if (dstBuffer->mappedDataPtr && srcBuffer->mappedDataPtr)
             std::memcpy(dstBuffer->mappedDataPtr, srcBuffer->mappedDataPtr, copySize);
         else 
@@ -2388,7 +2389,7 @@ namespace gfx {
         }
     }
 
-    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barriers, FenceHandle fence, uint32_t arrayLevel, uint32_t mipLevel)
+    void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, BufferHandle src, uint32_t bufferOffset, FenceHandle fence)
     {
         VulkanBuffer* from = buffers.AccessResource(src.handle);
         VulkanTexture* to = textures.AccessResource(dst.handle);
@@ -2409,43 +2410,44 @@ namespace gfx {
         region.bufferRowLength = 0;
         region.bufferImageHeight = 0;
         region.imageSubresource.aspectMask = to->imageAspect;
-        region.imageSubresource.baseArrayLayer = arrayLevel;
-        region.imageSubresource.mipLevel = mipLevel;
+        region.imageSubresource.baseArrayLayer = to->arrayLayers;
+        region.imageSubresource.mipLevel = to->mipLevels;
         region.imageSubresource.layerCount = 1;
 
         region.imageOffset = { 0, 0, 0 };
         region.imageExtent = {to->width, to->height, to->depth};
 
         // Check Image Layout
-
-        if (barriers)
+        if (to->layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
         {
-            assert(barriers->barrierInfoCount == 1);
             VkImageMemoryBarrier barrier = CreateImageBarrier(to->image,
 				to->imageAspect,
-                _ConvertAccessFlags(barriers->barrierInfo->srcAccessMask),
-                _ConvertAccessFlags(barriers->barrierInfo->dstAccessMask),
+                0,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
                 to->layout,
-                _ConvertLayout(barriers->barrierInfo->newLayout),
-                barriers->barrierInfo->baseMipLevel,
-                barriers->barrierInfo->baseArrayLevel,
-                barriers->barrierInfo->mipCount,
-                barriers->barrierInfo->layerCount);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                0,
+                to->arrayLayers,
+                0,
+                to->mipLevels);
 
             vkCmdPipelineBarrier(commandBuffer,
-                _ConvertPipelineStageFlags(barriers->srcStage),
-                _ConvertPipelineStageFlags(barriers->dstStage),
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
                 0, 0, 0, 0, 0, 1, &barrier);
             to->layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         }
 
         vkCmdCopyBufferToImage(commandBuffer, from->buffer, to->image, to->layout, 1, &region);
 
-		// Post transfer memory barrier
-        VkImageMemoryBarrier postTransferBarrier = CreateImageBarrier(to->image, to->imageAspect, VK_ACCESS_TRANSFER_WRITE_BIT, 0, to->layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 0);
-        postTransferBarrier.srcQueueFamilyIndex = transferQueueIndex_;
-        postTransferBarrier.dstQueueFamilyIndex = mainQueueIndex_;
-        vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &postTransferBarrier);
+        if (!mUnifiedTransferGraphicsQueue)
+        {
+            // Post transfer memory barrier
+            VkImageMemoryBarrier postTransferBarrier = CreateImageBarrier(to->image, to->imageAspect, VK_ACCESS_TRANSFER_WRITE_BIT, 0, to->layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, 0);
+            postTransferBarrier.srcQueueFamilyIndex = transferQueueIndex_;
+            postTransferBarrier.dstQueueFamilyIndex = mainQueueIndex_;
+            vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &postTransferBarrier);
+        }
 
         VK_CHECK(vkEndCommandBuffer(commandBuffer));
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -2458,7 +2460,7 @@ namespace gfx {
 
         VK_CHECK(vkQueueSubmit(transferQueue_, 1, &submitInfo, vkFence));
     }
-
+/*
     void VulkanGraphicsDevice::CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, FenceHandle fence, uint32_t arrayLevel, uint32_t mipLevel, bool generateMipMap)
     {
         VulkanTexture* dstTexture = textures.AccessResource(dst.handle);
@@ -2489,7 +2491,7 @@ namespace gfx {
 			GenerateMipmap(dst, dstTexture->mipLevels);
 		//Destroy(stagingBuffer);
     }
-
+    */
     void VulkanGraphicsDevice::GenerateMipmap(TextureHandle src, uint32_t mipCount)
     {
         uint32_t currentIndex = swapchain_->currentImageIndex;

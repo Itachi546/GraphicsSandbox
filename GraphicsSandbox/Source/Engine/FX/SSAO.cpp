@@ -75,7 +75,7 @@ namespace fx
 			desc.size = kernelDataSize;
 			desc.usage = gfx::Usage::Upload;
 			mKernelBuffer = mDevice->CreateBuffer(&desc);
-			mDevice->CopyToBuffer(mKernelBuffer, sampleKernel.data(), 0, kernelDataSize);
+			mDevice->CopyToCPUBuffer(mKernelBuffer, sampleKernel.data(), 0, kernelDataSize);
 		}
 
 		// Generate rotation vector in tangent space
@@ -100,7 +100,7 @@ namespace fx
 			mNoiseTexture = mDevice->CreateTexture(&textureDesc);
 
 			uint32_t imageDataSize = static_cast<uint32_t>(sizeof(glm::vec3) * sampleRotation.size());
-			mDevice->CopyTexture(mNoiseTexture, sampleRotation.data(), imageDataSize);
+			//mDevice->CopyTexture(mNoiseTexture, sampleRotation.data(), imageDataSize);
 		}
 
 		mPipeline = gfx::CreateComputePipeline(StringConstants::SSAO_COMP_PATH, mDevice);

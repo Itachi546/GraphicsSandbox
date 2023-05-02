@@ -41,14 +41,12 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	depthAttachment.width = desc.width;
 	depthAttachment.height = desc.height;
 
-	gfx::Attachment attachments[3] = 
+	std::vector<gfx::Attachment> attachments{
 	{
 		gfx::Attachment{0, colorAttachment},
 		gfx::Attachment{2, depthAttachment},
 		gfx::Attachment{1, colorAttachment}
-	};
-
-	desc.attachmentCount = static_cast<uint32_t>(std::size(attachments));
+	} };
 	desc.attachments = attachments;
 	desc.hasDepthAttachment = true;
 	mHdrRenderPass = mDevice->CreateRenderPass(&desc);

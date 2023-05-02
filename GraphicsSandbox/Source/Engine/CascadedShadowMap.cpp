@@ -22,14 +22,14 @@ CascadedShadowMap::CascadedShadowMap() : mDevice(gfx::GetDevice())
 		depthAttachment.width = kShadowDims;
 		depthAttachment.height = kShadowDims;
 		depthAttachment.arrayLayers = kNumCascades;
+		depthAttachment.mipLevels = 1;
 		depthAttachment.imageViewType = gfx::ImageViewType::IV2DArray;
 		depthAttachment.samplerInfo.wrapMode = gfx::TextureWrapMode::ClampToBorder;
 		depthAttachment.samplerInfo.enableBorder = true;
 
-		gfx::Attachment attachments[] = {
+		std::vector<gfx::Attachment> attachments = {
 			{0, depthAttachment},
 		};
-		renderPassDesc.attachmentCount = (uint32_t)std::size(attachments);
 		renderPassDesc.attachments = attachments;
 		renderPassDesc.hasDepthAttachment = true;
 		mRenderPass = mDevice->CreateRenderPass(&renderPassDesc);

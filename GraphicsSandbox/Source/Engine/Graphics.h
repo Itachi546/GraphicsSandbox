@@ -344,9 +344,7 @@ namespace gfx
 
 	struct RenderPassDesc
 	{
-		uint32_t attachmentCount;
-		Attachment* attachments;
-
+		std::vector<Attachment> attachments;
 		uint32_t width;
 		uint32_t height;
 		bool hasDepthAttachment = false;

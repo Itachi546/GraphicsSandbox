@@ -1477,12 +1477,13 @@ namespace gfx {
 
     VkRenderPass VulkanGraphicsDevice::createRenderPass(const RenderPassDesc* desc)
     {
-        std::vector<VkAttachmentDescription> attachments(desc->attachmentCount);
-        std::vector<VkAttachmentReference> attachmentRef(desc->attachmentCount);
+        uint32_t attachmentCount = (uint32_t)desc->attachments.size();
+        std::vector<VkAttachmentDescription> attachments(attachmentCount);
+        std::vector<VkAttachmentReference> attachmentRef(attachmentCount);
 
         bool hasDepthAttachment = false;
         uint32_t depthAttachmentIndex = 0;
-        for (uint32_t i = 0; i < desc->attachmentCount; ++i)
+        for (uint32_t i = 0; i < attachmentCount; ++i)
         {
             const Attachment& attachment = desc->attachments[i];
             VkFormat format = _ConvertFormat(attachment.desc.format);
@@ -1517,7 +1518,7 @@ namespace gfx {
         }
 
         VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-        createInfo.attachmentCount = desc->attachmentCount;
+        createInfo.attachmentCount = attachmentCount;
         createInfo.pAttachments = attachments.data();
 
         VkSubpassDescription subpassDescription = {};
@@ -1554,7 +1555,7 @@ namespace gfx {
         auto rp = renderPasses.AccessResource(renderPass.handle);
         FramebufferHandle fbHandle = { framebuffers.ObtainResource() };
         VulkanFramebuffer* vkFramebuffer = framebuffers.AccessResource(fbHandle.handle);
-		uint32_t attachmentCount = attachmentCount = rp->desc.attachmentCount;
+		uint32_t attachmentCount = attachmentCount = (uint32_t)rp->desc.attachments.size();
 
         uint32_t width = rp->desc.width;
 		uint32_t height = rp->desc.height;
@@ -1562,7 +1563,7 @@ namespace gfx {
         std::vector<VkImageView> imageViews(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
         {
-            Attachment* attachment = (rp->desc.attachments + i);
+            Attachment* attachment = &rp->desc.attachments[i];
             uint32_t index = attachment->index;
             attachment->desc.width = width;
             attachment->desc.height = height;
@@ -2018,7 +2019,7 @@ namespace gfx {
         uint32_t width = swapchain_->desc.width;
         uint32_t height = swapchain_->desc.height;
 
-        uint32_t attachmentCount = vkRenderpass->desc.attachmentCount;
+        uint32_t attachmentCount = (uint32_t)vkRenderpass->desc.attachments.size();
         if (framebuffer.handle != K_INVALID_RESOURCE_HANDLE)
         {
 

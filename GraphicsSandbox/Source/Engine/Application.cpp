@@ -172,9 +172,8 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 	depthAttachment.imageAspect = gfx::ImageAspect::Depth;
 	depthAttachment.width = props.width;
 	depthAttachment.height = props.height;
-	gfx::Attachment attachments[] = { {0, colorAttachment}, {1, depthAttachment, true}};
 
-	renderPassDesc.attachmentCount = (uint32_t)std::size(attachments);
+	std::vector<gfx::Attachment> attachments{ {0, colorAttachment}, {1, depthAttachment, true} };
 	renderPassDesc.attachments = attachments;
 	renderPassDesc.hasDepthAttachment = false;
 	mSwapchainRP = mDevice->CreateRenderPass(&renderPassDesc);

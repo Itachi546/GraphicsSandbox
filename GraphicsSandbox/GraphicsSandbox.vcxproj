@@ -186,6 +186,7 @@
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
+    <ClInclude Include="Source\Engine\FrameGraph.h" />
     <ClInclude Include="Source\Engine\FX\Bloom.h" />
     <ClInclude Include="Source\Engine\FX\SSAO.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
@@ -242,6 +243,7 @@
     <ClCompile Include="Source\Engine\Camera.cpp" />
     <ClCompile Include="Source\Engine\CascadedShadowMap.cpp" />
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
+    <ClCompile Include="Source\Engine\FrameGraph.cpp" />
     <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
     <ClCompile Include="Source\Engine\FX\SSAO.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />

@@ -39,6 +39,10 @@ static void AddToLogHistory(const LogEntry& entry)
 static void Print(std::string_view msg, const char* colorCode)
 {
 	fprintf(stdout, "%s%s\n", colorCode, msg.data());
+#ifdef _MSC_VER
+	OutputDebugStringA(msg.data());
+	OutputDebugStringA("\n");
+#endif
 }
 
 void Logger::Initialize()

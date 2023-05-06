@@ -391,5 +391,6 @@
     </None>
     <None Include="packages.config" />
     <None Include="..\Assets\Shaders\material.glsl" />
+    <None Include="..\Assets\graph.json" />
   </ItemGroup>
 </Project>

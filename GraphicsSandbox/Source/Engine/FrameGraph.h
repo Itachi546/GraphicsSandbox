@@ -97,6 +97,23 @@ namespace gfx
 		FrameGraphResourceHandle CreateNodeInput(const FrameGraphResourceCreation& creation);
 		FrameGraphResourceHandle CreateNodeOutput(const FrameGraphResourceCreation& creation, FrameGraphNodeHandle producer);
 
+		FrameGraphNode* AccessNode(FrameGraphNodeHandle handle)
+		{
+			return nodePools.AccessResource(handle.index);
+		}
+
+		FrameGraphResource* AccessResource(FrameGraphResourceHandle handle)
+		{
+			return resourcePools.AccessResource(handle.index);
+		}
+
+		FrameGraphResource* AccessResource(std::string name) {
+			auto found = resourceCache.find(name);
+			if (found != resourceCache.end())
+				return AccessResource(FrameGraphResourceHandle{found->second});
+			return nullptr;
+		}
+
 		gfx::GraphicsDevice* device;
 		static const uint32_t kMaxRenderpass = 128;
 		static const uint32_t kMaxFramebuffer = 128;
@@ -122,8 +139,8 @@ namespace gfx
 		std::string name;
 
 	private:
-		//void ComputeEdges(FrameGraphNode* node, uint32_t index);
-		void TopologicalSort(std::vector<FrameGraphNodeHandle> inputs, std::vector<FrameGraphNodeHandle>& output);
+		void ComputeEdges(FrameGraphNode* node, uint32_t index);
+		std::vector<FrameGraphNodeHandle> TopologicalSort(std::vector<FrameGraphNodeHandle> inputs);
 	};
 
 }

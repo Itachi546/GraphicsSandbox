@@ -282,6 +282,7 @@
     <CustomBuild Include="..\Assets\Shaders\animated.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <None Include="..\Assets\graph.json" />
     <None Include="..\Assets\Shaders\bindings.glsl" />
     <CustomBuild Include="..\Assets\Shaders\cubemap.frag.glsl">
       <FileType>Document</FileType>

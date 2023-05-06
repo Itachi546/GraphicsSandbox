@@ -62,10 +62,10 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mGlobalUniformData.enabledNormalMapping = true;
 	mGlobalUniformData.enableCascadeDebug = 0;
 
-	mFrameGraph = std::make_unique<gfx::FrameGraph>();
-	mFrameGraph->Init(mDevice);
-	mFrameGraph->Parse("Assets/graph.json");
-	mFrameGraph->Compile();
+	mFrameGraphBuilder.Init(mDevice);
+	mFrameGraph.Init(&mFrameGraphBuilder);
+	mFrameGraph.Parse("Assets/graph.json");
+	mFrameGraph.Compile();
 }
 
 // TODO: temp width and height variable
@@ -539,7 +539,8 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 
 void Renderer::Shutdown()
 {
-	mFrameGraph->Shutdown();
+	mFrameGraphBuilder.Shutdown();
+	mFrameGraph.Shutdown();
 	mDevice->Destroy(mMeshPipeline);
 	mDevice->Destroy(mSkinnedMeshPipeline);
 	mDevice->Destroy(mCubemapPipeline);

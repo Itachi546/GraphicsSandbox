@@ -147,44 +147,38 @@ namespace gfx {
 		for (std::size_t i = 0; i < passes.size(); ++i)
 		{
 			json pass = passes[i];
-			FrameGraphNodeCreation node;
-			node.name = pass.value("name", "");
-			node.enabled = pass.value("enabled", true);
+			FrameGraphNodeCreation nodeCreation;
+			nodeCreation.name = pass.value("name", "");
+			nodeCreation.enabled = pass.value("enabled", true);
 
 			json inputs = pass["inputs"];
 			json outputs = pass["outputs"];
 
-			node.inputs.resize(inputs.size());
-			node.outputs.resize(outputs.size());
+			nodeCreation.inputs.resize(inputs.size());
+			nodeCreation.outputs.resize(outputs.size());
 
 			// Parse Inputs for the pass
-			Logger::Info("Pass: " + node.name);
-
-			Logger::Info("Parsing Pass Inputs");
 			for (std::size_t j = 0; j < inputs.size(); ++j)
 			{
 				json passInput = inputs[j];
-				FrameGraphResourceCreation& resource = node.inputs[j];
+				FrameGraphResourceCreation& resource = nodeCreation.inputs[j];
 				std::string name = passInput.value("name", "");
 				resource.name = name;
 
 				std::string resourceType = passInput.value("type", "");
 				resource.type = GetResourceTypeFromString(resourceType);
-				Logger::Info("Name: " + name + " Type: " + resourceType);
 			}
 
-			Logger::Info("Parsing Pass Outputs");
 			for (std::size_t j = 0; j < outputs.size(); ++j)
 			{
 				json passOutput = outputs[j];
-				FrameGraphResourceCreation& resource = node.outputs[j];
+				FrameGraphResourceCreation& resource = nodeCreation.outputs[j];
 
 				std::string name = passOutput.value("name", "");;
 				resource.name = name;
 
 				std::string resourceType = passOutput.value("type", "");
 				resource.type = GetResourceTypeFromString(resourceType);
-				Logger::Info("Name: " + name + " Type: " + resourceType);
 				switch (resource.type)
 				{
 				case FrameGraphResourceType::Attachment:
@@ -201,40 +195,116 @@ namespace gfx {
 					break;
 				}
 			}
+			nodeHandles.push_back(builder->CreateNode(nodeCreation));
 		}
 	}
 
 	void FrameGraph::Compile()
 	{
-		/*
 		// Initialize edges
-		for (std::size_t i = 0; nodeHandles.size(); ++i)
+		for (std::size_t i = 0; i < nodeHandles.size(); ++i)
 		{
-			FrameGraphNodeCreation* node = nodePools.AccessResource(nodeHandles[i].index);
+			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
 			node->edges.clear();
 		}
 
 		for (std::size_t i = 0; i < nodeHandles.size(); ++i)
 		{
-			FrameGraphNodeCreation* node = nodePools.AccessResource(nodeHandles[i].index);
+			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
 			if (!node->enabled) continue;
-			ComputeEdges(node, i);
+			ComputeEdges(node, (uint32_t)i);
 		}
-		*/
+
+		nodeHandles = TopologicalSort(nodeHandles);
 	}
 
 	void FrameGraph::Shutdown()
 	{
 	}
 
-	/*
 	void FrameGraph::ComputeEdges(FrameGraphNode* node, uint32_t index)
 	{
+		for (uint32_t i = 0; i < node->inputs.size(); ++i)
+		{
+			// Access the input resource of this node
+			FrameGraphResource* resource = builder->AccessResource(node->inputs[i]);
 
+			// Access the output resource from the global output cache
+			FrameGraphResource* outputResource = builder->AccessResource(resource->name);
+
+			if (resource == nullptr || outputResource == nullptr)
+			{
+				Logger::Warn("Requested resource is not produced by any other node");
+				continue;
+			}
+
+			resource->producer = outputResource->producer;
+			resource->info = outputResource->info;
+			resource->outputHandle = outputResource->outputHandle;
+
+			FrameGraphNode* parent = builder->AccessNode(outputResource->producer);
+			parent->edges.push_back(nodeHandles[index]);
+		}
 	}
-	*/
-	void FrameGraph::TopologicalSort(std::vector<FrameGraphNodeHandle> inputs, std::vector<FrameGraphNodeHandle>& output)
+
+	std::vector<FrameGraphNodeHandle> FrameGraph::TopologicalSort(std::vector<FrameGraphNodeHandle> inputs)
 	{
-		std::stack<std::size_t> visitedNodes;
+		/*
+		* Randomly choose an unvisited node
+		* Visit all the nodes in the depth first order
+		* Push the node in final list on every recursive call
+		*/
+		std::vector<uint8_t> visitedNodes(inputs.size(), 0);
+		std::stack<FrameGraphNodeHandle> stack;
+		std::vector<FrameGraphNodeHandle> sortedNodes;
+
+		const uint8_t kVisited = 1;
+		const uint8_t kPushed = 2;
+
+		for (uint32_t i = 0; i < inputs.size(); ++i)
+		{
+			FrameGraphNode* currentNode = builder->AccessNode(inputs[i]);
+			if (!currentNode->enabled)
+				continue;
+
+			stack.push(inputs[i]);
+
+			while (stack.size() > 0)
+			{
+				FrameGraphNodeHandle nodeHandle = stack.top();
+
+				// If node is already pushed we skip it
+				if (visitedNodes[nodeHandle.index] == kPushed)
+				{
+					stack.pop();
+					continue;
+				}
+
+				// If node is visited already we pop it from stack and
+				// add it to sorted node
+				if (visitedNodes[nodeHandle.index] == kVisited)
+				{
+					visitedNodes[nodeHandle.index] = kPushed;
+					sortedNodes.push_back(nodeHandle);
+					stack.pop();
+					continue;
+				}
+
+				// if it is processed for first time we mark it as visited
+				visitedNodes[nodeHandle.index] = kVisited;
+
+				// Push the edges to the stack
+				FrameGraphNode* node = builder->AccessNode(nodeHandle);
+				if (node->edges.size() == 0)
+					continue;
+
+				for (FrameGraphNodeHandle edges : node->edges)
+				{
+					if (visitedNodes[edges.index] != kVisited)
+						stack.push(edges);
+				}
+			}
+		}
+		return sortedNodes;
 	}
 }

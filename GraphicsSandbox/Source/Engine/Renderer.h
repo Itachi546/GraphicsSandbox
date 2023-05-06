@@ -111,7 +111,9 @@ private:
 	const int kMaxEntity = 10'000;
 	std::shared_ptr<fx::Bloom> mBloomFX;
 	std::shared_ptr<CascadedShadowMap> mShadowMap;
-	std::unique_ptr<gfx::FrameGraph> mFrameGraph;
+
+	gfx::FrameGraphBuilder mFrameGraphBuilder;
+	gfx::FrameGraph mFrameGraph;
 
 	gfx::PipelineHandle loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
 	void initializeBuffers();

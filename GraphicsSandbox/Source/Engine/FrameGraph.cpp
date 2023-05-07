@@ -15,6 +15,16 @@ namespace gfx {
 
 	void FrameGraphBuilder::Shutdown()
 	{
+		for (auto& [key, value] : resourceCache)
+		{
+			FrameGraphResource* resource = resourcePools.AccessResource(value);
+			if (resource->type == FrameGraphResourceType::Texture || resource->type == FrameGraphResourceType::Texture)
+				device->Destroy(resource->info.texture.texture);
+			else if (resource->type == FrameGraphResourceType::Buffer)
+				device->Destroy(resource->info.buffer.buffer);
+		}
+
+		resourceCache.clear();
 		nodePools.Shutdown();
 		resourcePools.Shutdown();
 	}
@@ -110,17 +120,28 @@ namespace gfx {
 		return FrameGraphResourceType::Invalid;
 	}
 
-	static Format GetTextureFormat(std::string inputFormat)
+	static void GetTextureFormatAndAspect(std::string inputFormat, Format& format, ImageAspect& aspect)
 	{
 		if (inputFormat == "B8G8R8A8_UNORM")
-			return Format::B8G8R8A8_UNORM;
+		{
+			format = Format::B8G8R8A8_UNORM;
+			aspect = ImageAspect::Color;
+		}
 		else if (inputFormat == "R16G16B16A16_SFLOAT")
-			return Format::R16B16G16A16_SFLOAT;
+		{
+			format = Format::R16B16G16A16_SFLOAT;
+			aspect = ImageAspect::Color;
+		}
 		else if (inputFormat == "D32_SFLOAT")
-			return Format::D32_SFLOAT;
-		else
-			assert(0);
-		return Format::FormatCount;
+		{
+			format = Format::D32_SFLOAT;
+			aspect = ImageAspect::Depth;
+		}
+		else {
+			assert(!"Undefined input format");
+			format = Format::FormatCount;
+			aspect = ImageAspect::Color;
+		}
 	}
 
 	void FrameGraph::Parse(std::string filename)
@@ -187,7 +208,8 @@ namespace gfx {
 					json resolution = passOutput["resolution"];
 					resource.info.texture.width = resolution[0];
 					resource.info.texture.height = resolution[1];
-					resource.info.texture.format = GetTextureFormat(passOutput["format"]);
+					resource.info.texture.depth = 1;
+					GetTextureFormatAndAspect(passOutput["format"], resource.info.texture.format, resource.info.texture.imageAspect);
 					break;
 				}
 				case FrameGraphResourceType::Buffer:
@@ -197,6 +219,11 @@ namespace gfx {
 			}
 			nodeHandles.push_back(builder->CreateNode(nodeCreation));
 		}
+	}
+
+	void FrameGraph::onResize(uint32_t width, uint32_t height)
+	{
+		assert(0);
 	}
 
 	void FrameGraph::Compile()
@@ -216,10 +243,89 @@ namespace gfx {
 		}
 
 		nodeHandles = TopologicalSort(nodeHandles);
+
+		// Allocate all the resources for framegraph
+		// keep track of allocation, deallocation and free texture
+		uint32_t resourceCount = builder->resourcePools.usedIndices;
+		std::vector<FrameGraphNodeHandle> allocations(resourceCount, { K_INVALID_RESOURCE_HANDLE });
+
+		// Iterate through all the nodes and increase the reference of the resource
+		// each time they are taken as input
+		for (std::size_t i = 0; i < nodeHandles.size(); ++i)
+		{
+			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
+			if (!node->enabled) continue;
+
+			for (std::size_t j = 0; j < node->inputs.size(); ++j)
+			{
+				FrameGraphResource* input = builder->AccessResource(node->inputs[j]);
+				FrameGraphResource* resource = builder->AccessResource(input->name);
+				resource->refCount++;
+			}
+		}
+
+		for (std::size_t i = 0; i < nodeHandles.size(); ++i)
+		{
+			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
+			if (!node->enabled) continue;
+
+			for (std::size_t j = 0; j < node->outputs.size(); ++j)
+			{
+				uint32_t resourceIndex = node->outputs[j].index;
+				FrameGraphResource* output = builder->AccessResource(node->outputs[j]);
+				FrameGraphResource* resource = builder->AccessResource(output->name);
+				if (allocations[resourceIndex].index == K_INVALID_RESOURCE_HANDLE)
+				{
+					allocations[resourceIndex] = nodeHandles[i];
+
+					if (resource->type == FrameGraphResourceType::Attachment)
+					{
+						GPUTextureDesc textureDesc;
+						textureDesc.format = resource->info.texture.format;
+						textureDesc.width = resource->info.texture.width;
+						textureDesc.height = resource->info.texture.height;
+						textureDesc.depth = resource->info.texture.depth;
+						textureDesc.imageAspect = resource->info.texture.imageAspect;
+						if(textureDesc.imageAspect == ImageAspect::Depth)
+							textureDesc.bindFlag = BindFlag::DepthStencil | BindFlag::ShaderResource;
+						else
+							textureDesc.bindFlag = BindFlag::RenderTarget | BindFlag::ShaderResource;
+
+						textureDesc.imageType = ImageType::I2D;
+						textureDesc.bCreateSampler = true;
+						textureDesc.mipLevels = 1;
+						textureDesc.arrayLayers = 1;
+
+						TextureHandle handle = builder->device->CreateTexture(&textureDesc);
+						resource->info.texture.texture = handle;
+					}
+				}
+			}
+		}
+
+		for (uint32_t i = 0; i < nodeHandles.size(); ++i)
+		{
+			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
+			if (!node->enabled)
+				continue;
+
+			if (node->renderPass.handle = K_INVALID_RESOURCE_HANDLE)
+				node->renderPass = CreateRenderPass(node);
+			if (node->framebuffer.handle = K_INVALID_RESOURCE_HANDLE)
+				node->framebuffer = CreateFramebuffer(node);
+		}
 	}
 
 	void FrameGraph::Shutdown()
 	{
+		for (uint32_t i = 0; i < nodeHandles.size(); ++i)
+		{
+			FrameGraphNodeHandle handle = nodeHandles[i];
+			FrameGraphNode* node = builder->AccessNode(handle);
+
+			builder->device->Destroy(node->renderPass);
+			builder->device->Destroy(node->framebuffer);
+		}
 	}
 
 	void FrameGraph::ComputeEdges(FrameGraphNode* node, uint32_t index)
@@ -305,6 +411,117 @@ namespace gfx {
 				}
 			}
 		}
-		return sortedNodes;
+		return std::vector<FrameGraphNodeHandle>(sortedNodes.rbegin(), sortedNodes.rend());
+	}
+
+	RenderPassHandle FrameGraph::CreateRenderPass(FrameGraphNode* node)
+	{
+		RenderPassDesc desc;
+		std::vector<Attachment>& attachments = desc.colorAttachments;
+
+		for (uint32_t i = 0; i < node->outputs.size(); ++i)
+		{
+			FrameGraphResource* output = builder->AccessResource(node->outputs[i]);
+			FrameGraphResourceInfo& info = output->info;
+
+			if (output->type == FrameGraphResourceType::Attachment)
+			{
+				Attachment attachment = {};
+				attachment.operation = RenderPassOperation::DontCare;
+				attachment.format = info.texture.format;
+				attachment.imageAspect = info.texture.imageAspect;
+
+				if (output->info.texture.imageAspect == ImageAspect::Depth)
+				{
+					desc.hasDepthAttachment = true;
+					desc.depthAttachment = attachment;
+				}
+				else
+					attachments.push_back(attachment);
+			}
+		}
+
+		for (uint32_t i = 0; i < node->inputs.size(); ++i) {
+			FrameGraphResource* inputResource = builder->AccessResource(node->inputs[i]);
+
+			FrameGraphResourceInfo& info = inputResource->info;
+			if (inputResource->type == FrameGraphResourceType::Attachment) {
+
+				if (info.texture.imageAspect == ImageAspect::Depth) {
+					desc.hasDepthAttachment = true;
+					desc.depthAttachment = Attachment{info.texture.format, RenderPassOperation::Load, info.texture.imageAspect};
+				}
+				else {
+					attachments.emplace_back(Attachment{ info.texture.format, RenderPassOperation::Load, ImageAspect::Color });
+				}
+			}
+		}
+
+		return builder->device->CreateRenderPass(&desc);
+	}
+
+	FramebufferHandle FrameGraph::CreateFramebuffer(FrameGraphNode* node)
+	{
+		FramebufferDesc desc = {};
+		desc.renderPass = node->renderPass;
+
+		uint32_t width = 0;
+		uint32_t height = 0;
+
+		for (uint32_t r = 0; r < node->outputs.size(); ++r)
+		{
+			FrameGraphResource* output = builder->AccessResource(node->outputs[r]);
+			FrameGraphResourceInfo& info = output->info;
+
+			if (output->type == FrameGraphResourceType::Buffer || output->type == FrameGraphResourceType::Reference)
+				continue;
+
+			if (width == 0) width = info.texture.width;
+			else assert(width == info.texture.width);
+
+			if (height == 0) height = info.texture.height;
+			else assert(height = info.texture.height);
+
+			if (info.texture.imageAspect == ImageAspect::Depth)
+			{
+				desc.hasDepthStencilAttachment = true;
+				desc.depthStencilAttachment = info.texture.texture;
+			}
+			else {
+				desc.outputTextures.push_back(info.texture.texture);
+			}
+		}
+
+		// Copy the texture handle to the input
+		for (uint32_t r = 0; r < node->inputs.size(); ++r)
+		{
+			FrameGraphResource* input = builder->AccessResource(node->inputs[r]);
+			if (input->type == FrameGraphResourceType::Buffer || input->type == FrameGraphResourceType::Reference)
+				continue;
+
+			FrameGraphResource* resource = builder->AccessResource(input->name);
+			FrameGraphResourceInfo& info = input->info;
+
+			input->info.texture.texture = resource->info.texture.texture;
+
+			if (width == 0)	width = info.texture.width;
+			else assert(width == info.texture.width);
+			if (height == 0) height = info.texture.height;
+			else assert(height = info.texture.height);
+
+			if (input->type == FrameGraphResourceType::Texture) continue;
+
+			if (info.texture.imageAspect == ImageAspect::Depth)
+			{
+				desc.hasDepthStencilAttachment = true;
+				desc.depthStencilAttachment = info.texture.texture;
+			}
+			else 
+				desc.outputTextures.push_back(info.texture.texture);
+		}
+
+		desc.width = width;
+		desc.height = height;
+		return builder->device->CreateFramebuffer(&desc);
 	}
 }

@@ -7,6 +7,7 @@
 #include <string>
 #include <unordered_map>
 
+class Scene;
 namespace gfx
 {
 	using FrameGraphHandle = uint32_t;
@@ -42,7 +43,7 @@ namespace gfx
 				uint32_t depth;
 
 				Format format;
-				Usage usage;
+				ImageAspect imageAspect;
 				TextureHandle texture;
 			} texture;
 		};
@@ -74,6 +75,14 @@ namespace gfx
 		std::vector<FrameGraphResourceCreation> outputs;
 	};
 
+	struct FrameGraphRenderer
+	{
+		virtual void AddUI() {}
+		virtual void PreRender(CommandList* commandList) {}
+		virtual void Render(CommandList* commandList, Scene* scene) {}
+		virtual void OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height) {}
+	};
+
 	struct FrameGraphNode
 	{
 		bool enabled;
@@ -83,6 +92,8 @@ namespace gfx
 		RenderPassHandle renderPass;
 		FramebufferHandle framebuffer;
 		std::vector<FrameGraphNodeHandle> edges;
+
+		FrameGraphRenderer* renderer;
 
 		std::vector<FrameGraphResourceHandle> inputs;
 		std::vector<FrameGraphResourceHandle> outputs;
@@ -100,6 +111,14 @@ namespace gfx
 		FrameGraphNode* AccessNode(FrameGraphNodeHandle handle)
 		{
 			return nodePools.AccessResource(handle.index);
+		}
+
+		FrameGraphNode* AccessNode(std::string name)
+		{
+			auto found = nodeCache.find(name);
+			if (found != nodeCache.end())
+				return nodePools.AccessResource(found->second);
+			return nullptr;
 		}
 
 		FrameGraphResource* AccessResource(FrameGraphResourceHandle handle)
@@ -131,6 +150,7 @@ namespace gfx
 	{
 		void Init(FrameGraphBuilder* builder);
 		void Parse(std::string filename);
+		void onResize(uint32_t width, uint32_t height);
 		void Compile();
 		void Shutdown();
 
@@ -141,6 +161,9 @@ namespace gfx
 	private:
 		void ComputeEdges(FrameGraphNode* node, uint32_t index);
 		std::vector<FrameGraphNodeHandle> TopologicalSort(std::vector<FrameGraphNodeHandle> inputs);
+
+		RenderPassHandle CreateRenderPass(FrameGraphNode* node);
+		FramebufferHandle CreateFramebuffer(FrameGraphNode* node);
 	};
 
 }

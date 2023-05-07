@@ -11,7 +11,7 @@ public:
 	{
 		initialize_();
 		mCamera = mScene.GetCamera();
-		mRenderer->SetEnableBloom(true);
+		//mRenderer->SetEnableBloom(true);
 		InitializeScene();
 	}
 

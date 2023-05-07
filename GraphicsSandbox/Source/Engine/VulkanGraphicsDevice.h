@@ -28,14 +28,14 @@ namespace gfx
 		VulkanGraphicsDevice(const VulkanGraphicsDevice&) = delete;
 		void operator=(const VulkanGraphicsDevice&) = delete;
 
-		bool               CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
+		bool               CreateSwapchain(Platform::WindowType window)  override;
 		RenderPassHandle   CreateRenderPass(const RenderPassDesc* desc)                                      override;
 		PipelineHandle     CreateGraphicsPipeline(const PipelineDesc* desc)                                  override;
 		PipelineHandle     CreateComputePipeline(const PipelineDesc* desc)                                   override;
 		BufferHandle       CreateBuffer(const GPUBufferDesc* desc)                                           override;
 		TextureHandle      CreateTexture(const GPUTextureDesc* desc)                                         override;
 		SemaphoreHandle    CreateSemaphore()                                                                 override;
-		FramebufferHandle  CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)               override;
+		FramebufferHandle  CreateFramebuffer(const FramebufferDesc* desc)                                    override;
 		void               CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
 		void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)                   override;
@@ -85,7 +85,7 @@ namespace gfx
 		void DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;
 
-		bool IsSwapchainReady(RenderPassHandle rp) override;
+		bool IsSwapchainReady() override;
 
 		VkInstance GetInstance() { return instance_; }
 		VkDevice GetDevice() { return device_; }
@@ -93,7 +93,7 @@ namespace gfx
 		VkQueue GetQueue() { return queue_; }
 		uint32_t GetSwapchainImageCount() { return swapchain_->imageCount; }
 
-		VkRenderPass Get(RenderPassHandle rp);
+		VkRenderPass GetSwapchainRenderPass();
 		VkCommandBuffer Get(CommandList* commandList);
 		VkDescriptorPool GetDescriptorPool() { return descriptorPools_[swapchain_->imageCount]; }
 
@@ -155,14 +155,14 @@ namespace gfx
 			VkQueue queue = VK_NULL_HANDLE;
 		} queues;
 
-		std::shared_ptr<VulkanSwapchain> swapchain_ = nullptr;
+		std::unique_ptr<VulkanSwapchain> swapchain_ = nullptr;
 		std::shared_ptr<VulkanCommandList> commandList_;
 
 		void findAvailableInstanceLayer(const std::vector<VkLayerProperties>& availableLayers, std::vector<const char*>& outLayers);
 		void findAvailableInstanceExtensions(const std::vector<VkExtensionProperties>& availableExtensions, std::vector<const char*>& outExtensions);
 		bool isSwapchainResized();
 		VkPhysicalDevice findSuitablePhysicalDevice(const std::vector<const char*>& requiredDeviceExtensions);
-		bool createSwapchainInternal(VkRenderPass renderPass);
+		bool createSwapchainInternal();
 		VkShaderModule createShader(VkDevice device, const char* data, uint32_t sizeInByte, VkShaderStageFlagBits shaderStage);
 		void destroyReleasedResources();
 

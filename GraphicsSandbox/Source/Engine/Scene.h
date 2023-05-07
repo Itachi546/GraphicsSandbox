@@ -34,9 +34,6 @@ public:
 
 	void Update(float dt);
 
-	void GenerateDrawData(std::vector<DrawData>& out);
-	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& out);
-
 	void SetSize(int width, int height);
 
 	void SetShowBoundingBox(bool state) { mShowBoundingBox = state; }
@@ -53,6 +50,15 @@ public:
 	inline std::unique_ptr<EnvironmentMap>& GetEnvironmentMap() { return mEnvMap; }
 
 	std::vector<ecs::Entity> FindChildren(ecs::Entity entity);
+
+	std::vector<DrawData>& GetStaticDrawData() {
+		return mDrawData;
+	}
+
+	std::vector<DrawData>& GetSkinnedMeshDrawData()
+	{
+		return mSkinnedMeshDrawData;
+	}
 
 	void Shutdown();
 	virtual ~Scene() = default; 
@@ -73,6 +79,12 @@ private:
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;
 	std::vector<gfx::BufferHandle> mAllocatedBuffers;
+
+	std::vector<DrawData> mDrawData;
+	std::vector<DrawData> mSkinnedMeshDrawData;
+
+	void GenerateDrawData(std::vector<DrawData>& out);
+	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& out);
 
 	void UpdateTransform();
 	void UpdateHierarchy();

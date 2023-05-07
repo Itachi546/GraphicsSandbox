@@ -58,9 +58,8 @@ class SponzaTest : public Application
 		mScene.SetEnableFrustumCulling(false);
 		mScene.SetShowBoundingBox(false);
 		DebugDraw::SetEnable(false);
-		mRenderer->GetShadowMap()->SetShadowDistance(150.0f);
-		mRenderer->GetShadowMap()->SetSplitLambda(0.85f);
-
+		//mRenderer->GetShadowMap()->SetShadowDistance(150.0f);
+		//mRenderer->GetShadowMap()->SetSplitLambda(0.85f);
 
 		auto compMgr = mScene.GetComponentManager();
 

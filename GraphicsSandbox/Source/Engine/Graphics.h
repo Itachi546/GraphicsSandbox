@@ -173,6 +173,7 @@ namespace gfx
 		uint32_t size;
 	};
 
+/*
 	struct SwapchainDesc
 	{
 		union
@@ -191,7 +192,7 @@ namespace gfx
 		bool enableDepth = false;
 		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
-
+	*/
 	enum class AccessFlag
 	{
 		None,
@@ -286,6 +287,13 @@ namespace gfx
 		Upload, // CPU Write, GPU Read
 		ReadBack
 	};
+	
+	enum class RenderPassOperation {
+		DontCare,
+		Load,
+		Clear,
+		Count
+	};
 
 	enum class BindFlag
 	{
@@ -336,18 +344,33 @@ namespace gfx
 
 	struct Attachment
 	{
-		uint32_t index;
-		GPUTextureDesc desc;
-		bool loadOp = false;
+		Format format;
+		RenderPassOperation operation;
+		ImageAspect imageAspect;
 	};
 
 
 	struct RenderPassDesc
 	{
-		std::vector<Attachment> attachments;
-		uint32_t width;
-		uint32_t height;
+		std::vector<Attachment> colorAttachments;
+		Attachment depthAttachment;
 		bool hasDepthAttachment = false;
+	};
+
+
+	struct FramebufferDesc {
+		RenderPassHandle renderPass;
+		std::vector<TextureHandle> outputTextures;
+
+		bool hasDepthStencilAttachment = false;
+		TextureHandle depthStencilAttachment;
+
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t layers = 1;
+
+		float scalingX = 1.0f;
+		float scalingY = 1.0f;
 	};
 
 	/*

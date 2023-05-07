@@ -552,12 +552,18 @@ ecs::Entity Scene::CreateLight(std::string_view name)
 
 void Scene::Update(float dt)
 {
+	mDrawData.clear();
+	mSkinnedMeshDrawData.clear();
+
 	mCamera.Update(dt);
 	UpdateTransform();
 	UpdateHierarchy();
 
 	if(mShowBoundingBox)
 		DrawBoundingBox();
+
+	GenerateDrawData(mDrawData);
+	GenerateSkinnedMeshDrawData(mSkinnedMeshDrawData);
 }
 
 void Scene::SetSize(int width, int height)

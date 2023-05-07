@@ -475,6 +475,18 @@ namespace gfx {
         }
     }
 
+    VkAttachmentLoadOp _ConvertRenderPassLoadOp(RenderPassOperation operation)
+    {
+        switch (operation)
+        {
+        case RenderPassOperation::Load:
+            return VK_ATTACHMENT_LOAD_OP_LOAD;
+        case RenderPassOperation::Clear:
+            return VK_ATTACHMENT_LOAD_OP_CLEAR;
+        }
+		return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    }
+
     VkSamplerAddressMode _ConvertSamplerAddressMode(TextureWrapMode wrapMode)
     {
         switch (wrapMode)
@@ -606,6 +618,7 @@ namespace gfx {
         return imageView;
     }
 
+    // TODO: Can create once and reuse
     VkSampler CreateSampler(VkDevice device, const SamplerInfo* samplerInfo, float maxAnisotropy)
     {
         VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -632,7 +645,7 @@ namespace gfx {
         return sampler;
     }
 
-    VkFramebuffer createFramebufferInternal(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height, uint32_t layerCount = 1)
+    VkFramebuffer createFramebufferInternal(VkDevice device, VkRenderPass renderPass, VkImageView* imageViews, uint32_t imageViewCount, uint32_t width, uint32_t height, uint32_t layers = 1)
     {
         VkFramebufferCreateInfo createInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
         createInfo.renderPass = renderPass;
@@ -640,7 +653,7 @@ namespace gfx {
         createInfo.pAttachments = imageViews;
         createInfo.width = width;
         createInfo.height = height;
-        createInfo.layers = layerCount;
+        createInfo.layers = layers;
 
         VkFramebuffer framebuffer = 0;
         VK_CHECK(vkCreateFramebuffer(device, &createInfo, nullptr, &framebuffer));
@@ -861,10 +874,9 @@ namespace gfx {
     }
 
 
-    bool VulkanGraphicsDevice::createSwapchainInternal(VkRenderPass renderPass)
+    bool VulkanGraphicsDevice::createSwapchainInternal()
     {
         VkSurfaceKHR surface = swapchain_->surface;
-        SwapchainDesc& desc = swapchain_->desc;
 
         VkSurfaceCapabilitiesKHR surfaceCaps = {};
         VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice_, surface, &surfaceCaps));
@@ -872,8 +884,8 @@ namespace gfx {
         if (surfaceCaps.currentExtent.width == 0 || surfaceCaps.currentExtent.height == 0)
             return false;
 
-        desc.width = surfaceCaps.currentExtent.width;
-        desc.height = surfaceCaps.currentExtent.height;
+        swapchain_->width = surfaceCaps.currentExtent.width;
+        swapchain_->height = surfaceCaps.currentExtent.height;
 
         VkCompositeAlphaFlagBitsKHR surfaceComposite =
             (surfaceCaps.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR)
@@ -898,10 +910,10 @@ namespace gfx {
         VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice_, surface, &presentModeCount, presentModes.data()));
 
         VkSurfaceFormatKHR surfaceFormat = {};
-        surfaceFormat.format = _ConvertFormat(desc.colorFormat);
+        surfaceFormat.format = VK_FORMAT_B8G8R8A8_UNORM;
         surfaceFormat.colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 
-        VkFormat requiredFormat = _ConvertFormat(desc.colorFormat);
+        VkFormat requiredFormat = VK_FORMAT_B8G8R8A8_UNORM;
         for(auto& supportedFormat : formats)
         {
             if (supportedFormat.format == requiredFormat && surfaceFormat.colorSpace == supportedFormat.colorSpace)
@@ -913,7 +925,7 @@ namespace gfx {
         swapchain_->format = surfaceFormat;
 
         VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
-        if (!desc.vsync)
+        if (swapchain_->vsync)
         {
             for (auto& supportedPresentMode : presentModes)
             {
@@ -933,13 +945,16 @@ namespace gfx {
             presentMode = VK_PRESENT_MODE_FIFO_KHR;
         }
 
+        uint32_t width = swapchain_->width;
+        uint32_t height = swapchain_->height;
+
         VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
         createInfo.surface = surface;
         createInfo.minImageCount = std::max(2u, surfaceCaps.minImageCount);
         createInfo.imageFormat = surfaceFormat.format;
         createInfo.imageColorSpace = surfaceFormat.colorSpace;
-        createInfo.imageExtent.width = desc.width;
-        createInfo.imageExtent.height = desc.height;
+        createInfo.imageExtent.width = width;
+        createInfo.imageExtent.height = height;
         createInfo.imageArrayLayers = 1;
         createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         createInfo.queueFamilyIndexCount = 1;
@@ -980,29 +995,20 @@ namespace gfx {
 
         swapchain_->imageViews.resize(imageCount);
         swapchain_->framebuffers.resize(imageCount);
-        if (desc.enableDepth)
-        {
-            swapchain_->depthImages.resize(imageCount);
-            swapchain_->depthImageViews.resize(imageCount);
-        }
+		swapchain_->depthImages.resize(imageCount);
+		swapchain_->depthImageViews.resize(imageCount);
 
-        uint32_t width  = swapchain_->desc.width;
-        uint32_t height = swapchain_->desc.height;
-
-        VkFormat depthFormat = _ConvertFormat(desc.depthFormat);
+        VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
         for (uint32_t i = 0; i < imageCount; ++i)
         {
-            if (desc.enableDepth)
-            {
-                swapchain_->depthImages[i] = CreateSwapchainDepthImage(vmaAllocator_, depthFormat, width, height);
-                swapchain_->depthImageViews[i] = CreateImageView(device_, swapchain_->depthImages[i].first, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
-            }
+			swapchain_->depthImages[i] = CreateSwapchainDepthImage(vmaAllocator_, depthFormat, width, height);
+			swapchain_->depthImageViews[i] = CreateImageView(device_, swapchain_->depthImages[i].first, VK_IMAGE_VIEW_TYPE_2D, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
             swapchain_->imageViews[i] = CreateImageView(device_, swapchain_->images[i], VK_IMAGE_VIEW_TYPE_2D, swapchain_->format.format, VK_IMAGE_ASPECT_COLOR_BIT);
 
             std::vector<VkImageView> imageViews = { swapchain_->imageViews[i] };
-            if (desc.enableDepth)
-                imageViews.push_back(swapchain_->depthImageViews[i]);
-            swapchain_->framebuffers[i] = createFramebufferInternal(device_, renderPass, imageViews.data(), static_cast<uint32_t>(imageViews.size()), width, height);
+
+			imageViews.push_back(swapchain_->depthImageViews[i]);
+            swapchain_->framebuffers[i] = createFramebufferInternal(device_, swapchain_->renderPass->renderPass, imageViews.data(), static_cast<uint32_t>(imageViews.size()), width, height);
         }
 
         return true;
@@ -1163,8 +1169,8 @@ namespace gfx {
         VkSurfaceCapabilitiesKHR surfaceCaps = {};
         VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice_, swapchain_->surface, &surfaceCaps));
 
-        int width = swapchain_->desc.width;
-        int height = swapchain_->desc.height;
+        int width = swapchain_->width;
+        int height = swapchain_->height;
 
         if (surfaceCaps.currentExtent.width != width || surfaceCaps.currentExtent.height != height)
             return true;
@@ -1428,18 +1434,25 @@ namespace gfx {
 		VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &mComputeFence_));
     }
 
-    bool VulkanGraphicsDevice::CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)
+    bool VulkanGraphicsDevice::CreateSwapchain(Platform::WindowType window)
     {
         if (swapchain_ == nullptr)
         {
-			swapchain_ = std::make_shared<VulkanSwapchain>();
-            swapchain_->desc = *swapchainDesc;
+			swapchain_ = std::make_unique<VulkanSwapchain>();
+
+            gfx::RenderPassDesc renderPassDesc = {};
+            renderPassDesc.colorAttachments.emplace_back(Attachment{ Format::B8G8R8A8_UNORM, RenderPassOperation::Clear, ImageAspect::Color });
+
+            renderPassDesc.hasDepthAttachment = true;
+            renderPassDesc.depthAttachment = { Format::D32_SFLOAT, RenderPassOperation::Clear, ImageAspect::Depth };
+            RenderPassHandle handle = CreateRenderPass(&renderPassDesc);
+            swapchain_->renderPass = renderPasses.AccessResource(handle.handle);
 			swapchain_->surface = CreateSurface(instance_, physicalDevice_, queueFamilyIndices_, window);
         }
 
-        VulkanRenderPass* vkRenderPass = renderPasses.AccessResource(swapchainDesc->renderPass.handle);
+        VulkanRenderPass* vkRenderPass = swapchain_->renderPass;
         assert(vkRenderPass != nullptr);
-		createSwapchainInternal(vkRenderPass->renderPass);
+		createSwapchainInternal();
 
         if (swapchain_->signalSemaphores.size() == 0)
         {
@@ -1477,61 +1490,69 @@ namespace gfx {
 
     VkRenderPass VulkanGraphicsDevice::createRenderPass(const RenderPassDesc* desc)
     {
-        uint32_t attachmentCount = (uint32_t)desc->attachments.size();
-        std::vector<VkAttachmentDescription> attachments(attachmentCount);
-        std::vector<VkAttachmentReference> attachmentRef(attachmentCount);
+        uint32_t colorAttachmentCount = (uint32_t)desc->colorAttachments.size();
+        std::vector<VkAttachmentDescription> attachments(colorAttachmentCount);
+        std::vector<VkAttachmentReference> attachmentRef(colorAttachmentCount);
 
-        bool hasDepthAttachment = false;
-        uint32_t depthAttachmentIndex = 0;
-        for (uint32_t i = 0; i < attachmentCount; ++i)
+        bool hasDepthAttachment = desc->hasDepthAttachment;
+
+        for (uint32_t i = 0; i < colorAttachmentCount; ++i)
         {
-            const Attachment& attachment = desc->attachments[i];
-            VkFormat format = _ConvertFormat(attachment.desc.format);
+            const Attachment& attachment = desc->colorAttachments[i];
+            VkFormat format = _ConvertFormat(attachment.format);
 
             VkImageLayout layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            assert(i < colorAttachmentCount);
 
-            uint32_t index = attachment.index;
-            assert(index < desc->attachments.size());
+            VkAttachmentLoadOp loadOp = _ConvertRenderPassLoadOp(attachment.operation);
+            attachments[i].format = format;
+            attachments[i].samples = VK_SAMPLE_COUNT_1_BIT;
+            attachments[i].loadOp = loadOp;
+            attachments[i].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachments[i].stencilLoadOp = loadOp;
+            attachments[i].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachments[i].initialLayout = layout;
+            attachments[i].finalLayout = layout;
+            attachmentRef[i] = { i, layout};
+        }
 
-            if (attachment.desc.imageAspect == ImageAspect::Depth)
-            {
-                layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-                hasDepthAttachment = true;
-                depthAttachmentIndex = index;
+        VkAttachmentReference depthStencilAttachmentRef = {};
+        if (desc->hasDepthAttachment)
+        {
+            const Attachment& attachment = desc->depthAttachment;
+            VkFormat format = _ConvertFormat(attachment.format);
 
-            }
+            VkImageLayout layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+            uint32_t index = static_cast<uint32_t>(attachments.size());
+            VkAttachmentLoadOp loadOp = _ConvertRenderPassLoadOp(attachment.operation);
 
-            // For DepthPrepass
-            VkAttachmentLoadOp loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-            if(attachment.loadOp)
-                loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            VkAttachmentDescription attachmentDesc = {};
+            attachmentDesc.format = format;
+            attachmentDesc.samples = VK_SAMPLE_COUNT_1_BIT;
+            attachmentDesc.loadOp = loadOp;
+            attachmentDesc.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachmentDesc.stencilLoadOp = loadOp;
+            attachmentDesc.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachmentDesc.initialLayout = layout;
+            attachmentDesc.finalLayout = layout;
+            attachments.push_back(attachmentDesc);
 
-            attachments[index].format = format;
-            attachments[index].samples = VK_SAMPLE_COUNT_1_BIT;
-            attachments[index].loadOp = loadOp;
-            attachments[index].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-            attachments[index].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            attachments[index].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-            attachments[index].initialLayout = layout;
-            attachments[index].finalLayout = layout;
-            attachmentRef[index] = { attachment.index, layout};
+            depthStencilAttachmentRef.attachment = index;
+			depthStencilAttachmentRef.layout = layout;
         }
 
         VkRenderPassCreateInfo createInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-        createInfo.attachmentCount = attachmentCount;
+        createInfo.attachmentCount = (uint32_t)attachments.size();
         createInfo.pAttachments = attachments.data();
 
         VkSubpassDescription subpassDescription = {};
         subpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        if (hasDepthAttachment)
-        {
-            VkAttachmentReference depthAttachmentRef = attachmentRef[depthAttachmentIndex];
-            subpassDescription.pDepthStencilAttachment = &depthAttachmentRef;
-            attachmentRef.erase(attachmentRef.begin() + depthAttachmentIndex);
-        }
 
         subpassDescription.colorAttachmentCount = static_cast<uint32_t>(attachmentRef.size());
         subpassDescription.pColorAttachments = attachmentRef.data();
+
+        if(desc->hasDepthAttachment)
+			subpassDescription.pDepthStencilAttachment = &depthStencilAttachmentRef;
 
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpassDescription;
@@ -1545,43 +1566,43 @@ namespace gfx {
     {
         RenderPassHandle handle = { renderPasses.ObtainResource()};
         VulkanRenderPass* vkRenderPass = renderPasses.AccessResource(handle.handle);
+        vkRenderPass->hasDepthAttachment = desc->hasDepthAttachment;
+        vkRenderPass->numColorAttachments = (uint32_t)desc->colorAttachments.size();
         vkRenderPass->renderPass = createRenderPass(desc);
-        vkRenderPass->desc = *desc;
         return handle;
     }
 
-    FramebufferHandle VulkanGraphicsDevice::CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)
+    FramebufferHandle VulkanGraphicsDevice::CreateFramebuffer(const FramebufferDesc* desc)
     {
-        auto rp = renderPasses.AccessResource(renderPass.handle);
+        auto rp = renderPasses.AccessResource(desc->renderPass.handle);
         FramebufferHandle fbHandle = { framebuffers.ObtainResource() };
         VulkanFramebuffer* vkFramebuffer = framebuffers.AccessResource(fbHandle.handle);
-		uint32_t attachmentCount = attachmentCount = (uint32_t)rp->desc.attachments.size();
-
-        uint32_t width = rp->desc.width;
-		uint32_t height = rp->desc.height;
+		uint32_t attachmentCount = (uint32_t)desc->outputTextures.size();
 
         std::vector<VkImageView> imageViews(attachmentCount);
-        for (uint32_t i = 0; i < attachmentCount; ++i)
+        for (uint32_t i = 0; i < desc->outputTextures.size(); ++i)
         {
-            Attachment* attachment = &rp->desc.attachments[i];
-            uint32_t index = attachment->index;
-            attachment->desc.width = width;
-            attachment->desc.height = height;
-
-            assert(attachment->desc.arrayLayers == layerCount);
-            TextureHandle texture = CreateTexture(&attachment->desc);
-
-            imageViews[index] = textures.AccessResource(texture.handle)->imageViews[0];
-            if (attachment->desc.imageAspect == ImageAspect::Depth)
-                vkFramebuffer->depthAttachmentIndex = attachment->index;
-
-            vkFramebuffer->attachments[index] = texture;
+            TextureHandle attachment = desc->outputTextures[i];
+            vkFramebuffer->attachments[i] = attachment;
+            VulkanTexture* texture = textures.AccessResource(attachment.handle);
+            imageViews[i] = texture->imageViews[0];
         }
 
-        vkFramebuffer->width = width;
-        vkFramebuffer->height = height;
         vkFramebuffer->attachmentCount = attachmentCount;
-        vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), attachmentCount, width, height, layerCount);
+
+        if (desc->hasDepthStencilAttachment)
+        {
+            TextureHandle depthStencilAttachment = desc->depthStencilAttachment;
+            vkFramebuffer->depthAttachment = depthStencilAttachment;
+
+            VkImageView depthStencilImageView = textures.AccessResource(depthStencilAttachment.handle)->imageViews[0];
+            imageViews.push_back(depthStencilImageView);
+        }
+
+        vkFramebuffer->width = desc->width;
+        vkFramebuffer->height = desc->height;
+        vkFramebuffer->layers = desc->layers;
+        vkFramebuffer->framebuffer = createFramebufferInternal(device_, rp->renderPass, imageViews.data(), (uint32_t)imageViews.size(), desc->width, desc->height, desc->layers);
         return fbHandle;
     }
     void VulkanGraphicsDevice::CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)
@@ -1605,7 +1626,6 @@ namespace gfx {
         auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
         auto cmd = GetCommandList(commandList);
         vkCmdResetQueryPool(cmd->commandBuffer, queryPool, first, count);
-		//vkResetQueryPool(device_, queryPool, first, count);
     }
 
     void VulkanGraphicsDevice::Query(CommandList* commandList, QueryPool* pool, uint32_t index)
@@ -2013,22 +2033,18 @@ namespace gfx {
         auto vkCmdList = GetCommandList(commandList);
 
         uint32_t imageIndex = swapchain_->currentImageIndex;
-        uint32_t fbDepthAttachmentIndex = ~0u;
         VkFramebuffer vkFramebuffer = VK_NULL_HANDLE;
 
-        uint32_t width = swapchain_->desc.width;
-        uint32_t height = swapchain_->desc.height;
+        uint32_t width = swapchain_->width;
+        uint32_t height = swapchain_->height;
 
-        uint32_t attachmentCount = (uint32_t)vkRenderpass->desc.attachments.size();
+        uint32_t attachmentCount = vkRenderpass->numColorAttachments;
         if (framebuffer.handle != K_INVALID_RESOURCE_HANDLE)
         {
-
             VulkanFramebuffer* internalState = framebuffers.AccessResource(framebuffer.handle);
-            fbDepthAttachmentIndex = internalState->depthAttachmentIndex;
             vkFramebuffer = internalState->framebuffer;
-
-            width  = vkRenderpass->desc.width;
-            height = vkRenderpass->desc.height;
+            width = internalState->width;
+            height = internalState->height;
         }
         else
         {
@@ -2037,11 +2053,14 @@ namespace gfx {
 
         std::vector<VkClearValue> clearValues(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
+			clearValues[i].color = { 0.5f, 0.5f, 0.5f, 1 };
+
+        if (vkRenderpass->hasDepthAttachment)
         {
-            if (i == fbDepthAttachmentIndex)
-                clearValues[i].depthStencil = { 1.0f, 0 };
-            else
-                clearValues[i].color = { 0.5f, 0.5f, 0.5f, 1 };
+            VkClearValue depthStencilClearValue{};
+            depthStencilClearValue.depthStencil = { 1.0f, 0 };
+            clearValues.push_back(depthStencilClearValue);
+            attachmentCount++;
         }
 
         VkRenderPassBeginInfo passBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -2099,13 +2118,12 @@ namespace gfx {
         vkCmdDispatch(cmd->commandBuffer, groupCountX, groupCountY, groupCountZ);
     }
 
-    bool VulkanGraphicsDevice::IsSwapchainReady(RenderPassHandle rp)
+    bool VulkanGraphicsDevice::IsSwapchainReady()
     {
-		VulkanRenderPass* vkRenderpass = renderPasses.AccessResource(rp.handle);
         if (isSwapchainResized())
         {
             vkDeviceWaitIdle(device_);
-            return createSwapchainInternal(vkRenderpass->renderPass);
+            return createSwapchainInternal();
         }
         return true;
     }
@@ -2160,7 +2178,7 @@ namespace gfx {
         blitRegion.srcOffsets[0] = { 0, levelHeight, 0 };
         blitRegion.srcOffsets[1] = { levelWidth, 0, 1 };
         blitRegion.dstOffsets[0] = { 0, 0, 0 };
-        blitRegion.dstOffsets[1] = { swapchain_->desc.width, swapchain_->desc.height, 1 };
+        blitRegion.dstOffsets[1] = { (int)swapchain_->width, (int)swapchain_->height, 1 };
 
         vkCmdBlitImage(cmd->commandBuffer, src->image, src->layout, dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, filter);
 
@@ -2626,9 +2644,9 @@ namespace gfx {
     }
 
 
-    VkRenderPass VulkanGraphicsDevice::Get(RenderPassHandle rp)
+    VkRenderPass VulkanGraphicsDevice::GetSwapchainRenderPass()
     {
-        return renderPasses.AccessResource(rp.handle)->renderPass;
+        return swapchain_->renderPass->renderPass;
     }
 
     VkCommandBuffer VulkanGraphicsDevice::Get(CommandList* commandList)
@@ -2725,8 +2743,8 @@ namespace gfx {
         gAllocationHandler.destroyedFences_.push_back(mComputeFence_);
         gAllocationHandler.destroyedSemaphore_.insert(gAllocationHandler.destroyedSemaphore_.end(), swapchain_->signalSemaphores.begin(), swapchain_->signalSemaphores.end());
         gAllocationHandler.destroyedFences_.insert(gAllocationHandler.destroyedFences_.end(), swapchain_->inFlightFences.begin(), swapchain_->inFlightFences.end());
-
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
+        gAllocationHandler.destroyedRenderPass_.push_back(swapchain_->renderPass->renderPass);
         swapchain_->framebuffers.clear();
 
         destroyReleasedResources();

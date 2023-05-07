@@ -32,7 +32,7 @@ void Camera::Update(float dt)
 	mRotation += (mTargetRotation - mRotation) * 0.8f * dt;
 
 	CalculateView();
-	DebugDraw::AddFrustum(mFrustumPoints, 8, 0xff0000);
+	//DebugDraw::AddFrustum(mFrustumPoints, 8, 0xff0000);
 }
 
 glm::vec4 Camera::ComputeNDCCoordinate(const glm::vec3& p)

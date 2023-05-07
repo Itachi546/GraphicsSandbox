@@ -184,11 +184,9 @@
     <ClInclude Include="Source\Editor\TransformGizmo.h" />
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
-    <ClInclude Include="Source\Engine\CascadedShadowMap.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
     <ClInclude Include="Source\Engine\FrameGraph.h" />
-    <ClInclude Include="Source\Engine\FX\Bloom.h" />
-    <ClInclude Include="Source\Engine\FX\SSAO.h" />
+    <ClInclude Include="Source\Engine\FrameGraphRenderer.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
     <ClInclude Include="Source\Engine\ImageLoader.h" />
     <ClInclude Include="Source\Engine\ECS.h" />
@@ -241,11 +239,9 @@
     <ClCompile Include="Source\Editor\TransformGizmo.cpp" />
     <ClCompile Include="Source\Engine\Animation\Animation.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
-    <ClCompile Include="Source\Engine\CascadedShadowMap.cpp" />
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\FrameGraph.cpp" />
-    <ClCompile Include="Source\Engine\FX\Bloom.cpp" />
-    <ClCompile Include="Source\Engine\FX\SSAO.cpp" />
+    <ClCompile Include="Source\Engine\FrameGraphRenderer.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
     <ClCompile Include="Source\Engine\ECS.cpp" />
     <ClCompile Include="Source\Engine\Components.cpp" />

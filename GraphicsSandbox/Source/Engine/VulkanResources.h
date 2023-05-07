@@ -25,9 +25,16 @@ struct VulkanCommandList
 	std::vector<VkPipelineStageFlags> waitStages;
 };
 
+
+struct VulkanRenderPass
+{
+	VkRenderPass renderPass;
+	uint32_t numColorAttachments = 0;
+	bool hasDepthAttachment = false;
+};
+
 struct VulkanSwapchain
 {
-	gfx::SwapchainDesc desc;
 	VkSwapchainKHR swapchain;
 
 	std::vector<VkImage> images;
@@ -46,13 +53,15 @@ struct VulkanSwapchain
 	VkSemaphore acquireSemaphore;
 	std::vector<VkSemaphore> signalSemaphores;
 	std::vector<VkFence> inFlightFences;
+
+	VulkanRenderPass* renderPass = nullptr;
+
+	uint32_t width = UINT32_MAX;
+	uint32_t height = UINT32_MAX;
+
+	bool vsync = true;
 };
 
-struct VulkanRenderPass
-{
-	VkRenderPass renderPass;
-	gfx::RenderPassDesc desc;
-};
 
 constexpr uint32_t K_MAX_DESCRIPTOR_SET = 8;
 struct VulkanPipeline
@@ -108,10 +117,13 @@ struct VulkanFramebuffer
 	VkFramebuffer framebuffer;
 
 	uint32_t attachmentCount;
-	uint32_t depthAttachmentIndex;
 	gfx::TextureHandle attachments[16];
+
+	gfx::TextureHandle depthAttachment = gfx::INVALID_TEXTURE;
+
 	uint32_t width;
 	uint32_t height;
+	uint32_t layers;
 };
 
 struct VulkanSemaphore

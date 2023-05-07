@@ -100,9 +100,6 @@
     <ClInclude Include="Source\Engine\ImageLoader.h">
       <Filter>SOURCE\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\FX\Bloom.h">
-      <Filter>SOURCE\FX</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\Camera.h">
       <Filter>SOURCE\ECS</Filter>
     </ClInclude>
@@ -145,9 +142,6 @@
     <ClInclude Include="Source\Test\BloomTest.h">
       <Filter>TEST</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Engine\CascadedShadowMap.h">
-      <Filter>SOURCE\Graphics</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\SceneHierarchy.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
@@ -188,13 +182,13 @@
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
-    <ClInclude Include="Source\Engine\FX\SSAO.h" />
     <ClInclude Include="Source\Editor\ImGui\IconsFontAwesome5.h" />
     <ClInclude Include="Source\Engine\TransformComponent.h" />
     <ClInclude Include="Source\Engine\ResourcePool.h" />
     <ClInclude Include="Source\Engine\VulkanResources.h" />
     <ClInclude Include="Source\Engine\Resource.h" />
     <ClInclude Include="Source\Engine\FrameGraph.h" />
+    <ClInclude Include="Source\Engine\FrameGraphRenderer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -239,20 +233,11 @@
     <ClCompile Include="Source\Engine\EnvironmentMap.cpp">
       <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\Renderer.cpp">
-      <Filter>SOURCE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\ImageLoader.cpp">
       <Filter>SOURCE\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\FX\Bloom.cpp">
-      <Filter>SOURCE\FX</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\Camera.cpp">
       <Filter>SOURCE\ECS</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\Engine\CascadedShadowMap.cpp">
-      <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\DebugDraw.cpp">
       <Filter>SOURCE\Graphics</Filter>
@@ -308,10 +293,13 @@
     <ClCompile Include="Source\Engine\Animation\Animation.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\FX\SSAO.cpp">
+    <ClCompile Include="Source\Engine\FrameGraph.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\FrameGraph.cpp">
+    <ClCompile Include="Source\Engine\FrameGraphRenderer.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Renderer.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
   </ItemGroup>

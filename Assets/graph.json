@@ -43,34 +43,11 @@
     {
       "inputs": [
         {
-          "type": "attachment",
+          "type": "reference",
           "name": "lighting"
-        },
-        {
-          "type": "attachment",
-          "name": "depth"
         }
       ],
-      "name": "transparent_pass",
-      "outputs": [
-        {
-          "type": "reference",
-          "name": "lighting"
-        }
-      ]
-    },
-    {
-      "inputs": [
-        {
-          "type": "reference",
-          "name": "lighting"
-        },
-        {
-          "type": "reference",
-          "name": "depth"
-        }
-      ],
-      "name": "depth_of_field_pass",
+      "name": "bloom",
       "outputs": [
         {
           "type": "attachment",

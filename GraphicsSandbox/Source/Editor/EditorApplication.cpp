@@ -50,7 +50,7 @@ void EditorApplication::Initialize()
 	initInfo.DescriptorPool = vkDevice->GetDescriptorPool();
 	initInfo.Allocator = 0;
 
-	ImGui_ImplVulkan_Init(&initInfo, vkDevice->Get(mSwapchainRP));
+	ImGui_ImplVulkan_Init(&initInfo, vkDevice->GetSwapchainRenderPass());
 
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	ImGui_ImplVulkan_CreateFontsTexture(vkDevice->Get(&commandList));
@@ -67,8 +67,8 @@ void EditorApplication::Initialize()
 
 void EditorApplication::RenderUI(gfx::CommandList* commandList)
 {
-	static bool enableBloom = true;
-	mRenderer->SetEnableBloom(enableBloom);
+	//static bool enableBloom = true;
+	//mRenderer->SetEnableBloom(enableBloom);
 	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);
 	ImGui_ImplVulkan_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -115,7 +115,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 
 		if (ImGui::CollapsingHeader("Bloom"))
 		{
-			ImGui::Checkbox("Enable", &enableBloom);
+			//ImGui::Checkbox("Enable", &enableBloom);
 			ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f);
 			ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f);
 			ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f);
@@ -163,6 +163,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 		ImGui::End();
 		mHierarchy->Draw();
 	}
+	/*
 	auto shadowMap = mRenderer->GetShadowMap();
 	shadowMap->SetSplitLambda(shadowSplitLambda);
 	shadowMap->SetShadowDistance(shadowDistance);
@@ -175,7 +176,7 @@ void EditorApplication::RenderUI(gfx::CommandList* commandList)
 	mRenderer->SetDebugCascade(showCascade);
 	mScene.SetShowBoundingBox(showBoundingBox);
 	DebugDraw::SetEnable(enableDebugDraw);
-
+	*/
 
 	if (mShowSkeleton && enableDebugDraw)
 		DrawSkeleton();

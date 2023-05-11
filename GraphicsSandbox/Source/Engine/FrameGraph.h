@@ -45,6 +45,7 @@ namespace gfx
 				Format format;
 				ImageAspect imageAspect;
 				TextureHandle texture;
+				RenderPassOperation op;
 			} texture;
 		};
 	};
@@ -81,6 +82,7 @@ namespace gfx
 		virtual void PreRender(CommandList* commandList) {}
 		virtual void Render(CommandList* commandList, Scene* scene) {}
 		virtual void OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height) {}
+		virtual void Shutdown() {}
 	};
 
 	struct FrameGraphNode
@@ -111,6 +113,16 @@ namespace gfx
 		FrameGraphNode* AccessNode(FrameGraphNodeHandle handle)
 		{
 			return nodePools.AccessResource(handle.index);
+		}
+
+		void ReleaseResource(FrameGraphResourceHandle handle)
+		{
+			resourcePools.ReleaseResource(handle.index);
+		}
+
+		void ReleaseNode(FrameGraphNodeHandle node)
+		{
+			nodePools.ReleaseResource(node.index);
 		}
 
 		FrameGraphNode* AccessNode(std::string name)
@@ -153,6 +165,14 @@ namespace gfx
 		void onResize(uint32_t width, uint32_t height);
 		void Compile();
 		void Shutdown();
+
+		void RegisterRenderer(const std::string& name, FrameGraphRenderer* renderer) {
+			FrameGraphNode* node = builder->AccessNode(name);
+			if (node)
+				node->renderer = renderer;
+			else
+				Logger::Error("Failed to find framegraph node: " + name);
+		}
 
 		FrameGraphBuilder* builder;
 		std::vector<FrameGraphNodeHandle> nodeHandles;

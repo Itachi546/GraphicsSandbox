@@ -18,13 +18,29 @@ namespace gfx {
 		for (auto& [key, value] : resourceCache)
 		{
 			FrameGraphResource* resource = resourcePools.AccessResource(value);
-			if (resource->type == FrameGraphResourceType::Texture || resource->type == FrameGraphResourceType::Texture)
+			if (resource->type == FrameGraphResourceType::Attachment)
 				device->Destroy(resource->info.texture.texture);
 			else if (resource->type == FrameGraphResourceType::Buffer)
 				device->Destroy(resource->info.buffer.buffer);
 		}
 
+		for (auto& [key, value] : nodeCache)
+		{
+			FrameGraphNode* node = nodePools.AccessResource(value);
+
+			for (uint32_t i = 0; i < node->inputs.size(); ++i)
+				resourcePools.ReleaseResource(node->inputs[i].index);
+			
+			for (uint32_t i = 0; i < node->outputs.size(); ++i)
+				resourcePools.ReleaseResource(node->outputs[i].index);
+
+			if(node->renderer)
+				node->renderer->Shutdown();
+			nodePools.ReleaseResource(value);
+		}
+
 		resourceCache.clear();
+		nodeCache.clear();
 		nodePools.Shutdown();
 		resourcePools.Shutdown();
 	}
@@ -120,7 +136,7 @@ namespace gfx {
 		return FrameGraphResourceType::Invalid;
 	}
 
-	static void GetTextureFormatAndAspect(std::string inputFormat, Format& format, ImageAspect& aspect)
+	static void GetTextureFormatAndAspect(const std::string& inputFormat, Format& format, ImageAspect& aspect)
 	{
 		if (inputFormat == "B8G8R8A8_UNORM")
 		{
@@ -142,6 +158,15 @@ namespace gfx {
 			format = Format::FormatCount;
 			aspect = ImageAspect::Color;
 		}
+	}
+
+	static RenderPassOperation GetTextureLoadOp(const std::string& loadOp)
+	{
+		if (loadOp == "VK_ATTACHMENT_LOAD_OP_CLEAR")
+			return RenderPassOperation::Clear;
+		else if (loadOp == "VK_ATTACHMENT_LOAD_OP_LOAD")
+			return RenderPassOperation::Load;
+		return RenderPassOperation::DontCare;
 	}
 
 	void FrameGraph::Parse(std::string filename)
@@ -210,6 +235,7 @@ namespace gfx {
 					resource.info.texture.height = resolution[1];
 					resource.info.texture.depth = 1;
 					GetTextureFormatAndAspect(passOutput["format"], resource.info.texture.format, resource.info.texture.imageAspect);
+					resource.info.texture.op = GetTextureLoadOp(passOutput["op"]);
 					break;
 				}
 				case FrameGraphResourceType::Buffer:
@@ -322,7 +348,6 @@ namespace gfx {
 		{
 			FrameGraphNodeHandle handle = nodeHandles[i];
 			FrameGraphNode* node = builder->AccessNode(handle);
-
 			builder->device->Destroy(node->renderPass);
 			builder->device->Destroy(node->framebuffer);
 		}
@@ -427,7 +452,7 @@ namespace gfx {
 			if (output->type == FrameGraphResourceType::Attachment)
 			{
 				Attachment attachment = {};
-				attachment.operation = RenderPassOperation::DontCare;
+				attachment.operation = info.texture.op;
 				attachment.format = info.texture.format;
 				attachment.imageAspect = info.texture.imageAspect;
 

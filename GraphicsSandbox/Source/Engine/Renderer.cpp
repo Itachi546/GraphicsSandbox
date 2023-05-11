@@ -9,6 +9,7 @@
 #include "StringConstants.h"
 #include "DebugDraw.h"
 #include "TransformComponent.h"
+#include "FrameGraphRenderer.h"
 
 #include "../Shared/MeshData.h"
 #include <vector>
@@ -119,8 +120,8 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mFrameGraphBuilder.Init(mDevice);
 	mFrameGraph.Init(&mFrameGraphBuilder);
 	mFrameGraph.Parse("Assets/graph.json");
-
 	mFrameGraph.Compile();
+	mFrameGraph.RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(mFrameGraphBuilder.AccessNode("depth_pre_pass")->renderPass, this));
 }
 
 // TODO: temp width and height variable
@@ -178,37 +179,74 @@ void Renderer::Update(float dt)
 
 void Renderer::Render(gfx::CommandList* commandList)
 {
-	mDevice->BeginDebugMarker(commandList, "SwapchainRP", 1.0f, 1.0f, 1.0f, 1.0f);
-	RangeId swapchainRangeId = Profiler::StartRangeGPU(commandList, "Swapchain Render");
+	gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode("depth_pre_pass");
 
-	gfx::TextureHandle outputTexture = gfx::INVALID_TEXTURE;
-	//gfx::ImageBarrierInfo shaderReadBarrier = { gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, outputTexture };
-	//gfx::PipelineBarrierInfo shaderReadPipelineBarrier = { &shaderReadBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::FragmentShader };
-	//mDevice->PipelineBarrier(commandList, &shaderReadPipelineBarrier);
+	std::vector<gfx::ImageBarrierInfo> colorAttachmentBarrier;
+	std::vector<gfx::ImageBarrierInfo> depthAttachmentBarrier;
 
-	//gfx::TextureHandle sceneDepthTexture = mRenderer->GetOutputTexture(OutputTextureType::HDRDepth);
-	//gfx::ImageBarrierInfo transferSrcBarrier = { gfx::AccessFlag::None, gfx::AccessFlag::TransferReadBit, gfx::ImageLayout::TransferSrcOptimal, sceneDepthTexture };
-	//gfx::PipelineBarrierInfo transferSrcPipelineBarrier = { &transferSrcBarrier, 1, gfx::PipelineStage::ComputeShader, gfx::PipelineStage::TransferBit };
-	//mDevice->PipelineBarrier(&commandList, &transferSrcPipelineBarrier);
-	//mDevice->CopyToSwapchain(&commandList, sceneDepthTexture, gfx::ImageLayout::DepthStencilAttachmentOptimal);
+	// Generate the Image barrier from input and output
+	for (uint32_t i = 0; i < node->inputs.size(); ++i)
+	{
+		if (!node->enabled) continue;
 
-	mDevice->BeginRenderPass(commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
-	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
-	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
-	mDevice->BindPipeline(commandList, mFullScreenPipeline);
-	mDevice->Draw(commandList, 6, 0, 1);
+		mDevice->BeginDebugMarker(commandList, node->name.c_str());
 
-	// Draw DebugData
-	auto camera = mScene->GetCamera();
-	glm::mat4 VP = camera->GetProjectionMatrix() * camera->GetViewMatrix();
-	DebugDraw::Draw(commandList, VP);
-	//RenderUI(&commandList);
+		gfx::FrameGraphResource* input = mFrameGraphBuilder.AccessResource(node->inputs[i]);
+		gfx::FrameGraphResourceInfo resourceInfo = input->info;
+		if (input->type == gfx::FrameGraphResourceType::Texture)
+		{
+			gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
+			colorAttachmentBarrier.push_back(barrierInfo);
+		}
+	}
+
+	for (uint32_t i = 0; i < node->outputs.size(); ++i)
+	{
+		gfx::FrameGraphResource* output = mFrameGraphBuilder.AccessResource(node->outputs[i]);
+		gfx::FrameGraphResourceInfo resourceInfo = output->info;
+
+		if (output->type == gfx::FrameGraphResourceType::Attachment)
+		{
+			if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
+			{
+				gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+				depthAttachmentBarrier.push_back(barrierInfo);
+			}
+			else {
+				gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, resourceInfo.texture.texture };
+				colorAttachmentBarrier.push_back(barrierInfo);
+			}
+		}
+	}
+
+	// Pipeline barrier for color attachments
+	if (colorAttachmentBarrier.size() > 0)
+	{
+		gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::FragmentShader };
+		mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+	}
+
+	// Pipeline barrier for depth attachments
+	if (depthAttachmentBarrier.size() > 0)
+	{
+		gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+		mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+	}
+
+	node->renderer->PreRender(commandList);
+
+	mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
+	node->renderer->Render(commandList, mScene);
 	mDevice->EndRenderPass(commandList);
-
 	mDevice->EndDebugMarker(commandList);
-	Profiler::EndRangeGPU(commandList, swapchainRangeId);
+/*
+	std::vector<gfx::FrameGraphNodeHandle>& nodeHandles = mFrameGraph.nodeHandles;
+	for (gfx::FrameGraphNodeHandle handle : nodeHandles)
+	{
+		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(handle);
 
-
+	}
+	*/
 }
 
 /*
@@ -635,11 +673,11 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 
 void Renderer::Shutdown()
 {
-	mFrameGraphBuilder.Shutdown();
 	mFrameGraph.Shutdown();
+	mFrameGraphBuilder.Shutdown();
+	mDevice->Destroy(mFullScreenPipeline);
 	//mDevice->Destroy(mMeshPipeline);
 	//mDevice->Destroy(mSkinnedMeshPipeline);
-	mDevice->Destroy(mCubemapPipeline);
 
 	mDevice->Destroy(mGlobalUniformBuffer);
 	mDevice->Destroy(mTransformBuffer);

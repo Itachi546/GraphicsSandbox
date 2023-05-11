@@ -89,16 +89,9 @@ void Application::render_()
 
 	Profiler::BeginFrameGPU(&commandList);
 	mDevice->PrepareSwapchain(&commandList);
-
-	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
 	mRenderer->Render(&commandList);
-	
 	mDevice->PrepareSwapchainForPresent(&commandList);
-	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
-
 	mDevice->Present(&commandList);
-
-	Profiler::EndRangeCPU(cpuRenderTime);
 }
 
 void Application::SetWindow(Platform::WindowType window, bool fullscreen)

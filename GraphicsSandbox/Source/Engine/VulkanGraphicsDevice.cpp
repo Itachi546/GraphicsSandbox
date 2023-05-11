@@ -1445,8 +1445,8 @@ namespace gfx {
 
             renderPassDesc.hasDepthAttachment = true;
             renderPassDesc.depthAttachment = { Format::D32_SFLOAT, RenderPassOperation::Clear, ImageAspect::Depth };
-            RenderPassHandle handle = CreateRenderPass(&renderPassDesc);
-            swapchain_->renderPass = renderPasses.AccessResource(handle.handle);
+            mSwapchainRP = CreateRenderPass(&renderPassDesc);
+            swapchain_->renderPass = renderPasses.AccessResource(mSwapchainRP.handle);
 			swapchain_->surface = CreateSurface(instance_, physicalDevice_, queueFamilyIndices_, window);
         }
 
@@ -2019,10 +2019,13 @@ namespace gfx {
         std::vector<VkImageMemoryBarrier> renderBeginBarrier = {
             CreateImageBarrier(swapchain_->images[imageIndex], VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL),
         };
+        vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
 
         if (swapchain_->depthImages.size() > 0)
-            renderBeginBarrier.push_back(CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL));
-        vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, static_cast<uint32_t>(renderBeginBarrier.size()), renderBeginBarrier.data());
+        {
+            VkImageMemoryBarrier depthBarrier = CreateImageBarrier(swapchain_->depthImages[imageIndex].first, VK_IMAGE_ASPECT_DEPTH_BIT, 0, 0, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+            vkCmdPipelineBarrier(vkCmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, 0, 0, 0, 1, &depthBarrier);
+        }
     }
 
     void VulkanGraphicsDevice::BeginRenderPass(CommandList* commandList, RenderPassHandle renderPass, FramebufferHandle framebuffer)
@@ -2658,6 +2661,8 @@ namespace gfx {
     void VulkanGraphicsDevice::Destroy(RenderPassHandle renderPass)
     {
         VulkanRenderPass* vkRp = renderPasses.AccessResource(renderPass.handle);
+        if (vkRp == nullptr) return;
+
         gAllocationHandler.destroyedRenderPass_.push_back(vkRp->renderPass);
         renderPasses.ReleaseResource(renderPass.handle);
     }
@@ -2665,6 +2670,8 @@ namespace gfx {
     void VulkanGraphicsDevice::Destroy(PipelineHandle pipeline)
     {
         VulkanPipeline* vkPipeline = pipelines.AccessResource(pipeline.handle);
+        if (vkPipeline == nullptr) return;
+
         gAllocationHandler.destroyedPipeline_.push_back(vkPipeline->pipeline);
         gAllocationHandler.destroyedPipelineLayout_.push_back(vkPipeline->pipelineLayout);
         gAllocationHandler.destroyedShaders_.insert(gAllocationHandler.destroyedShaders_.end(), vkPipeline->shaderModules.begin(), vkPipeline->shaderModules.end());
@@ -2677,34 +2684,39 @@ namespace gfx {
     void VulkanGraphicsDevice::Destroy(BufferHandle buffer)
     {
         VulkanBuffer* vkBuffer = buffers.AccessResource(buffer.handle);
-        gAllocationHandler.destroyedBuffers_.push_back(std::make_pair(vkBuffer->buffer, vkBuffer->allocation));
-        vkBuffer->desc = {};
-        buffers.ReleaseResource(buffer.handle);
+        if (vkBuffer == nullptr) return;
+
+		gAllocationHandler.destroyedBuffers_.push_back(std::make_pair(vkBuffer->buffer, vkBuffer->allocation));
+		vkBuffer->desc = {};
+		buffers.ReleaseResource(buffer.handle);
     }
 
     void VulkanGraphicsDevice::Destroy(TextureHandle texture)
     {
         VulkanTexture* vkTexture = textures.AccessResource(texture.handle);
-        gAllocationHandler.destroyedImages_.push_back(std::make_pair(vkTexture->image, vkTexture->allocation));
-        gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), vkTexture->imageViews.begin(), vkTexture->imageViews.end());
-        gAllocationHandler.destroyedSamplers_.push_back(vkTexture->sampler);
+        if (vkTexture == nullptr) return;
 
-        vkTexture->imageViews.clear();
-        textures.ReleaseResource(texture.handle);
+		gAllocationHandler.destroyedImages_.push_back(std::make_pair(vkTexture->image, vkTexture->allocation));
+		gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), vkTexture->imageViews.begin(), vkTexture->imageViews.end());
+		gAllocationHandler.destroyedSamplers_.push_back(vkTexture->sampler);
+
+		vkTexture->imageViews.clear();
+		textures.ReleaseResource(texture.handle);
     }
 
     void VulkanGraphicsDevice::Destroy(FramebufferHandle framebuffer)
     {
         VulkanFramebuffer* vkFramebuffer = framebuffers.AccessResource(framebuffer.handle);
+        if (vkFramebuffer == nullptr) return;
+
         gAllocationHandler.destroyedFramebuffers_.push_back(vkFramebuffer->framebuffer);
-        for (uint32_t i = 0; i < vkFramebuffer->attachmentCount; ++i)
-            Destroy(vkFramebuffer->attachments[i]);
         framebuffers.ReleaseResource(framebuffer.handle);
     }
 
     void VulkanGraphicsDevice::Destroy(SemaphoreHandle semaphore)
     {
         VulkanSemaphore* vkSemaphore = semaphores.AccessResource(semaphore.handle);
+        if (vkSemaphore == nullptr) return;
         gAllocationHandler.destroyedSemaphore_.push_back(vkSemaphore->semaphore);
         semaphores.ReleaseResource(semaphore.handle);
     }
@@ -2719,14 +2731,6 @@ namespace gfx {
 
     void VulkanGraphicsDevice::Shutdown()
     {
-        // Release resources
-        framebuffers.Shutdown();
-        renderPasses.Shutdown();
-        buffers.Shutdown();
-        textures.Shutdown();
-        pipelines.Shutdown();
-        semaphores.Shutdown();
-
         gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), swapchain_->imageViews.begin(), swapchain_->imageViews.end());
         swapchain_->images.clear();
         swapchain_->imageViews.clear();
@@ -2746,6 +2750,16 @@ namespace gfx {
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
         gAllocationHandler.destroyedRenderPass_.push_back(swapchain_->renderPass->renderPass);
         swapchain_->framebuffers.clear();
+
+        renderPasses.ReleaseResource(mSwapchainRP.handle);
+
+        // Release resources
+        framebuffers.Shutdown();
+        renderPasses.Shutdown();
+        buffers.Shutdown();
+        textures.Shutdown();
+        pipelines.Shutdown();
+        semaphores.Shutdown();
 
         destroyReleasedResources();
 

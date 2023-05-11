@@ -9,7 +9,8 @@ namespace gfx {
 	struct DepthPrePass : public FrameGraphRenderer
 	{
 		DepthPrePass(RenderPassHandle renderPass, Renderer* renderer);
-		void render(CommandList* commandList, Scene* scene);
+		void Render(CommandList* commandList, Scene* scene) override;
+		void Shutdown();
 
 		PipelineHandle pipeline = INVALID_PIPELINE;
 		DescriptorInfo descriptorInfos[3];

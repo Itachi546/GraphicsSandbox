@@ -156,6 +156,7 @@ namespace gfx
 		} queues;
 
 		std::unique_ptr<VulkanSwapchain> swapchain_ = nullptr;
+		RenderPassHandle mSwapchainRP;
 		std::shared_ptr<VulkanCommandList> commandList_;
 
 		void findAvailableInstanceLayer(const std::vector<VkLayerProperties>& availableLayers, std::vector<const char*>& outLayers);

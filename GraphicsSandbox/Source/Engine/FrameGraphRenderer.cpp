@@ -30,7 +30,7 @@ gfx::DepthPrePass::DepthPrePass(RenderPassHandle renderPass, Renderer* renderer_
 	descriptorInfos[2] = { INVALID_BUFFER, ~0u, ~0u, gfx::DescriptorType::StorageBuffer };
 }
 
-void gfx::DepthPrePass::render(CommandList* commandList, Scene* scene)
+void gfx::DepthPrePass::Render(CommandList* commandList, Scene* scene)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 
@@ -68,4 +68,9 @@ void gfx::DepthPrePass::render(CommandList* commandList, Scene* scene)
 		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
 
+}
+
+void gfx::DepthPrePass::Shutdown()
+{
+	gfx::GetDevice()->Destroy(pipeline);
 }

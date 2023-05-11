@@ -9,13 +9,16 @@
 #include "StringConstants.h"
 #include "DebugDraw.h"
 #include "TransformComponent.h"
-#include "FrameGraphRenderer.h"
+#include "TextureCache.h"
 
 #include "../Shared/MeshData.h"
+#include "Pass/DepthPrePass.h"
+#include "Pass/GBufferPass.h"
+
+
 #include <vector>
 #include <algorithm>
 
-#include "TextureCache.h"
 
 Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
@@ -65,7 +68,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	pipelineDesc.rasterizationState.enableDepthWrite = false;
 	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
 	gfx::BlendState blendState = {};
-	pipelineDesc.blendState = &blendState;
+	pipelineDesc.blendStates = &blendState;
 	pipelineDesc.blendStateCount = 1;
 
 	mFullScreenPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
@@ -119,9 +122,11 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 
 	mFrameGraphBuilder.Init(mDevice);
 	mFrameGraph.Init(&mFrameGraphBuilder);
-	mFrameGraph.Parse("Assets/graph.json");
+	mFrameGraph.Parse("GraphicsSandbox/Shaders/graph.json");
 	mFrameGraph.Compile();
+
 	mFrameGraph.RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(mFrameGraphBuilder.AccessNode("depth_pre_pass")->renderPass, this));
+	mFrameGraph.RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(mFrameGraphBuilder.AccessNode("gbuffer_pass")->renderPass, this));
 }
 
 // TODO: temp width and height variable
@@ -179,74 +184,92 @@ void Renderer::Update(float dt)
 
 void Renderer::Render(gfx::CommandList* commandList)
 {
-	gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode("depth_pre_pass");
-
-	std::vector<gfx::ImageBarrierInfo> colorAttachmentBarrier;
-	std::vector<gfx::ImageBarrierInfo> depthAttachmentBarrier;
-
-	// Generate the Image barrier from input and output
-	for (uint32_t i = 0; i < node->inputs.size(); ++i)
+	for (uint32_t i = 0; i < mFrameGraph.nodeHandles.size(); ++i)
 	{
-		if (!node->enabled) continue;
+		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(mFrameGraph.nodeHandles[i]);
 
-		mDevice->BeginDebugMarker(commandList, node->name.c_str());
+		std::vector<gfx::ImageBarrierInfo> colorAttachmentBarrier;
+		std::vector<gfx::ImageBarrierInfo> depthAttachmentBarrier;
 
-		gfx::FrameGraphResource* input = mFrameGraphBuilder.AccessResource(node->inputs[i]);
-		gfx::FrameGraphResourceInfo resourceInfo = input->info;
-		if (input->type == gfx::FrameGraphResourceType::Texture)
+		// Generate the Image barrier from input and output
+		for (uint32_t i = 0; i < node->inputs.size(); ++i)
 		{
-			gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
-			colorAttachmentBarrier.push_back(barrierInfo);
-		}
-	}
+			if (!node->enabled) continue;
 
-	for (uint32_t i = 0; i < node->outputs.size(); ++i)
-	{
-		gfx::FrameGraphResource* output = mFrameGraphBuilder.AccessResource(node->outputs[i]);
-		gfx::FrameGraphResourceInfo resourceInfo = output->info;
+			mDevice->BeginDebugMarker(commandList, node->name.c_str());
 
-		if (output->type == gfx::FrameGraphResourceType::Attachment)
-		{
-			if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
+			gfx::FrameGraphResource* input = mFrameGraphBuilder.AccessResource(node->inputs[i]);
+			gfx::FrameGraphResourceInfo resourceInfo = input->info;
+			if (input->type == gfx::FrameGraphResourceType::Texture)
 			{
-				gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
-				depthAttachmentBarrier.push_back(barrierInfo);
-			}
-			else {
-				gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, resourceInfo.texture.texture };
-				colorAttachmentBarrier.push_back(barrierInfo);
+				if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
+				{
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+					depthAttachmentBarrier.push_back(barrierInfo);
+				}
+				else {
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
+					colorAttachmentBarrier.push_back(barrierInfo);
+				}
 			}
 		}
+
+		// Pipeline barrier for color attachments
+		if (colorAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::FragmentShader };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+			colorAttachmentBarrier.clear();
+		}
+
+		// Pipeline barrier for depth attachments
+		if (depthAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+			depthAttachmentBarrier.clear();
+		}
+
+		for (uint32_t i = 0; i < node->outputs.size(); ++i)
+		{
+			gfx::FrameGraphResource* output = mFrameGraphBuilder.AccessResource(node->outputs[i]);
+			gfx::FrameGraphResourceInfo resourceInfo = output->info;
+
+			if (output->type == gfx::FrameGraphResourceType::Attachment)
+			{
+				if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
+				{
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+					depthAttachmentBarrier.push_back(barrierInfo);
+				}
+				else {
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, resourceInfo.texture.texture };
+					colorAttachmentBarrier.push_back(barrierInfo);
+				}
+			}
+		}
+
+		// Pipeline barrier for color attachments
+		if (colorAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+		}
+
+		// Pipeline barrier for depth attachments
+		if (depthAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+		}
+
+		node->renderer->PreRender(commandList);
+
+		mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
+		node->renderer->Render(commandList, mScene);
+		mDevice->EndRenderPass(commandList);
+		mDevice->EndDebugMarker(commandList);
 	}
-
-	// Pipeline barrier for color attachments
-	if (colorAttachmentBarrier.size() > 0)
-	{
-		gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::FragmentShader };
-		mDevice->PipelineBarrier(commandList, &pipelineBarrier);
-	}
-
-	// Pipeline barrier for depth attachments
-	if (depthAttachmentBarrier.size() > 0)
-	{
-		gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
-		mDevice->PipelineBarrier(commandList, &pipelineBarrier);
-	}
-
-	node->renderer->PreRender(commandList);
-
-	mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
-	node->renderer->Render(commandList, mScene);
-	mDevice->EndRenderPass(commandList);
-	mDevice->EndDebugMarker(commandList);
-/*
-	std::vector<gfx::FrameGraphNodeHandle>& nodeHandles = mFrameGraph.nodeHandles;
-	for (gfx::FrameGraphNodeHandle handle : nodeHandles)
-	{
-		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(handle);
-
-	}
-	*/
 }
 
 /*

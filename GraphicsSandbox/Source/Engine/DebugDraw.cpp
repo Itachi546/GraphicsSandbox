@@ -33,7 +33,7 @@ void DebugDraw::Initialize(gfx::RenderPassHandle renderPass)
 	pipelineDesc.topology = gfx::Topology::Line;
 	pipelineDesc.renderPass = renderPass;
 	gfx::BlendState blendState = {};
-	pipelineDesc.blendState = &blendState;
+	pipelineDesc.blendStates = &blendState;
 	pipelineDesc.blendStateCount = 1;
 	pipelineDesc.rasterizationState.lineWidth = 1.0f;
 	

@@ -1713,7 +1713,7 @@ namespace gfx {
         std::vector< VkPipelineColorBlendAttachmentState> colorAttachmentState(desc->blendStateCount);
         for (uint32_t i = 0; i < desc->blendStateCount; ++i)
         {
-            const BlendState* bs = (desc->blendState + i);
+            const BlendState* bs = (desc->blendStates + i);
             if (bs->enable)
             {
                 colorAttachmentState[i].blendEnable = true;

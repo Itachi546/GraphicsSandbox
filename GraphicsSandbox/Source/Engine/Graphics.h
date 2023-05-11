@@ -276,7 +276,7 @@ namespace gfx
 		ShaderDescription* shaderDesc = nullptr;
 		Topology topology = Topology::TriangleList;
 		RasterizationState rasterizationState = {};
-		BlendState* blendState = nullptr;
+		BlendState* blendStates = nullptr;
 		uint32_t blendStateCount = 0;
 		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};

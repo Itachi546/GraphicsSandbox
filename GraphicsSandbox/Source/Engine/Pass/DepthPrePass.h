@@ -1,12 +1,12 @@
 #pragma once
 
-#include "FrameGraph.h"
+#include "../FrameGraph.h"
 
 class Scene;
 class Renderer;
 namespace gfx {
 
-	struct DepthPrePass : public FrameGraphRenderer
+	struct DepthPrePass : public FrameGraphPass
 	{
 		DepthPrePass(RenderPassHandle renderPass, Renderer* renderer);
 		void Render(CommandList* commandList, Scene* scene) override;

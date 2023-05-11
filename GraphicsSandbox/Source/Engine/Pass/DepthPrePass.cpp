@@ -1,9 +1,9 @@
-#include "FrameGraphRenderer.h"
+#include "DepthPrePass.h"
 
-#include "Scene.h"
-#include "StringConstants.h"
-#include "Utils.h"
-#include "Renderer.h"
+#include "../Scene.h"
+#include "../StringConstants.h"
+#include "../Utils.h"
+#include "../Renderer.h"
 
 gfx::DepthPrePass::DepthPrePass(RenderPassHandle renderPass, Renderer* renderer_)
 {
@@ -28,6 +28,8 @@ gfx::DepthPrePass::DepthPrePass(RenderPassHandle renderPass, Renderer* renderer_
 	// Fill this later while rendering
 	descriptorInfos[1] = { INVALID_BUFFER, ~0u, ~0u, gfx::DescriptorType::StorageBuffer };
 	descriptorInfos[2] = { INVALID_BUFFER, ~0u, ~0u, gfx::DescriptorType::StorageBuffer };
+
+	delete[] code;
 }
 
 void gfx::DepthPrePass::Render(CommandList* commandList, Scene* scene)

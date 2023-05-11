@@ -41,54 +41,6 @@
       ]
     },
     {
-      "inputs": [
-        {
-          "type": "reference",
-          "name": "lighting"
-        }
-      ],
-      "name": "bloom",
-      "outputs": [
-        {
-          "type": "attachment",
-          "name": "final",
-          "format": "B8G8R8A8_UNORM",
-          "resolution": [ 1280, 800 ],
-          "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
-        }
-      ]
-    },
-    {
-      "inputs": [
-        {
-          "type": "texture",
-          "name": "gbuffer_colour"
-        },
-        {
-          "type": "texture",
-          "name": "gbuffer_normals"
-        },
-        {
-          "type": "texture",
-          "name": "gbuffer_metallic_roughness_occlusion"
-        },
-        {
-          "type": "texture",
-          "name": "gbuffer_position"
-        }
-      ],
-      "name": "lighting_pass",
-      "outputs": [
-        {
-          "type": "attachment",
-          "name": "lighting",
-          "format": "B8G8R8A8_UNORM",
-          "resolution": [ 1280, 800 ],
-          "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
-        }
-      ]
-    },
-    {
       "inputs": [],
       "name": "depth_pre_pass",
       "outputs": [

@@ -185,8 +185,8 @@
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
-    <ClInclude Include="Source\Engine\FrameGraph.h" />
-    <ClInclude Include="Source\Engine\FrameGraphRenderer.h" />
+    <ClInclude Include="Source\Engine\FrameGraph\FrameGraph.h" />
+    <ClInclude Include="Source\Engine\Pass\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
     <ClInclude Include="Source\Engine\ImageLoader.h" />
     <ClInclude Include="Source\Engine\ECS.h" />
@@ -203,6 +203,7 @@
     <ClInclude Include="Source\Engine\Input.h" />
     <ClInclude Include="Source\Engine\Interpolator.h" />
     <ClInclude Include="Source\Engine\Logger.h" />
+    <ClInclude Include="Source\Engine\Pass\GBufferPass.h" />
     <ClInclude Include="Source\Engine\Platform.h" />
     <ClInclude Include="Source\Engine\Profiler.h" />
     <ClInclude Include="Source\Engine\Renderer.h" />
@@ -241,7 +242,8 @@
     <ClCompile Include="Source\Engine\Camera.cpp" />
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\FrameGraph.cpp" />
-    <ClCompile Include="Source\Engine\FrameGraphRenderer.cpp" />
+    <ClCompile Include="Source\Engine\Pass\DepthPrePass.cpp" />
+    <ClCompile Include="Source\Engine\Pass\GBufferPass.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
     <ClCompile Include="Source\Engine\ECS.cpp" />
     <ClCompile Include="Source\Engine\Components.cpp" />
@@ -281,6 +283,14 @@
     <CustomBuild Include="Shaders\includes\bindless.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\gbuffer\gbuffer.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\gbuffer\gbuffer.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="Shaders\graph.json" />
+    <None Include="Shaders\graph.json.bak" />
     <None Include="Shaders\includes\material.glsl" />
     <None Include="Shaders\includes\mesh.glsl" />
     <None Include="Shaders\includes\pbr.glsl" />

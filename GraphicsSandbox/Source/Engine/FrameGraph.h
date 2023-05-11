@@ -76,7 +76,7 @@ namespace gfx
 		std::vector<FrameGraphResourceCreation> outputs;
 	};
 
-	struct FrameGraphRenderer
+	struct FrameGraphPass
 	{
 		virtual void AddUI() {}
 		virtual void PreRender(CommandList* commandList) {}
@@ -95,7 +95,7 @@ namespace gfx
 		FramebufferHandle framebuffer;
 		std::vector<FrameGraphNodeHandle> edges;
 
-		FrameGraphRenderer* renderer;
+		FrameGraphPass* renderer;
 
 		std::vector<FrameGraphResourceHandle> inputs;
 		std::vector<FrameGraphResourceHandle> outputs;
@@ -166,7 +166,7 @@ namespace gfx
 		void Compile();
 		void Shutdown();
 
-		void RegisterRenderer(const std::string& name, FrameGraphRenderer* renderer) {
+		void RegisterRenderer(const std::string& name, FrameGraphPass* renderer) {
 			FrameGraphNode* node = builder->AccessNode(name);
 			if (node)
 				node->renderer = renderer;

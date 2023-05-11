@@ -3,7 +3,7 @@
 #extension GL_GOOGLE_include_directive: require
 #extension GL_ARB_shader_draw_parameters: require
 
-#include "mesh.glsl"
+#include "../includes/mesh.glsl"
 
 #define MAX_WEIGHT 4
 #define MAX_BONE_COUNT 80

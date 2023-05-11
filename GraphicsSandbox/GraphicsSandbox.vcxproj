@@ -263,87 +263,81 @@
     <ClCompile Include="Source\Shared\MathUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
-      <FileType>Document</FileType>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)Assets\Shaders\shadow.glsl;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">$(SolutionDir)Assets\Shaders\shadow.glsl;%(AdditionalInputs)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)Assets\Shaders\shadow.glsl;%(AdditionalInputs)</AdditionalInputs>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\main.vert.glsl">
+    <CustomBuild Include="Shaders\bloom\bloom-final.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\animated.vert.glsl">
+    <CustomBuild Include="Shaders\bloom\downsample.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\animated.frag.glsl">
+    <CustomBuild Include="Shaders\bloom\upsample.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="..\Assets\graph.json" />
-    <None Include="..\Assets\Shaders\bindings.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\cubemap.frag.glsl">
+    <CustomBuild Include="Shaders\cubemap\cubemap.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
+    <CustomBuild Include="Shaders\cubemap\cubemap.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bloom\downsample.comp.glsl">
+    <CustomBuild Include="Shaders\includes\bindless.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bloom\upsample.comp.glsl">
+    <None Include="Shaders\includes\material.glsl" />
+    <None Include="Shaders\includes\mesh.glsl" />
+    <None Include="Shaders\includes\pbr.glsl" />
+    <CustomBuild Include="Shaders\main.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\brdf_lut.comp.glsl">
+    <CustomBuild Include="Shaders\main.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\hdri_converter.comp.glsl">
+    <CustomBuild Include="Shaders\shadow\shadow-skinned.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\irradiance.comp.glsl">
+    <CustomBuild Include="Shaders\shadow\shadow.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\prefilter_env.comp.glsl">
+    <CustomBuild Include="Shaders\ssao\ssao.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bloom\bloom-final.comp.glsl">
+    <CustomBuild Include="Shaders\utils\copy.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\copy.frag.glsl">
+    <CustomBuild Include="Shaders\utils\copy.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
+    <CustomBuild Include="Shaders\debug\debug.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl">
+    <CustomBuild Include="Shaders\debug\debug.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl">
+    <CustomBuild Include="Shaders\envmap\brdf_lut.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bindless.frag.glsl">
+    <None Include="Shaders\envmap\cubemap.glsl" />
+    <CustomBuild Include="Shaders\envmap\hdri_converter.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="..\Assets\Shaders\envmap\cubemap.glsl" />
-    <None Include="..\Assets\Shaders\material.glsl" />
-    <None Include="..\Assets\Shaders\mesh.glsl">
-      <FileType>Document</FileType>
-    </None>
-    <None Include="..\Assets\Shaders\pbr.glsl">
-      <FileType>Document</FileType>
-    </None>
-    <CustomBuild Include="..\Assets\Shaders\shadow.vert.glsl">
+    <CustomBuild Include="Shaders\envmap\irradiance.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\shadow.geom.glsl">
+    <CustomBuild Include="Shaders\envmap\prefilter_env.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\shadow-skinned.vert.glsl">
+    <None Include="Shaders\includes\bindings.glsl" />
+    <CustomBuild Include="Shaders\shadow\shadow.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="..\Assets\Shaders\shadow.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\ssao\ssao.comp.glsl">
+    <CustomBuild Include="Shaders\shadow\shadow.geom.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <None Include="packages.config" />
+    <None Include="Shaders\shadow\shadow.glsl" />
+    <CustomBuild Include="Shaders\skinned\animated.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\skinned\animated.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

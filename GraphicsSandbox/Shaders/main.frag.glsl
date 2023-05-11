@@ -18,21 +18,15 @@ layout(location = 0) in VS_OUT
 } fs_in;
 
 #define FRAGMENT_SHADER
-#include "bindings.glsl"
-#include "shadow.glsl"
-#include "pbr.glsl"
+#include "includes/bindings.glsl"
+#include "shadow/shadow.glsl"
+#include "includes/pbr.glsl"
 
-#extension GL_EXT_nonuniform_qualifier : enable
-
-layout (set = 1, binding = 10) uniform sampler2D textures[];
 
 void main()
 {
 	Material material = aMaterialData[fs_in.matId];
-    vec3 Lo = material.albedo.rgb;
-	if(material.albedoMap != INVALID_TEXTURE)
-	 Lo = texture(textures[material.albedoMap], fs_in.uv).rgb;
-
+    vec3 Lo = CalculateColor(material);
     float luminance = dot(Lo, vec3(0.2126, 0.7152, 0.0722));
 	if(luminance > globals.bloomThreshold || material.emissive > 0.01f)
 	{

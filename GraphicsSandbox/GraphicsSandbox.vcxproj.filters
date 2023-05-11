@@ -304,81 +304,36 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="..\Assets\Shaders\main.frag.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\main.vert.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\cubemap.frag.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\cubemap.vert.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\brdf_lut.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bloom\downsample.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\hdri_converter.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\irradiance.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\envmap\prefilter_env.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bloom\upsample.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\bloom\bloom-final.comp.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\copy.frag.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\copy.vert.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\shadow.geom.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\shadow.vert.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\debug.frag.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\debug.vert.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="..\Assets\Shaders\ssao\ssao.comp.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\animated.vert.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\shadow-skinned.vert.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\animated.frag.glsl" />
-    <CustomBuild Include="..\Assets\Shaders\bindless.frag.glsl" />
+    <None Include="Shaders\debug\debug.frag.glsl" />
+    <None Include="Shaders\debug\debug.vert.glsl" />
+    <None Include="Shaders\bloom\downsample.comp.glsl" />
+    <None Include="Shaders\bloom\upsample.comp.glsl" />
+    <None Include="Shaders\envmap\brdf_lut.comp.glsl" />
+    <None Include="Shaders\envmap\cubemap.glsl" />
+    <None Include="Shaders\envmap\hdri_converter.comp.glsl" />
+    <None Include="Shaders\envmap\irradiance.comp.glsl" />
+    <None Include="Shaders\envmap\prefilter_env.comp.glsl" />
+    <None Include="Shaders\skinned\animated.frag.glsl" />
+    <None Include="Shaders\skinned\animated.vert.glsl" />
+    <None Include="Shaders\includes\bindings.glsl" />
+    <None Include="Shaders\shadow\shadow.frag.glsl" />
+    <None Include="Shaders\shadow\shadow.geom.glsl" />
+    <None Include="Shaders\shadow\shadow.glsl" />
+    <None Include="Shaders\utils\copy.frag.glsl" />
+    <None Include="Shaders\utils\copy.vert.glsl" />
+    <None Include="Shaders\cubemap\cubemap.frag.glsl" />
+    <None Include="Shaders\cubemap\cubemap.vert.glsl" />
+    <None Include="Shaders\includes\bindless.frag.glsl" />
+    <None Include="Shaders\includes\material.glsl" />
+    <None Include="Shaders\shadow\shadow.vert.glsl" />
+    <None Include="Shaders\includes\mesh.glsl" />
+    <None Include="Shaders\includes\pbr.glsl" />
+    <None Include="Shaders\shadow\shadow-skinned.vert.glsl" />
+    <None Include="Shaders\main.frag.glsl" />
+    <None Include="Shaders\main.vert.glsl" />
+    <None Include="Shaders\ssao\ssao.comp.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Assets\Shaders\mesh.glsl">
-      <Filter>SHADERS</Filter>
-    </None>
-    <None Include="..\Assets\Shaders\pbr.glsl">
-      <Filter>SHADERS</Filter>
-    </None>
-    <None Include="..\Assets\Shaders\bindings.glsl">
-      <Filter>SHADERS</Filter>
-    </None>
-    <None Include="..\Assets\Shaders\envmap\cubemap.glsl">
-      <Filter>SHADERS</Filter>
-    </None>
-    <None Include="..\Assets\Shaders\shadow.glsl">
-      <Filter>SHADERS</Filter>
-    </None>
-    <None Include="packages.config" />
-    <None Include="..\Assets\Shaders\material.glsl" />
-    <None Include="..\Assets\graph.json" />
+    <CustomBuild Include="Shaders\bloom\bloom-final.comp.glsl" />
   </ItemGroup>
 </Project>

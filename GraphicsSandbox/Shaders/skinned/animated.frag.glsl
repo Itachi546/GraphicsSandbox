@@ -18,9 +18,9 @@ layout(location = 0) in VS_OUT
 }fs_in;
 
 #define FRAGMENT_SHADER
-#include "bindings.glsl"
-#include "shadow.glsl"
-#include "pbr.glsl"
+#include "../includes/bindings.glsl"
+#include "../shadow/shadow.glsl"
+#include "../includes/pbr.glsl"
 
 void main()
 {

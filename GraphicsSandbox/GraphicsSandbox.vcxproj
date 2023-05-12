@@ -185,6 +185,7 @@
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
     <ClInclude Include="Source\Engine\DebugDraw.h" />
+    <ClInclude Include="Source\Engine\FrameGraph.h" />
     <ClInclude Include="Source\Engine\FrameGraph\FrameGraph.h" />
     <ClInclude Include="Source\Engine\Pass\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />

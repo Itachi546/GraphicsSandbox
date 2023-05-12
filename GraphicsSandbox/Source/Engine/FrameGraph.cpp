@@ -249,7 +249,12 @@ namespace gfx {
 
 	void FrameGraph::onResize(uint32_t width, uint32_t height)
 	{
-		assert(0);
+		for (uint32_t i = 0; i < nodeHandles.size(); ++i)
+		{
+			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
+			if (!node->enabled) continue;
+			node->renderer->OnResize(gfx::GetDevice(), width, height);
+		}
 	}
 
 	void FrameGraph::Compile()

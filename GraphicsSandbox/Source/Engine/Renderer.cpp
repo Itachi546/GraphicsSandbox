@@ -22,33 +22,6 @@
 
 Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
-
-	/*
-		gfx::RenderPassDesc renderPassDesc = {};
-		renderPassDesc.width = props.width;
-		renderPassDesc.height = props.height;
-
-		gfx::GPUTextureDesc colorAttachment;
-		colorAttachment.bCreateSampler = false;
-		colorAttachment.bindFlag = gfx::BindFlag::RenderTarget;
-		colorAttachment.format = mSwapchainColorFormat;
-		colorAttachment.width = props.width;
-		colorAttachment.height = props.height;
-
-		gfx::GPUTextureDesc depthAttachment;
-		depthAttachment.bCreateSampler = false;
-		depthAttachment.bindFlag = gfx::BindFlag::DepthStencil;
-		depthAttachment.format = mSwapchainDepthFormat;
-		depthAttachment.imageAspect = gfx::ImageAspect::Depth;
-		depthAttachment.width = props.width;
-		depthAttachment.height = props.height;
-
-		std::vector<gfx::Attachment> attachments{ {0, colorAttachment}, {1, depthAttachment, true} };
-		renderPassDesc.attachments = attachments;
-		renderPassDesc.hasDepthAttachment = false;
-		mSwapchainRP = mDevice->CreateRenderPass(&renderPassDesc);
-		*/
-
 	// Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
 	char* vertexCode = Utils::ReadFile(StringConstants::COPY_VERT_PATH, &vertexLen);
@@ -76,49 +49,6 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	delete[] fragmentCode;
 
 	initializeBuffers();
-	/*
-	gfx::RenderPassDesc desc;
-	desc.width = 1920;
-	desc.height = 1080;
-
-	gfx::GPUTextureDesc colorAttachment = {};
-	colorAttachment.bCreateSampler = true;
-	colorAttachment.format = mHDRColorFormat;
-	colorAttachment.bindFlag = gfx::BindFlag::RenderTarget | gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
-	colorAttachment.imageAspect = gfx::ImageAspect::Color;
-	colorAttachment.width = desc.width;
-	colorAttachment.height = desc.height;
-
-
-	gfx::GPUTextureDesc depthAttachment = {};
-	depthAttachment.bCreateSampler = true;
-	depthAttachment.format = mHDRDepthFormat;
-	depthAttachment.bindFlag = gfx::BindFlag::DepthStencil | gfx::BindFlag::ShaderResource;
-	depthAttachment.imageAspect = gfx::ImageAspect::Depth;
-	depthAttachment.width = desc.width;
-	depthAttachment.height = desc.height;
-
-	std::vector<gfx::Attachment> attachments{
-	{
-		gfx::Attachment{0, colorAttachment},
-		gfx::Attachment{2, depthAttachment},
-		gfx::Attachment{1, colorAttachment}
-	} };
-	desc.attachments = attachments;
-	desc.hasDepthAttachment = true;
-	mHdrRenderPass = mDevice->CreateRenderPass(&desc);
-	mHdrFramebuffer = mDevice->CreateFramebuffer(mHdrRenderPass, 1);
-
-	mMeshPipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
-	mSkinnedMeshPipeline = loadHDRPipeline(StringConstants::SKINNED_VERT_PATH, StringConstants::SKINNED_FRAG_PATH);
-	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
-
-	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
-	mShadowMap = std::make_shared<CascadedShadowMap>();
-
-	mGlobalUniformData.enabledNormalMapping = true;
-	mGlobalUniformData.enableCascadeDebug = 0;
-	*/
 
 	mFrameGraphBuilder.Init(mDevice);
 	mFrameGraph.Init(&mFrameGraphBuilder);
@@ -132,20 +62,6 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 // TODO: temp width and height variable
 void Renderer::Update(float dt)
 {
-	/*
-	std::vector<DrawData> drawDatas;
-	mScene->GenerateDrawData(drawDatas);
-	CreateBatch(drawDatas, mRenderBatches);
-
-
-	// Generate light Direction
-	glm::mat3 transform = compMgr->GetComponent<TransformComponent>(mScene->GetSun())->GetRotationMatrix();
-
-	glm::vec3 direction = normalize(transform * glm::vec3(0.0f, 1.0f, 0.0f));
-	mShadowMap->Update(camera, direction);
-	DebugDraw::AddLine(direction * 5.0f, direction, 0xff0000);
-	*/
-
 	// Update Global Uniform Data
 	auto compMgr = mScene->GetComponentManager();
 	Camera* camera = mScene->GetCamera();
@@ -270,6 +186,32 @@ void Renderer::Render(gfx::CommandList* commandList)
 		mDevice->EndRenderPass(commandList);
 		mDevice->EndDebugMarker(commandList);
 	}
+
+	gfx::TextureHandle outputTexture = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture;
+	gfx::ImageBarrierInfo imageBarrier = {
+		gfx::AccessFlag::None,
+		gfx::AccessFlag::ShaderRead,
+		gfx::ImageLayout::ShaderReadOptimal,
+		outputTexture
+	};
+
+	gfx::PipelineBarrierInfo pipelineBarrier = {
+		&imageBarrier,
+		1,
+		gfx::PipelineStage::BottomOfPipe,
+		gfx::PipelineStage::FragmentShader
+	};
+
+	mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+
+	mDevice->BeginDebugMarker(commandList, "fullscreen_pass");
+	mDevice->BeginRenderPass(commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
+	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
+	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
+	mDevice->BindPipeline(commandList, mFullScreenPipeline);
+	mDevice->Draw(commandList, 6, 0, 1);
+	mDevice->EndRenderPass(commandList);
+	mDevice->EndDebugMarker(commandList);
 }
 
 /*

@@ -83,7 +83,11 @@ void gfx::GBufferPass::Render(CommandList* commandList, Scene* scene)
 		lastOffset += (uint32_t)batch.drawCommands.size();
 	}
 }
-
+/*
+void gfx::GBufferPass::OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height)
+{
+}
+*/
 void gfx::GBufferPass::Shutdown()
 {
 	gfx::GetDevice()->Destroy(pipeline);

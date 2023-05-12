@@ -190,6 +190,7 @@
     <ClInclude Include="Source\Engine\FrameGraph\FrameGraph.h" />
     <ClInclude Include="Source\Engine\Pass\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\Pass\GBufferPass.h" />
+    <ClInclude Include="Source\Engine\FrameGraph.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">

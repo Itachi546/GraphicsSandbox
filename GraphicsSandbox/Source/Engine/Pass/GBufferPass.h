@@ -10,9 +10,11 @@ namespace gfx {
 
 		GBufferPass(RenderPassHandle renderPass, Renderer* renderer);
 
-		void Render(CommandList* commandList, Scene* scene);
+		void Render(CommandList* commandList, Scene* scene) override;
 
-		void Shutdown();
+		//void OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height) override;
+
+		void Shutdown() override;
 
 		gfx::PipelineHandle pipeline;
 		Renderer* renderer;

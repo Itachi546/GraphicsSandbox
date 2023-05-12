@@ -10,7 +10,9 @@ namespace gfx {
 	{
 		DepthPrePass(RenderPassHandle renderPass, Renderer* renderer);
 		void Render(CommandList* commandList, Scene* scene) override;
-		void Shutdown();
+		void Shutdown() override;
+
+		//void OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height);
 
 		PipelineHandle pipeline = INVALID_PIPELINE;
 		DescriptorInfo descriptorInfos[3];

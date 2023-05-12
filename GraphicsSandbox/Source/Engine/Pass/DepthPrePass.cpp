@@ -76,3 +76,8 @@ void gfx::DepthPrePass::Shutdown()
 {
 	gfx::GetDevice()->Destroy(pipeline);
 }
+/*
+void gfx::DepthPrePass::OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height)
+{
+}
+*/

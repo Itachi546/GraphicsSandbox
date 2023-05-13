@@ -324,6 +324,7 @@ namespace gfx {
 
 						textureDesc.imageType = ImageType::I2D;
 						textureDesc.bCreateSampler = true;
+						textureDesc.bAddToBindless = true;
 						textureDesc.mipLevels = 1;
 						textureDesc.arrayLayers = 1;
 

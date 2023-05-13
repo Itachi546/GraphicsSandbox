@@ -56,8 +56,8 @@ void main()
   normalBuffer = vec4(normalize(n), 1.0f);
 
   // Export metallic, roughness and AO component
-  float metallic = 0.0f;
-  float roughness = 1.0f;
+  float metallic = material.metallic;
+  float roughness = material.roughness;
   if(material.metallicMap != INVALID_TEXTURE)
     {
       vec3 metallicRoughness = texture(uTextures[nonuniformEXT(material.metallicMap)], fs_in.uv).rgb;
@@ -72,7 +72,7 @@ void main()
       }
     }
 
-  float ao = 0.0;
+  float ao = material.ao;
   if(material.ambientOcclusionMap != INVALID_TEXTURE)
     ao = texture(uTextures[nonuniformEXT(material.ambientOcclusionMap)], fs_in.uv).r;
   pbrBuffer = vec4(metallic, roughness, ao, 1.0);

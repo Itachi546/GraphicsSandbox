@@ -40,10 +40,8 @@ struct GlobalUniformData
 	glm::vec3 cameraPosition;
 	float dt;
 	float bloomThreshold;
-	int nLight;
 	int enabledNormalMapping;
 	int enableCascadeDebug;
-	LightData lights[128];
 };
 
 class Renderer
@@ -65,15 +63,22 @@ public:
 
 	virtual ~Renderer() = default;
 
+	gfx::BufferHandle mLightBuffer;
 	gfx::BufferHandle mGlobalUniformBuffer;
 	gfx::BufferHandle mTransformBuffer;
 	gfx::BufferHandle mDrawIndirectBuffer;
 	gfx::BufferHandle mMaterialBuffer;
 	gfx::BufferHandle mSkinnedMatrixBuffer;
+	gfx::FrameGraphBuilder mFrameGraphBuilder;
+	gfx::FrameGraph mFrameGraph;
+
 private:
 
 	gfx::GraphicsDevice* mDevice;
 	Scene* mScene;
+
+	std::vector<std::string> mOutputAttachments;
+	uint32_t mFinalOutput;
 
 	//gfx::PipelineHandle mMeshPipeline;
 	//gfx::PipelineHandle mSkinnedMeshPipeline;
@@ -91,10 +96,8 @@ private:
 
 	GlobalUniformData mGlobalUniformData;
 
-	gfx::FrameGraphBuilder mFrameGraphBuilder;
-	gfx::FrameGraph mFrameGraph;
-
-	void initializeBuffers();
+	void InitializeBuffers();
+	void AddUI();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
 
 	/*

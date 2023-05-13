@@ -1,14 +1,6 @@
 #extension GL_GOOGLE_include_directive: require
 #include "material.glsl"
 
-struct LightData
-{
-    vec3 position;
-	float radius;
-	vec3 color;
-	float type;
-};
-
 layout(binding = 0) uniform readonly Globals
 {
    mat4 P;
@@ -19,11 +11,8 @@ layout(binding = 0) uniform readonly Globals
    float dt;
 
    float bloomThreshold;
-   int nLight;
    int enableNormalMapping;
    int enableCascadeDebug;
-
-   LightData lights[128];
 } globals;
 
 #ifdef VERTEX_SHADER

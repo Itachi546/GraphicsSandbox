@@ -8,6 +8,7 @@
 #include "TextureCache.h"
 #include "DebugDraw.h"
 #include "StringConstants.h"
+#include "GUI/ImGuiService.h"
 
 #include <algorithm>
 #include <sstream>
@@ -37,6 +38,9 @@ void Application::initialize_()
 	EventDispatcher::Subscribe(EventType::WindowResize, BIND_EVENT_FN(Application::windowResizeEvent));
 	mInitialized = true;
 	Logger::Debug("Intialized Application: (" + std::to_string(timer.elapsedSeconds()) + "s)");
+
+	mGuiService = ImGuiService::GetInstance();
+	mGuiService->Init(mWindow, mDevice);
 }
 
 void Application::Run()
@@ -79,19 +83,28 @@ void Application::update_(float dt)
 
 void Application::render_()
 {
-	RangeId cpuRenderTime = Profiler::StartRangeCPU("RenderTime CPU");
-
 	if (!mDevice->IsSwapchainReady())
 		return;
 
-	mDevice->BeginFrame();
-	gfx::CommandList commandList = mDevice->BeginCommandList();
+	// New Profiler frame
+	Profiler::BeginFrame();
+	RangeId cpuRenderTime = Profiler::StartRangeCPU("RenderTime CPU");
 
+	// New GPU Frame
+	mDevice->BeginFrame();
+
+	gfx::CommandList commandList = mDevice->BeginCommandList();
 	Profiler::BeginFrameGPU(&commandList);
+	RangeId gpuRenderTime = Profiler::StartRangeGPU(&commandList, "RenderTime GPU");
+
 	mDevice->PrepareSwapchain(&commandList);
 	mRenderer->Render(&commandList);
 	mDevice->PrepareSwapchainForPresent(&commandList);
+
+	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 	mDevice->Present(&commandList);
+
+	Profiler::EndRangeCPU(cpuRenderTime);
 }
 
 void Application::SetWindow(Platform::WindowType window, bool fullscreen)
@@ -123,6 +136,7 @@ Application::~Application()
 {
 	// Wait for rendering to finish
 	mDevice->WaitForGPU();
+	ImGuiService::GetInstance()->Shutdown();
 	TextureCache::Shutdown();
 	DebugDraw::Shutdown();
 	mScene.Shutdown();

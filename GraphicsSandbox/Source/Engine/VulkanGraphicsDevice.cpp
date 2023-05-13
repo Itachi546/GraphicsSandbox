@@ -2457,7 +2457,7 @@ namespace gfx {
                 VK_ACCESS_NONE,
                 VK_ACCESS_TRANSFER_READ_BIT,
                 vkImage->layout,
-                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 5, 0, 1),
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mipCount - 1, 0, 1),
 
                 CreateImageBarrier(vkImage->image,
                 vkImage->imageAspect,

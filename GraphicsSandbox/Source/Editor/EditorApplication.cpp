@@ -3,191 +3,25 @@
 #include "../Shared/MathUtils.h"
 #include "../Engine/DebugDraw.h"
 #include "../Engine/CascadedShadowMap.h"
-
-#include "ImGui/imgui.h"
-#include "ImGui/imgui_impl_glfw.h"
-#include "ImGui/imgui_impl_vulkan.h"
-#include "ImPlot/implot.h"
-#include "ImGui/IconsFontAwesome5.h"
-
-#include "TransformGizmo.h"
 #include "../Engine/Animation/Animation.h"
 #include "../Engine/Interpolator.h"
+#include "../Engine/GUI/ImGuiService.h"
+
+#include "TransformGizmo.h"
 #include <iomanip>
 #include <algorithm>
 
 void EditorApplication::Initialize()
 {
 	initialize_();
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImPlot::CreateContext();
 
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	mWidth = io.DisplaySize.x;
-	mHeight = io.DisplaySize.y;
-
-	io.Fonts->AddFontDefault();
-	static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
-	ImFontConfig iconConfig; 
-	iconConfig.MergeMode = true;
-	iconConfig.PixelSnapH = true;
-	iconConfig.GlyphMinAdvanceX = 13.0f;
-	std::string filename = "Assets/Fonts/" + std::string(FONT_ICON_FILE_NAME_FAS);
-	io.Fonts->AddFontFromFileTTF(filename.c_str(), 13.0f, &iconConfig, icons_ranges);
-	// use FONT_ICON_FILE_NAME_FAR if you want regular instead of solid
-
-	ImGui_ImplGlfw_InitForVulkan(mWindow, true);
-
-	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);
-	ImGui_ImplVulkan_InitInfo initInfo = {};
-	initInfo.Instance = vkDevice->GetInstance();
-	initInfo.PhysicalDevice = vkDevice->GetPhysicalDevice();
-	initInfo.Device = vkDevice->GetDevice();
-	initInfo.Queue = vkDevice->GetQueue();
-	initInfo.MinImageCount = vkDevice->GetSwapchainImageCount();
-	initInfo.ImageCount = vkDevice->GetSwapchainImageCount();
-	initInfo.DescriptorPool = vkDevice->GetDescriptorPool();
-	initInfo.Allocator = 0;
-
-	ImGui_ImplVulkan_Init(&initInfo, vkDevice->GetSwapchainRenderPass());
-
-	gfx::CommandList commandList = mDevice->BeginCommandList();
-	ImGui_ImplVulkan_CreateFontsTexture(vkDevice->Get(&commandList));
-	// @TODO placeholder
-	mDevice->SubmitComputeLoad(&commandList);
-	mDevice->WaitForGPU();
-	ImGui_ImplVulkan_DestroyFontUploadObjects();
-
+	WindowProperties props;
+	Platform::GetWindowProperties(mWindow, &props);
+	mWidth = (float)props.width;
+	mHeight = (float)props.height;
 	mCamera = mScene.GetCamera();
 	InitializeScene();
-
 	mHierarchy = std::make_shared<SceneHierarchy>(&mScene, mWindow);
-}
-
-void EditorApplication::RenderUI(gfx::CommandList* commandList)
-{
-	//static bool enableBloom = true;
-	//mRenderer->SetEnableBloom(enableBloom);
-	auto vkDevice = std::static_pointer_cast<gfx::VulkanGraphicsDevice>(mDevice);
-	ImGui_ImplVulkan_NewFrame();
-	ImGui_ImplGlfw_NewFrame();
-	ImGui::NewFrame();
-
-	ImGui::SetNextWindowPos(ImVec2(10, 10));
-	ImGui::Begin("Statistics", 0, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize);
-	// Profilter Data
-	std::vector<Profiler::RangeData> profilerData;
-	Profiler::GetEntries(profilerData);
-	if (profilerData.size() > 0)
-	{
-		std::stringstream ss;
-		for (auto& data : profilerData)
-		{
-			if(data.inUse)
-				ss << data.name << " " << std::setprecision(3) << data.time << "ms\n";
-		}
-		ImGui::Text("%s", ss.str().c_str());
-	}
-	ImGui::End();
-
-	static bool enableDebugDraw = false;
-	static bool enableFrustumCulling = false;
-	static bool freezeFrustum = false;
-	static bool showBoundingBox = mScene.GetShowBoundingBox();
-	static float blurRadius = 1.0f;
-	static float bloomThreshold = 1.0f;
-	static float bloomStrength = 0.04f;
-	static bool enableNormalMapping = true;
-	static float shadowSplitLambda = 0.85f;
-	static float shadowDistance = 150.0f;
-	static bool showCascade = false;
-	if (mShowUI)
-	{
-		ImGui::Begin("Render Settings");
-		ImGui::Checkbox("Show BoundingBox", &showBoundingBox);
-		ImGui::Checkbox("Show Skeleton", &mShowSkeleton);
-		ImGui::Checkbox("Show Cascade", &showCascade);
-		ImGui::Checkbox("Debug Draw Enabled", &enableDebugDraw);
-		ImGui::Checkbox("Normal Mapping", &enableNormalMapping);
-		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
-		ImGui::Checkbox("Freeze Frustum", &freezeFrustum);
-
-		if (ImGui::CollapsingHeader("Bloom"))
-		{
-			//ImGui::Checkbox("Enable", &enableBloom);
-			ImGui::SliderFloat("BlurRadius", &blurRadius, 1.0f, 100.0f);
-			ImGui::SliderFloat("Bloom Threshold", &bloomThreshold, 0.1f, 2.0f);
-			ImGui::SliderFloat("Bloom Strength", &bloomStrength, 0.0f, 1.0f);
-		}
-		if (ImGui::CollapsingHeader("Cascaded ShadowMap"))
-		{
-			ImGui::SliderFloat("SplitLambda", &shadowSplitLambda, 0.0f, 1.0f);
-			ImGui::SliderFloat("ShadowDistance", &shadowDistance, 5.0f, 500.0f);
-		}
-
-		if (ImGui::CollapsingHeader("Interpolators"))
-		{
-			static glm::dvec2 a(0.0f, 0.0f);
-			static glm::dvec2 b(1.0f, 1.0f);
-			static glm::dvec2 c1(1.0f, 0.0f);
-			static glm::dvec2 c2(1.0f, 0.0f);
-
-			std::vector<double> bezierX;
-			std::vector<double> bezierY;
-			for (int i = 0; i < 80; ++i)
-			{
-				double x = Interpolator::BezierSpline<double>(a.x, b.x, c1.x, c2.x, double(i) / 80.0);
-				double y = Interpolator::BezierSpline<double>(a.y, b.y, c1.y, c2.y, double(i) / 80.0);
-				bezierX.push_back(x);
-				bezierY.push_back(y);
-			}
-			if (ImPlot::BeginPlot("Curve"))
-			{
-				double v1x[] = { a.x, c1.x };
-				double v1y[] = { a.y, c1.y };
-				ImPlot::PlotLine("line", v1x, v1y, 2);
-
-				double v2x[] = { b.x, c2.x };
-				double v2y[] = { b.y, c2.y };
-				ImPlot::PlotLine("line", v2x, v2y, 2);
-
-				ImPlot::DragPoint(2, &c1.x, &c1.y, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-				ImPlot::DragPoint(3, &c2.x, &c2.y, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-
-				ImPlot::PlotLine("Curve", bezierX.data(), bezierY.data(), (int)bezierX.size());
-				ImPlot::EndPlot();
-			}
-		}
-
-		ImGui::End();
-		mHierarchy->Draw();
-	}
-	/*
-	auto shadowMap = mRenderer->GetShadowMap();
-	shadowMap->SetSplitLambda(shadowSplitLambda);
-	shadowMap->SetShadowDistance(shadowDistance);
-	mScene.SetEnableFrustumCulling(enableFrustumCulling);
-	mScene.GetCamera()->SetFreezeFrustum(freezeFrustum);
-	mRenderer->SetEnableNormalMapping(enableNormalMapping);
-	mRenderer->SetBlurRadius(blurRadius);
-	mRenderer->SetBloomThreshold(bloomThreshold);
-	mRenderer->SetBloomStrength(bloomStrength);
-	mRenderer->SetDebugCascade(showCascade);
-	mScene.SetShowBoundingBox(showBoundingBox);
-	DebugDraw::SetEnable(enableDebugDraw);
-	*/
-
-	if (mShowSkeleton && enableDebugDraw)
-		DrawSkeleton();
-
-	//TransformGizmo::BeginFrame();
-	//static glm::mat4 out;
-	//TransformGizmo::Manipulate(mCamera->GetViewMatrix(), mCamera->GetProjectionMatrix(), TransformGizmo::Operation::Translate, out);
-
-
-	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), vkDevice->Get(commandList));
 }
 
 void EditorApplication::PreUpdate(float dt) {
@@ -213,9 +47,7 @@ void EditorApplication::PreUpdate(float dt) {
 	else if (Input::Down(Input::Key::KEY_2))
 		mCamera->Lift(-dt * walkSpeed);
 
-	if (Input::Down(Input::Key::MOUSE_BUTTON_LEFT) && 
-		!ImGui::IsAnyItemActive() && 
-		!ImGui::IsAnyItemHovered())
+	if (Input::Down(Input::Key::MOUSE_BUTTON_LEFT) && !mGuiService->IsAcceptingEvent())
 	{
 		auto [x, y] = Input::GetMouseState().delta;
 		mCamera->Rotate(-y, x, dt);
@@ -315,7 +147,7 @@ void EditorApplication::InitializeCSMScene()
 	TransformComponent* comp = compMgr->GetComponent<TransformComponent>(plane);
 	comp->scale = glm::vec3(40.0f);
 }
-
+/*
 void EditorApplication::DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform)
 {
 
@@ -375,12 +207,8 @@ void EditorApplication::DrawSkeleton()
 		DrawPose(meshRenderer.skeleton, drawList, worldTransform);
 	}
 }
-
+*/
 EditorApplication::~EditorApplication()
 {
 	mDevice->WaitForGPU();
-	ImGui_ImplVulkan_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImPlot::DestroyContext();
-	ImGui::DestroyContext();
 }

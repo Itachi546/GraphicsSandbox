@@ -6,6 +6,10 @@ namespace StringConstants
 	constexpr const char* GBUFFER_VERT_PATH = "Assets/SPIRV/gbuffer.vert.spv";
 	constexpr const char* GBUFFER_FRAG_PATH = "Assets/SPIRV/gbuffer.frag.spv";
 
+	// Light Pass
+	constexpr const char* LIGHTING_VERT_PATH = "Assets/SPIRV/copy.vert.spv";
+	constexpr const char* LIGHTING_FRAG_PATH = "Assets/SPIRV/lighting.frag.spv";
+
 	// Shaders
 	constexpr const char* MAIN_VERT_PATH = "Assets/SPIRV/main.vert.spv";
 	constexpr const char* SKINNED_VERT_PATH = "Assets/SPIRV/animated.vert.spv";

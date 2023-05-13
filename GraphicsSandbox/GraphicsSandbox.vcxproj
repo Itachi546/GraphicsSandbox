@@ -86,7 +86,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -114,7 +114,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;USE_INTEGRATED_GPU;ENABLE_BINDLESS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>MaxSpeed</Optimization>
     </ClCompile>
     <Link>
@@ -167,19 +167,20 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
     <ClInclude Include="Source\Editor\FileDialog.h" />
-    <ClInclude Include="Source\Editor\ImGui\IconsFontAwesome5.h" />
-    <ClInclude Include="Source\Editor\ImGui\imconfig.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h" />
-    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h" />
-    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h" />
-    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h" />
-    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h" />
-    <ClInclude Include="Source\Editor\ImPlot\implot.h" />
-    <ClInclude Include="Source\Editor\ImPlot\implot_internal.h" />
+    <ClInclude Include="Source\External\ImGui\IconsFontAwesome5.h" />
+    <ClInclude Include="Source\External\ImGui\imconfig.h" />
+    <ClInclude Include="Source\External\ImGui\imgui.h" />
+    <ClInclude Include="Source\External\ImGui\imgui_impl_glfw.h" />
+    <ClInclude Include="Source\External\ImGui\imgui_impl_vulkan.h" />
+    <ClInclude Include="Source\External\ImGui\imgui_internal.h" />
+    <ClInclude Include="Source\External\ImGui\imstb_rectpack.h" />
+    <ClInclude Include="Source\External\ImGui\imstb_textedit.h" />
+    <ClInclude Include="Source\External\ImGui\imstb_truetype.h" />
+    <ClInclude Include="Source\External\ImPlot\implot.h" />
+    <ClInclude Include="Source\External\ImPlot\implot_internal.h" />
     <ClInclude Include="Source\Editor\SceneHierarchy.h" />
     <ClInclude Include="Source\Editor\TransformGizmo.h" />
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
@@ -187,6 +188,7 @@
     <ClInclude Include="Source\Engine\DebugDraw.h" />
     <ClInclude Include="Source\Engine\FrameGraph.h" />
     <ClInclude Include="Source\Engine\FrameGraph\FrameGraph.h" />
+    <ClInclude Include="Source\Engine\GUI\ImGuiService.h" />
     <ClInclude Include="Source\Engine\Pass\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\GraphicsUtils.h" />
     <ClInclude Include="Source\Engine\ImageLoader.h" />
@@ -220,29 +222,32 @@
     <ClInclude Include="Source\Engine\VulkanGraphicsDevice.h" />
     <ClInclude Include="Source\Engine\spirv_reflect.h" />
     <ClInclude Include="Source\Engine\VulkanResources.h" />
+    <ClInclude Include="Source\External\json.hpp" />
     <ClInclude Include="Source\Shared\MathUtils.h" />
     <ClInclude Include="Source\Shared\MeshData.h" />
     <ClInclude Include="Source\Test\BloomTest.h" />
     <ClInclude Include="Source\Test\SponzaTest.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Source\Engine\Pass\LightingPass.cpp" />
     <ClCompile Include="Source\Editor\EditorApplication.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui_demo.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui_draw.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp" />
-    <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="Source\Editor\ImPlot\implot.cpp" />
-    <ClCompile Include="Source\Editor\ImPlot\implot_demo.cpp" />
-    <ClCompile Include="Source\Editor\ImPlot\implot_items.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui_demo.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui_draw.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui_impl_vulkan.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui_tables.cpp" />
+    <ClCompile Include="Source\External\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="Source\External\ImPlot\implot.cpp" />
+    <ClCompile Include="Source\External\ImPlot\implot_demo.cpp" />
+    <ClCompile Include="Source\External\ImPlot\implot_items.cpp" />
     <ClCompile Include="Source\Editor\SceneHierarchy.cpp" />
     <ClCompile Include="Source\Editor\TransformGizmo.cpp" />
     <ClCompile Include="Source\Engine\Animation\Animation.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\FrameGraph.cpp" />
+    <ClCompile Include="Source\Engine\GUI\ImGuiService.cpp" />
     <ClCompile Include="Source\Engine\Pass\DepthPrePass.cpp" />
     <ClCompile Include="Source\Engine\Pass\GBufferPass.cpp" />
     <ClCompile Include="Source\Engine\ImageLoader.cpp" />
@@ -266,24 +271,6 @@
     <ClCompile Include="Source\Shared\MathUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Shaders\bloom\bloom-final.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\bloom\downsample.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\bloom\upsample.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\cubemap\cubemap.frag.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\cubemap\cubemap.vert.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\includes\bindless.frag.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="Shaders\gbuffer\gbuffer.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
@@ -295,21 +282,6 @@
     <None Include="Shaders\includes\material.glsl" />
     <None Include="Shaders\includes\mesh.glsl" />
     <None Include="Shaders\includes\pbr.glsl" />
-    <CustomBuild Include="Shaders\main.frag.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\main.vert.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\shadow\shadow-skinned.vert.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\shadow\shadow.vert.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\ssao\ssao.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="Shaders\utils\copy.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
@@ -336,17 +308,7 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="Shaders\includes\bindings.glsl" />
-    <CustomBuild Include="Shaders\shadow\shadow.frag.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\shadow\shadow.geom.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <None Include="Shaders\shadow\shadow.glsl" />
-    <CustomBuild Include="Shaders\skinned\animated.frag.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\skinned\animated.vert.glsl">
+    <CustomBuild Include="Shaders\lighting.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
   </ItemGroup>

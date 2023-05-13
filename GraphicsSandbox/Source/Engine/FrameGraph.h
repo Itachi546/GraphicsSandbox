@@ -110,6 +110,12 @@ namespace gfx
 		FrameGraphResourceHandle CreateNodeInput(const FrameGraphResourceCreation& creation);
 		FrameGraphResourceHandle CreateNodeOutput(const FrameGraphResourceCreation& creation, FrameGraphNodeHandle producer);
 
+		void GetAllResourceName(std::vector<std::string>& output)
+		{
+			for (auto& [key, val] : resourceCache)
+				output.push_back(key);
+		}
+		
 		FrameGraphNode* AccessNode(FrameGraphNodeHandle handle)
 		{
 			return nodePools.AccessResource(handle.index);

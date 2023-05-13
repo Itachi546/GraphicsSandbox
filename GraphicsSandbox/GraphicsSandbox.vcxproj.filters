@@ -109,34 +109,34 @@
     <ClInclude Include="Source\Engine\GlmIncludes.h">
       <Filter>SOURCE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imconfig.h">
+    <ClInclude Include="Source\External\ImGui\imconfig.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui.h">
+    <ClInclude Include="Source\External\ImGui\imgui.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_glfw.h">
+    <ClInclude Include="Source\External\ImGui\imgui_impl_glfw.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui_impl_vulkan.h">
+    <ClInclude Include="Source\External\ImGui\imgui_impl_vulkan.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imgui_internal.h">
+    <ClInclude Include="Source\External\ImGui\imgui_internal.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImPlot\implot.h">
+    <ClInclude Include="Source\External\ImPlot\implot.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImPlot\implot_internal.h">
+    <ClInclude Include="Source\External\ImPlot\implot_internal.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imstb_rectpack.h">
+    <ClInclude Include="Source\External\ImGui\imstb_rectpack.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imstb_textedit.h">
+    <ClInclude Include="Source\External\ImGui\imstb_textedit.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\ImGui\imstb_truetype.h">
+    <ClInclude Include="Source\External\ImGui\imstb_truetype.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
     <ClInclude Include="Source\Test\BloomTest.h">
@@ -182,7 +182,7 @@
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
-    <ClInclude Include="Source\Editor\ImGui\IconsFontAwesome5.h" />
+    <ClInclude Include="Source\External\ImGui\IconsFontAwesome5.h" />
     <ClInclude Include="Source\Engine\TransformComponent.h" />
     <ClInclude Include="Source\Engine\ResourcePool.h" />
     <ClInclude Include="Source\Engine\VulkanResources.h" />
@@ -191,6 +191,9 @@
     <ClInclude Include="Source\Engine\Pass\DepthPrePass.h" />
     <ClInclude Include="Source\Engine\Pass\GBufferPass.h" />
     <ClInclude Include="Source\Engine\FrameGraph.h" />
+    <ClInclude Include="Source\Engine\GUI\ImGuiService.h" />
+    <ClInclude Include="Source\External\json.hpp" />
+    <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -244,34 +247,34 @@
     <ClCompile Include="Source\Engine\DebugDraw.cpp">
       <Filter>SOURCE\Graphics</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_demo.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui_demo.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_draw.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui_draw.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_impl_glfw.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui_impl_glfw.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_impl_vulkan.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui_impl_vulkan.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_tables.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui_tables.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImGui\imgui_widgets.cpp">
+    <ClCompile Include="Source\External\ImGui\imgui_widgets.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImPlot\implot.cpp">
+    <ClCompile Include="Source\External\ImPlot\implot.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImPlot\implot_demo.cpp">
+    <ClCompile Include="Source\External\ImPlot\implot_demo.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\ImPlot\implot_items.cpp">
+    <ClCompile Include="Source\External\ImPlot\implot_items.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\EditorApplication.cpp">
@@ -307,11 +310,16 @@
     <ClCompile Include="Source\Engine\Pass\GBufferPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GUI\ImGuiService.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\Engine\Pass\LightingPass.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\envmap\cubemap.glsl" />
     <None Include="Shaders\includes\bindings.glsl" />
-    <None Include="Shaders\shadow\shadow.glsl" />
     <None Include="Shaders\includes\material.glsl" />
     <None Include="Shaders\includes\mesh.glsl" />
     <None Include="Shaders\includes\pbr.glsl" />
@@ -321,19 +329,8 @@
     <None Include="Shaders\graph.json" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Shaders\bloom\bloom-final.comp.glsl" />
     <CustomBuild Include="Shaders\gbuffer\gbuffer.frag.glsl" />
     <CustomBuild Include="Shaders\gbuffer\gbuffer.vert.glsl" />
-    <CustomBuild Include="Shaders\bloom\downsample.comp.glsl" />
-    <CustomBuild Include="Shaders\bloom\upsample.comp.glsl" />
-    <CustomBuild Include="Shaders\cubemap\cubemap.frag.glsl" />
-    <CustomBuild Include="Shaders\cubemap\cubemap.vert.glsl" />
-    <CustomBuild Include="Shaders\includes\bindless.frag.glsl" />
-    <CustomBuild Include="Shaders\main.frag.glsl" />
-    <CustomBuild Include="Shaders\main.vert.glsl" />
-    <CustomBuild Include="Shaders\shadow\shadow-skinned.vert.glsl" />
-    <CustomBuild Include="Shaders\shadow\shadow.vert.glsl" />
-    <CustomBuild Include="Shaders\ssao\ssao.comp.glsl" />
     <CustomBuild Include="Shaders\utils\copy.frag.glsl" />
     <CustomBuild Include="Shaders\utils\copy.vert.glsl" />
     <CustomBuild Include="Shaders\debug\debug.frag.glsl" />
@@ -342,9 +339,8 @@
     <CustomBuild Include="Shaders\envmap\hdri_converter.comp.glsl" />
     <CustomBuild Include="Shaders\envmap\irradiance.comp.glsl" />
     <CustomBuild Include="Shaders\envmap\prefilter_env.comp.glsl" />
-    <CustomBuild Include="Shaders\shadow\shadow.frag.glsl" />
-    <CustomBuild Include="Shaders\shadow\shadow.geom.glsl" />
-    <CustomBuild Include="Shaders\skinned\animated.frag.glsl" />
-    <CustomBuild Include="Shaders\skinned\animated.vert.glsl" />
+    <CustomBuild Include="Shaders\lighting.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

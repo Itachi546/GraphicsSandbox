@@ -14,6 +14,7 @@
 #include <memory>
 
 class Renderer;
+struct ImGuiService;
 
 class Application
 {
@@ -22,8 +23,6 @@ public:
 	virtual void Initialize() = 0;
 	virtual void PreUpdate(float dt){}
 	virtual void PostUpdate(float dt) {}
-
-	virtual void RenderUI(gfx::CommandList* commandList){}
 
 	void Run();
 
@@ -59,6 +58,7 @@ protected:
 
 	Platform::WindowType mWindow = nullptr;
 	std::shared_ptr<gfx::GraphicsDevice > mDevice = nullptr;
+	ImGuiService* mGuiService = nullptr;
 
 	std::unique_ptr<Renderer> mRenderer;
 

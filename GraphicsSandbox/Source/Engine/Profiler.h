@@ -30,6 +30,8 @@ namespace Profiler
 		}
 	};
 
+	void BeginFrame();
+
 	void BeginFrameGPU(gfx::CommandList* commandList);
 
 	RangeId StartRangeCPU(const char* name);

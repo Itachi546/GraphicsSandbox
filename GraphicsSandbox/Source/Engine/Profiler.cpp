@@ -17,10 +17,14 @@ namespace Profiler
 	uint64_t queryResult[128];
 	double gpuTimestampFrequency = 0.0;
 
+	void BeginFrame()
+	{
+		id = 0;
+	}
+
 	void BeginFrameGPU(gfx::CommandList* commandList)
 	{
 		queryIdx = 0;
-		id = 0;
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		if (!initialized)
 		{

@@ -16,16 +16,15 @@ public:
 
 	void PostUpdate(float dt) override;
 
-	void RenderUI(gfx::CommandList* commandList) override;
 	~EditorApplication();
 private:
 	Camera* mCamera;
 	void InitializeScene();
 	void InitializeCSMScene();
-	void DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform);
+	//void DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform);
 	//void UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform);
-	void DrawSkeleton();
-
+	//void DrawSkeleton();
+	
 	std::shared_ptr<SceneHierarchy> mHierarchy;
 	ecs::Entity character;
 	bool mShowUI = false;

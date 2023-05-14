@@ -1448,6 +1448,7 @@ namespace gfx {
             mSwapchainRP = CreateRenderPass(&renderPassDesc);
             swapchain_->renderPass = renderPasses.AccessResource(mSwapchainRP.handle);
 			swapchain_->surface = CreateSurface(instance_, physicalDevice_, queueFamilyIndices_, window);
+            swapchain_->vsync = true;
         }
 
         VulkanRenderPass* vkRenderPass = swapchain_->renderPass;
@@ -1481,8 +1482,8 @@ namespace gfx {
             }
         }
         else {
-            commandList_->commandPool = commandPool_[swapchain_->currentImageIndex];
-            commandList_->commandBuffer = commandBuffer_[swapchain_->currentImageIndex];
+            commandList_->commandPool = commandPool_[currentFrame];
+            commandList_->commandBuffer = commandBuffer_[currentFrame];
         }
 
         return true;
@@ -1633,7 +1634,7 @@ namespace gfx {
         auto cmdList = GetCommandList(commandList);
         auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
         if (pool->queryType == QueryType::TimeStamp)
-            vkCmdWriteTimestamp(cmdList->commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, queryPool, index);
+            vkCmdWriteTimestamp(cmdList->commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, queryPool, index);
         else
             assert(!"Undefined Query Type");
     }
@@ -1948,11 +1949,10 @@ namespace gfx {
 
         // Reset Next Descriptor Pool
         uint32_t imageCount = swapchain_->imageCount;
-        uint32_t currentIndex = swapchain_->currentImageIndex;
-        vkResetDescriptorPool(device_, descriptorPools_[currentIndex], 0);
+        vkResetDescriptorPool(device_, descriptorPools_[currentFrame], 0);
 
-        commandList_->commandBuffer = commandBuffer_[currentIndex];
-        commandList_->commandPool = commandPool_[currentIndex];
+        commandList_->commandBuffer = commandBuffer_[currentFrame];
+        commandList_->commandPool = commandPool_[currentFrame];
         CommandList commandList = {};
         commandList.internalState = commandList_.get();
 
@@ -1996,12 +1996,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::BeginFrame()
     {
-        uint32_t imageIndex = 0;
-        VkSemaphore acquireSemaphore = swapchain_->acquireSemaphore;
-        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore, VK_NULL_HANDLE, &imageIndex));
-        swapchain_->currentImageIndex = imageIndex;
-
-        VkFence currentFence[2] = { swapchain_->inFlightFences[imageIndex], mComputeFence_ };
+        VkFence currentFence[2] = { swapchain_->inFlightFences[currentFrame], mComputeFence_ };
         uint32_t fenceCount = 2;
 
         if (vkGetFenceStatus(device_, mComputeFence_) == VK_SUCCESS)
@@ -2009,6 +2004,9 @@ namespace gfx {
 
         vkWaitForFences(device_, fenceCount, currentFence, VK_TRUE, UINT64_MAX);
         vkResetFences(device_, fenceCount, currentFence);
+
+        VkSemaphore acquireSemaphore = swapchain_->acquireSemaphore;
+        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore, VK_NULL_HANDLE, &swapchain_->currentImageIndex));
     }
 
     void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList)
@@ -2219,8 +2217,7 @@ namespace gfx {
     void VulkanGraphicsDevice::Present(CommandList* commandList)
     {
         VulkanCommandList* cmdList = GetCommandList(commandList);
-        uint32_t imageIndex = swapchain_->currentImageIndex;
-        VkSemaphore signalSemaphore = swapchain_->signalSemaphores[imageIndex];
+        VkSemaphore signalSemaphore = swapchain_->signalSemaphores[currentFrame];
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -2232,11 +2229,11 @@ namespace gfx {
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &signalSemaphore; 
 
-        VkFence renderEndFence = swapchain_->inFlightFences[imageIndex];
+        VkFence renderEndFence = swapchain_->inFlightFences[currentFrame];
         vkQueueSubmit(queue_, 1, &submitInfo, renderEndFence);
 
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pImageIndices = &swapchain_->currentImageIndex;
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = &signalSemaphore;
         presentInfo.swapchainCount = 1;
@@ -2246,6 +2243,8 @@ namespace gfx {
         commandList_->waitStages.clear();
 
         destroyReleasedResources();
+
+        currentFrame = (currentFrame + 1) % swapchain_->imageCount;
     }
 
     void VulkanGraphicsDevice::CopyToBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)
@@ -2595,7 +2594,7 @@ namespace gfx {
             }
         }
 
-        VkDescriptorPool descriptorPool = descriptorPools_[swapchain_->currentImageIndex];
+        VkDescriptorPool descriptorPool = descriptorPools_[currentFrame];
 		VkDescriptorSetAllocateInfo allocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 		allocateInfo.descriptorPool = descriptorPool;
 		allocateInfo.descriptorSetCount = 1;

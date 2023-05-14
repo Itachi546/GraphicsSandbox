@@ -43,6 +43,8 @@ public:
 
 	void Destroy(ecs::Entity entity);
 
+	void AddUI();
+
 	Camera* GetCamera() {
 		return &mCamera;
 	}

@@ -150,8 +150,7 @@ struct MaterialComponent {
 	float roughness = 0.9f;
 	float metallic = 0.01f;
 	float ao = 1.0f;
-
-	float transparency = 1.0f;
+	float opacity = 1.0f;
 
 	union {
 		uint32_t textures[7] = {

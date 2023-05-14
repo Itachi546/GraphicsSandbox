@@ -118,7 +118,7 @@ void EditorApplication::InitializeScene()
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
 		transform->position.y += 0.5f;
 		transform->position.x += 1.0f;
-		transform->scale *= 0.5f; 
+		transform->scale *= 0.5f;
 		transform->rotation = glm::quat(glm::vec3(0.0, glm::pi<float>() * 0.5, 0.0f));
 	}
 }

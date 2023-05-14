@@ -123,6 +123,7 @@ namespace gfx
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
 		VkFence mComputeFence_ = VK_NULL_HANDLE;
+		uint32_t currentFrame = 0;
 
 		std::vector<VkDescriptorPool> descriptorPools_;
 

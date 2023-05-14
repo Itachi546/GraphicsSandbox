@@ -116,11 +116,14 @@ void Renderer::Render(gfx::CommandList* commandList)
 	// New GUI Frame
 	ImGuiService::GetInstance()->NewFrame();
 	ImGui::Begin("Renderer");
+
+	mScene->AddUI();
 	AddUI();
 
 	for (uint32_t i = 0; i < mFrameGraph.nodeHandles.size(); ++i)
 	{
 		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(mFrameGraph.nodeHandles[i]);
+		if (!node->enabled) continue;
 
 		// Begin GPU Timer
 		RangeId nodeProfilerId = Profiler::StartRangeGPU(commandList, node->name.c_str());
@@ -131,10 +134,6 @@ void Renderer::Render(gfx::CommandList* commandList)
 		// Generate the Image barrier from input and output
 		for (uint32_t i = 0; i < node->inputs.size(); ++i)
 		{
-			if (!node->enabled) continue;
-
-			mDevice->BeginDebugMarker(commandList, node->name.c_str());
-
 			gfx::FrameGraphResource* input = mFrameGraphBuilder.AccessResource(node->inputs[i]);
 			gfx::FrameGraphResourceInfo resourceInfo = input->info;
 			if (input->type == gfx::FrameGraphResourceType::Texture)
@@ -202,15 +201,19 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 		node->renderer->PreRender(commandList);
 		mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
+
+		mDevice->BeginDebugMarker(commandList, node->name.c_str());
+
 		node->renderer->Render(commandList, mScene);
-		mDevice->EndRenderPass(commandList);
+
 		mDevice->EndDebugMarker(commandList);
+		mDevice->EndRenderPass(commandList);
+		// End GPU Timer
+		Profiler::EndRangeGPU(commandList, nodeProfilerId);
 
 		// Draw UI
 		node->renderer->AddUI();
 
-		// End GPU Timer
-		Profiler::EndRangeGPU(commandList, nodeProfilerId);
 	}
 	ImGui::End();
 
@@ -236,8 +239,8 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 	mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 
-	mDevice->BeginDebugMarker(commandList, "fullscreen_pass");
 	mDevice->BeginRenderPass(commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
+	mDevice->BeginDebugMarker(commandList, "fullscreen_pass");
 	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
 	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
 	mDevice->BindPipeline(commandList, mFullScreenPipeline);
@@ -249,8 +252,8 @@ void Renderer::Render(gfx::CommandList* commandList)
 	start = Profiler::StartRangeGPU(commandList, "imgui");
 	ImGuiService::GetInstance()->Render(commandList);
 
-	mDevice->EndRenderPass(commandList);
 	mDevice->EndDebugMarker(commandList);
+	mDevice->EndRenderPass(commandList);
 	Profiler::EndRangeGPU(commandList, start);
 }
 

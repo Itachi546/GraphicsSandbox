@@ -45,6 +45,8 @@ void Application::initialize_()
 
 void Application::Run()
 {
+	// New Profiler frame
+	Profiler::BeginFrame();
 	RangeId totalTime = Profiler::StartRangeCPU("Total CPU Time");
 
 	Timer timer;
@@ -86,8 +88,6 @@ void Application::render_()
 	if (!mDevice->IsSwapchainReady())
 		return;
 
-	// New Profiler frame
-	Profiler::BeginFrame();
 	RangeId cpuRenderTime = Profiler::StartRangeCPU("RenderTime CPU");
 
 	// New GPU Frame
@@ -103,7 +103,7 @@ void Application::render_()
 
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 	mDevice->Present(&commandList);
-
+	//mDevice->WaitForGPU();
 	Profiler::EndRangeCPU(cpuRenderTime);
 }
 

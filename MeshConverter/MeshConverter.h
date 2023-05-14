@@ -107,7 +107,7 @@ namespace MeshConverter {
 			fprintf(stdout, "Loaded [%s] %dx%d texture with %d channels\n", filename.c_str(), width, height, nChannel);
 		}
 
-		ResizeAndExportTexture(pixels, width, height, EXPORT_TEXTURE_SIZE, EXPORT_TEXTURE_SIZE, nChannel, outputImagePath);
+		ResizeAndExportTexture(pixels, width, height, width, height, nChannel, outputImagePath);
 
 		stbi_image_free(pixels);
 
@@ -220,11 +220,31 @@ namespace MeshConverter {
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_METALNESS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 			material.metallicMap = AddUnique(textureFiles, Path.C_Str());
 
-		/*
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_OPACITY, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
+		{
 			material.opacityMap = AddUnique(textureFiles, Path.C_Str());
-			material.transparency = 0.5f;
-			*/
+		}
+
+		float opacity = 1.0f;
+		if (aiGetMaterialFloat(assimpMat, AI_MATKEY_OPACITY, &opacity) == AI_SUCCESS)
+		{
+			material.opacity = glm::clamp(1.0f - opacity, 0.0f, 1.0f);
+			if (material.opacity >= 0.95)
+				material.opacity = 0.0f;
+		}
+
+		if (aiGetMaterialFloat(assimpMat, AI_MATKEY_TRANSPARENCYFACTOR, &opacity) == AI_SUCCESS)
+		{
+			material.opacity = glm::clamp(1.0f - opacity, 0.0f, 1.0f);
+			if (material.opacity >= 0.95)
+				material.opacity = 0.0f;
+		}
+
+		aiColor4D transparencyColor = { 1.0f, 1.0f, 1.0f , 1.0f };
+		if (aiGetMaterialColor(assimpMat, AI_MATKEY_COLOR_TRANSPARENT, &transparencyColor) == AI_SUCCESS)
+		{
+			material.opacity = std::max(transparencyColor.r, std::max(transparencyColor.g, transparencyColor.b));
+		}
 	}
 
 	// Root bone is the bone that doesn't have any other bone as parent 

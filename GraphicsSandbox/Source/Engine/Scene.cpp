@@ -5,6 +5,7 @@
 #include "DebugDraw.h"
 #include "../Shared/MathUtils.h"
 #include "StringConstants.h"
+#include "GUI/ImGuiService.h"
 
 #include <execution>
 #include <algorithm>
@@ -589,6 +590,20 @@ void Scene::Destroy(ecs::Entity entity)
 	ecs::DestroyEntity(mComponentManager.get(), entity);
 }
 
+void Scene::AddUI()
+{
+	LightComponent* light = mComponentManager->GetComponent<LightComponent>(mSun);
+	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(mSun);
+	if (ImGui::CollapsingHeader("Directional Light"))
+	{
+		ImGui::PushID("dirlight");
+		ImGui::SliderFloat3("rotation", &transform->rotation[0], -glm::pi<float>(), glm::pi<float>());
+		ImGui::SliderFloat("intensity", &light->intensity, 0.0f, 4.0f);
+		ImGui::ColorPicker3("color", &light->color[0]);
+		ImGui::PopID();
+	}
+}
+
 std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
 {
 	auto hierarchyComp = mComponentManager->GetComponentArray<HierarchyComponent>();
@@ -915,6 +930,21 @@ void Scene::InitializeLights()
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
 	light.intensity = 1.0f;
 	light.type = LightType::Directional;
+/*
+	for (uint32_t i = 0; i < 50; ++i)
+	{
+		ecs::Entity light = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
+		TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(light);
+		transform.position = glm::vec3(MathUtils::Rand01() * 50 - 25, MathUtils::Rand01() * 25, MathUtils::Rand01() * 50 - 25);
+		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+		//transform.rotation = glm::vec3(0.0f, 0.021f, 0.375f);
+		LightComponent& lightComp = mComponentManager->AddComponent<LightComponent>(light);
+		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
+		lightComp.intensity = 10.0f;
+		lightComp.type = LightType::Point;
+	}
+	*/
 }
 
 void Scene::RemoveChild(ecs::Entity parent, ecs::Entity child)

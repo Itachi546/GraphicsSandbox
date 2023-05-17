@@ -1642,7 +1642,7 @@ namespace gfx {
     {
         auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
 
-        vkGetQueryPoolResults(device_, queryPool, index, count, sizeof(uint64_t) * count, result, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT);
+		VK_CHECK(vkGetQueryPoolResults(device_, queryPool, index, count, sizeof(uint64_t) * count, result, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT));
     }
 
     PipelineHandle VulkanGraphicsDevice::CreateGraphicsPipeline(const PipelineDesc* desc)
@@ -2729,6 +2729,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::Shutdown()
     {
+        WaitForGPU();
         gAllocationHandler.destroyedImageViews_.insert(gAllocationHandler.destroyedImageViews_.end(), swapchain_->imageViews.begin(), swapchain_->imageViews.end());
         swapchain_->images.clear();
         swapchain_->imageViews.clear();

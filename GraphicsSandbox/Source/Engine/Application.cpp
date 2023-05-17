@@ -140,7 +140,6 @@ Application::~Application()
 	DebugDraw::Shutdown();
 	mScene.Shutdown();
 	mRenderer->Shutdown();
-	mDevice->WaitForGPU();
 	mDevice->Shutdown();
 }
 

@@ -127,6 +127,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 		// Begin GPU Timer
 		RangeId nodeProfilerId = Profiler::StartRangeGPU(commandList, node->name.c_str());
+		mDevice->BeginDebugLabel(commandList, node->name.c_str());
 
 		std::vector<gfx::ImageBarrierInfo> colorAttachmentBarrier;
 		std::vector<gfx::ImageBarrierInfo> depthAttachmentBarrier;
@@ -201,23 +202,18 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 		node->renderer->PreRender(commandList);
 		mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
-
-		mDevice->BeginDebugMarker(commandList, node->name.c_str());
-
 		node->renderer->Render(commandList, mScene);
-
-		mDevice->EndDebugMarker(commandList);
 		mDevice->EndRenderPass(commandList);
 		// End GPU Timer
 		Profiler::EndRangeGPU(commandList, nodeProfilerId);
-
 		// Draw UI
 		node->renderer->AddUI();
-
+		mDevice->EndDebugLabel(commandList);
 	}
 	ImGui::End();
 
 	RangeId start = Profiler::StartRangeGPU(commandList, "fullscreen_pass");
+	mDevice->BeginDebugLabel(commandList, "fullscreen_pass");
 
 	gfx::TextureHandle outputTexture = mFrameGraphBuilder.
 		AccessResource(mOutputAttachments[mFinalOutput])->info.
@@ -240,7 +236,6 @@ void Renderer::Render(gfx::CommandList* commandList)
 	mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 
 	mDevice->BeginRenderPass(commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
-	mDevice->BeginDebugMarker(commandList, "fullscreen_pass");
 	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
 	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
 	mDevice->BindPipeline(commandList, mFullScreenPipeline);
@@ -252,9 +247,9 @@ void Renderer::Render(gfx::CommandList* commandList)
 	start = Profiler::StartRangeGPU(commandList, "imgui");
 	ImGuiService::GetInstance()->Render(commandList);
 
-	mDevice->EndDebugMarker(commandList);
 	mDevice->EndRenderPass(commandList);
 	Profiler::EndRangeGPU(commandList, start);
+	mDevice->EndDebugLabel(commandList);
 }
 
 /*

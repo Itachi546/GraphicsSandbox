@@ -72,8 +72,8 @@ namespace gfx
 		void BindPipeline(CommandList* commandList, PipelineHandle pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, BufferHandle buffer)                      override;
 
-		void BeginDebugMarker(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) override;
-		void EndDebugMarker(CommandList* commandList) override;
+		void BeginDebugLabel(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) override;
+		void EndDebugLabel(CommandList* commandList) override;
 		// Dynamic field allows to create new descriptor set 
 		// However it shouldn't be used in loop because there  
 		// is currently no way to free allocated descriptor set
@@ -114,7 +114,7 @@ namespace gfx
 		VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 		VkDevice device_ = VK_NULL_HANDLE;
 		VkQueue queue_ = VK_NULL_HANDLE;
-		VkSurfaceKHR surface_ = VK_NULL_HANDLE;
+
 		bool debugMarkerEnabled_ = false;
 		bool supportBindless = false;
 

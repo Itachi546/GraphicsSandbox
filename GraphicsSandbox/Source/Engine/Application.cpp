@@ -135,12 +135,12 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 Application::~Application()
 {
 	// Wait for rendering to finish
-	mDevice->WaitForGPU();
 	ImGuiService::GetInstance()->Shutdown();
 	TextureCache::Shutdown();
 	DebugDraw::Shutdown();
 	mScene.Shutdown();
 	mRenderer->Shutdown();
+	mDevice->WaitForGPU();
 	mDevice->Shutdown();
 }
 

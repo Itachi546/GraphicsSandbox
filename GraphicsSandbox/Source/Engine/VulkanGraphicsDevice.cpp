@@ -1028,7 +1028,6 @@ namespace gfx {
         if (mValidationMode == ValidationMode::Enabled)
         {
             requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-			//requiredExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 			requiredExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         }
 
@@ -1038,6 +1037,9 @@ namespace gfx {
             {
                 if (strcmp(extension.extensionName, required) == 0)
                 {
+                    if (std::strcmp(extension.extensionName, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
+                        debugMarkerEnabled_ = true;
+
                     outExtensions.push_back(required);
                     break;
                 }
@@ -1086,6 +1088,9 @@ namespace gfx {
             std::vector<VkExtensionProperties> availableExtension(extensionCount);
             VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtension.data()));
 
+            vkGetPhysicalDeviceProperties2(physicalDevice, &properties2_);
+            Logger::Info("Enumerating extension for device: " + std::string(properties2_.properties.deviceName));
+
             bool suitable = true;
             for (auto& extension : requiredDeviceExtensions)
             {
@@ -1093,10 +1098,8 @@ namespace gfx {
                 for (auto& available : availableExtension)
                 {
                     if (std::strcmp(extension, available.extensionName) == 0)
-                    {
-                        if (std::strcmp(extension, VK_EXT_DEBUG_UTILS_EXTENSION_NAME) == 0)
-                            debugMarkerEnabled_ = true;
-
+					{
+                        Logger::Debug("Found extension: " + std::string(extension));
                         found = true;
                         break;
                     }
@@ -1104,6 +1107,7 @@ namespace gfx {
 
                 if (!found)
                 {
+                    Logger::Debug("Extension not available: " + std::string(extension));
                     suitable = false;
                     break;
                 }
@@ -1111,8 +1115,6 @@ namespace gfx {
 
             if (!suitable) continue;
 
-
-            vkGetPhysicalDeviceProperties2(physicalDevice, &properties2_);
 #if USE_INTEGRATED_GPU
             if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
                 return physicalDevice;
@@ -1133,7 +1135,7 @@ namespace gfx {
             {
                 // Although the debug VK_EXT_DEBUG_MARKER_EXTENSION_NAME is not present
                 // in available extension it works in Nvidia GPU
-                debugMarkerEnabled_ = true;
+				//debugMarkerEnabled_ = true;
                 return devices[i];
             }
 #endif
@@ -1243,9 +1245,6 @@ namespace gfx {
         std::vector<const char*> requiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
         };
-
-		if (validationMode == ValidationMode::Enabled)
-			requiredDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 
         // Create physical device
         physicalDevice_ = findSuitablePhysicalDevice(requiredDeviceExtensions);
@@ -2744,13 +2743,20 @@ namespace gfx {
 
         gAllocationHandler.destroyedSemaphore_.push_back(swapchain_->acquireSemaphore);
         gAllocationHandler.destroyedFences_.push_back(mComputeFence_);
+
         gAllocationHandler.destroyedSemaphore_.insert(gAllocationHandler.destroyedSemaphore_.end(), swapchain_->signalSemaphores.begin(), swapchain_->signalSemaphores.end());
+        swapchain_->signalSemaphores.clear();
+
         gAllocationHandler.destroyedFences_.insert(gAllocationHandler.destroyedFences_.end(), swapchain_->inFlightFences.begin(), swapchain_->inFlightFences.end());
+        swapchain_->inFlightFences.clear();
+
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
-        gAllocationHandler.destroyedRenderPass_.push_back(swapchain_->renderPass->renderPass);
         swapchain_->framebuffers.clear();
 
+        gAllocationHandler.destroyedRenderPass_.push_back(swapchain_->renderPass->renderPass);
         renderPasses.ReleaseResource(mSwapchainRP.handle);
+
+
 
         // Release resources
         framebuffers.Shutdown();
@@ -2785,7 +2791,6 @@ namespace gfx {
         vkDestroyCommandPool(device_, stagingCmdPool_, nullptr);
         vkDestroySwapchainKHR(device_, swapchain_->swapchain, nullptr);
         vkDestroySurfaceKHR(instance_, swapchain_->surface, nullptr);
-        vkDestroySurfaceKHR(instance_, surface_, nullptr);
         vkDestroyDevice(device_, nullptr);
         if (mValidationMode == ValidationMode::Enabled)
             vkDestroyDebugUtilsMessengerEXT(instance_, messenger_, nullptr);
@@ -2794,25 +2799,28 @@ namespace gfx {
 
     }
 
-    void VulkanGraphicsDevice::BeginDebugMarker(CommandList* commandList, const char* name, float r, float g, float b, float a)
+    void VulkanGraphicsDevice::BeginDebugLabel(CommandList* commandList, const char* name, float r, float g, float b, float a)
     {
         if (mValidationMode == ValidationMode::Disabled || !debugMarkerEnabled_)
             return;
-        VkDebugMarkerMarkerInfoEXT markerInfo = { VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT };
-        float color[4] = { r, g, b, a };
-        std::memcpy(markerInfo.color, color, sizeof(float) * 4);
-        markerInfo.pMarkerName = name;
 
-        auto cmd = GetCommandList(commandList);
-        vkCmdDebugMarkerBeginEXT(cmd->commandBuffer, &markerInfo);
+        VkDebugUtilsLabelEXT labelInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+        labelInfo.color[0] = r;
+        labelInfo.color[1] = g;
+        labelInfo.color[2] = b;
+        labelInfo.color[3] = a;
+        labelInfo.pLabelName = name;
+
+        VulkanCommandList* cmdList = GetCommandList(commandList);
+        vkCmdBeginDebugUtilsLabelEXT(cmdList->commandBuffer, &labelInfo);
     }
 
-    void VulkanGraphicsDevice::EndDebugMarker(CommandList* commandList)
+    void VulkanGraphicsDevice::EndDebugLabel(CommandList* commandList)
     {
         if (mValidationMode == ValidationMode::Disabled || !debugMarkerEnabled_)
             return;
         auto cmd = GetCommandList(commandList);
-        vkCmdDebugMarkerEndEXT(cmd->commandBuffer);
+        vkCmdEndDebugUtilsLabelEXT(cmd->commandBuffer);
     }
 
     void VulkanGraphicsDevice::destroyReleasedResources()

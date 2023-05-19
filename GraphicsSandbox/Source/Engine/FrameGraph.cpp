@@ -303,8 +303,8 @@ namespace gfx {
 			for (std::size_t j = 0; j < node->outputs.size(); ++j)
 			{
 				uint32_t resourceIndex = node->outputs[j].index;
-				FrameGraphResource* output = builder->AccessResource(node->outputs[j]);
-				FrameGraphResource* resource = builder->AccessResource(output->name);
+				FrameGraphResourceHandle resourceHandle = node->outputs[j];
+				FrameGraphResource* resource = builder->AccessResource(resourceHandle);
 				if (allocations[resourceIndex].index == K_INVALID_RESOURCE_HANDLE)
 				{
 					allocations[resourceIndex] = nodeHandles[i];

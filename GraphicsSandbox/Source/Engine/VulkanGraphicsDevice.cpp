@@ -844,18 +844,22 @@ namespace gfx {
         uint32_t pushConstantCount = 0;
         result = spvReflectEnumeratePushConstantBlocks(&module, &pushConstantCount, nullptr);
         assert(result == SPV_REFLECT_RESULT_SUCCESS);
-		std::vector<SpvReflectBlockVariable*> pushConstants(pushConstantCount);
-        result = spvReflectEnumeratePushConstantBlocks(&module, &pushConstantCount, pushConstants.data());
-        assert(result == SPV_REFLECT_RESULT_SUCCESS);
-
-        for (auto& pushConstant : pushConstants)
+        if (pushConstantCount > 0)
         {
-            VkPushConstantRange pushConstantRange = {};
-            pushConstantRange.size = pushConstant->size;
-            pushConstantRange.offset = pushConstant->offset;
-            pushConstantRange.stageFlags = shaderStage;
-            out->pushConstantRanges.push_back(pushConstantRange);
+            std::vector<SpvReflectBlockVariable*> pushConstants(pushConstantCount);
+            result = spvReflectEnumeratePushConstantBlocks(&module, &pushConstantCount, pushConstants.data());
+            assert(result == SPV_REFLECT_RESULT_SUCCESS);
+
+            for (auto& pushConstant : pushConstants)
+            {
+                VkPushConstantRange pushConstantRange = {};
+                pushConstantRange.size = pushConstant->size;
+                pushConstantRange.offset = pushConstant->offset;
+                pushConstantRange.stageFlags = shaderStage;
+                out->pushConstantRanges.push_back(pushConstantRange);
+            }
         }
+
         spvReflectDestroyShaderModule(&module);
     }
 
@@ -2760,8 +2764,6 @@ namespace gfx {
 
         gAllocationHandler.destroyedRenderPass_.push_back(swapchain_->renderPass->renderPass);
         renderPasses.ReleaseResource(mSwapchainRP.handle);
-
-
 
         // Release resources
         framebuffers.Shutdown();

@@ -366,5 +366,8 @@
     <CustomBuild Include="Shaders\main.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="Shaders\transparent.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

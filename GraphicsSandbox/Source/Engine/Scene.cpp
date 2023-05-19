@@ -52,8 +52,8 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 		if (isVisible)
 		{
 			DrawData drawData = {};
-			const gfx::BufferView& vertexBuffer = meshRenderer->vertexBuffer;
-			const gfx::BufferView& indexBuffer = meshRenderer->indexBuffer;
+			const gfx::BufferView vertexBuffer = meshRenderer->vertexBuffer;
+			const gfx::BufferView indexBuffer = meshRenderer->indexBuffer;
 
 			drawData.vertexBuffer = vertexBuffer;
 			drawData.indexBuffer = indexBuffer;
@@ -341,11 +341,11 @@ void Scene::UpdateEntity(ecs::Entity parent,
 			}
 			meshRenderer->vertexBuffer.buffer = stagingMeshData.vertexBuffer;
 			meshRenderer->vertexBuffer.offset = mesh.vertexOffset;
-			meshRenderer->vertexBuffer.size = mesh.vertexCount;
+			meshRenderer->vertexBuffer.count = mesh.vertexCount;
 
 			meshRenderer->indexBuffer.buffer = stagingMeshData.indexBuffer;
 			meshRenderer->indexBuffer.offset = mesh.indexOffset;
-			meshRenderer->indexBuffer.size = mesh.indexCount;
+			meshRenderer->indexBuffer.count = mesh.indexCount;
 
 			meshRenderer->boundingBox = stagingMeshData.boxes_[meshId];
 

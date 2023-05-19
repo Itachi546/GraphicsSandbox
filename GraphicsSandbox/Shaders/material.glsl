@@ -1,9 +1,9 @@
 #ifndef MATERIAL_H
 #define MATERIAL_H
 
-#define ALPHAMODE_NONE   0
-#define ALPHAMODE_BLEND   1
-#define ALPHAMODE_MASK 2
+const int ALPHAMODE_NONE = 0;
+const int ALPHAMODE_BLEND = 1;
+const int ALPHAMODE_MASK = 2;
 
 struct Material
 {

@@ -23,7 +23,7 @@ gfx::DepthPrePass::DepthPrePass(RenderPassHandle renderPass, Renderer* renderer_
 	pipelineDesc.rasterizationState.enableDepthClamp = true;
 	pipeline = gfx::GetDevice()->CreateGraphicsPipeline(&pipelineDesc);
 
-	descriptorInfos[0] = descriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+	descriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 
 	// Fill this later while rendering
 	descriptorInfos[1] = { INVALID_BUFFER, ~0u, ~0u, gfx::DescriptorType::StorageBuffer };

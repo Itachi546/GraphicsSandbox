@@ -113,8 +113,8 @@ void EditorApplication::InitializeScene()
 
 	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
 
-	ecs::Entity plane = mScene.CreatePlane("Plane00");
-	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
+	//ecs::Entity plane = mScene.CreatePlane("Plane00");
+	//compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
 	{
 		ecs::Entity helmet = mScene.CreateMesh("Assets/Models/DamagedHelmet.sbox");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
@@ -123,7 +123,6 @@ void EditorApplication::InitializeScene()
 		transform->scale *= 0.5f;
 		transform->rotation = glm::quat(glm::vec3(0.0, glm::pi<float>() * 0.5, 0.0f));
 	}
-
 }
 
 void EditorApplication::InitializeCSMScene()

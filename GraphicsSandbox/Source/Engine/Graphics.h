@@ -169,8 +169,12 @@ namespace gfx
 	struct BufferView
 	{
 		BufferHandle buffer;
+
+		// Offset in byte to the parent buffer
 		uint32_t offset;
-		uint32_t size;
+
+		// Count of underlying data
+		uint32_t count;
 	};
 
 /*
@@ -261,8 +265,8 @@ namespace gfx
 	struct BlendState
 	{
 		bool enable = false;
-		BlendFactor srcColor = BlendFactor::SrcColor;
-		BlendFactor dstColor = BlendFactor::OneMinusSrcColor;
+		BlendFactor srcColor = BlendFactor::SrcAlpha;
+		BlendFactor dstColor = BlendFactor::OneMinusSrcAlpha;
 		BlendFactor srcAlpha = BlendFactor::SrcAlpha;
 		BlendFactor dstAlpha = BlendFactor::OneMinusSrcAlpha;
 	};

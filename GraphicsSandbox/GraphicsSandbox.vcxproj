@@ -280,6 +280,9 @@
     <ClCompile Include="Source\Engine\spriv_reflect.c" />
     <ClCompile Include="Source\glfwMain.cpp" />
     <ClCompile Include="Source\Shared\MathUtils.cpp" />
+    <CustomBuild Include="Shaders\transparent.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\bindless.glsl" />

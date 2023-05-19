@@ -16,7 +16,7 @@
 #include "Pass/DepthPrePass.h"
 #include "Pass/GBufferPass.h"
 #include "Pass/LightingPass.h"
-
+#include "Pass/TransparentPass.h"
 
 #include <vector>
 #include <algorithm>
@@ -62,6 +62,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mFrameGraph.RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(mFrameGraphBuilder.AccessNode("depth_pre_pass")->renderPass, this));
 	mFrameGraph.RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(mFrameGraphBuilder.AccessNode("gbuffer_pass")->renderPass, this));
 	mFrameGraph.RegisterRenderer("lighting_pass", new gfx::LightingPass(mFrameGraphBuilder.AccessNode("lighting_pass")->renderPass, this));
+	mFrameGraph.RegisterRenderer("transparent_pass", new gfx::TransparentPass(mFrameGraphBuilder.AccessNode("transparent_pass")->renderPass, this));
 
 	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
 	if (found != mOutputAttachments.end())
@@ -498,7 +499,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 
 	descriptorInfos[1].buffer = vb.buffer;
 	descriptorInfos[1].offset = vb.offset;
-	descriptorInfos[1].size = vb.size;
+	descriptorInfos[1].size = vb.count * sizeof(Vertex);
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
 	descriptorInfos[2].texture = &cubemap;

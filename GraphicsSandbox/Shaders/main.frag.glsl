@@ -88,9 +88,10 @@ vec4 CalculateColor(vec2 uv)
        albedo *= texture(uTextures[nonuniformEXT(material.albedoMap)], uv);
 
 	float alpha = albedo.a;
-	if(material.alphaMode == ALPHAMODE_MASK && albedo.a < material.alphaCutoff)
+	if(material.alphaMode == ALPHAMODE_MASK && alpha < material.alphaCutoff)
 	   discard;
-	else if(material.alphaMode == ALPHAMODE_BLEND)
+	
+	if(material.alphaMode == ALPHAMODE_BLEND)
 	   alpha *= material.transparency;
 
     // Export normals
@@ -165,7 +166,7 @@ vec4 CalculateColor(vec2 uv)
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
 	vec3 ambient = (Kd * diffuse + specular) * ao;
-	vec3 emissive = material.emissive * albedo.rgb;
+	vec3 emissive = material.emissive;
 
 	//if(material.emissiveMap != INVALID_TEXTURE)
 	//emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb * material.emissive;

@@ -108,7 +108,7 @@ void EditorApplication::InitializeScene()
 
 	character = mScene.CreateMesh("Assets/Models/michelle.sbox");
 	compMgr->GetComponent<TransformComponent>(character)->position = glm::vec3(5.0f, 0.0f, 6.0f);
-	ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/sponza.sbox");
+	//ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/sponza.sbox");
 
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);

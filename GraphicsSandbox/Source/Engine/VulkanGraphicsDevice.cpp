@@ -962,7 +962,9 @@ namespace gfx {
         createInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
         createInfo.compositeAlpha = surfaceComposite;
         createInfo.presentMode = presentMode;
-        createInfo.oldSwapchain = swapchain_->swapchain;
+
+        VkSwapchainKHR oldSwapchain = swapchain_->swapchain;
+        createInfo.oldSwapchain = oldSwapchain;
 
   		VK_CHECK(vkCreateSwapchainKHR(device_, &createInfo, 0, &swapchain_->swapchain));
 
@@ -1010,6 +1012,8 @@ namespace gfx {
 			imageViews.push_back(swapchain_->depthImageViews[i]);
             swapchain_->framebuffers[i] = createFramebufferInternal(device_, swapchain_->renderPass->renderPass, imageViews.data(), static_cast<uint32_t>(imageViews.size()), width, height);
         }
+
+        vkDestroySwapchainKHR(device_, oldSwapchain, nullptr);
 
         return true;
     }

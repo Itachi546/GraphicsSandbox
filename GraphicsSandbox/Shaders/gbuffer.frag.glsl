@@ -3,6 +3,10 @@
 #extension GL_GOOGLE_include_directive: require
 #extension GL_EXT_nonuniform_qualifier : enable
 
+#include "material.glsl"
+#include "bindless.glsl"
+#include "constants.glsl"
+
 layout(location = 0) out vec4 colorBuffer;
 layout(location = 1) out vec4 normalBuffer;
 layout(location = 2) out vec4 pbrBuffer;
@@ -20,15 +24,10 @@ layout(location = 0) in VS_OUT
    flat uint matId;
 } fs_in;
 
-const uint INVALID_TEXTURE = 0xFFFFFFFF;
-#include "../includes/material.glsl"
-
-layout(binding = 3) readonly buffer MaterialData 
+layout(binding = 3) readonly buffer MaterialData
 {
-  Material aMaterialData[]; 
+    Material aMaterialData[];
 };
-
-layout (set = 1, binding = 10) uniform sampler2D uTextures[];
 
 void main()
 {

@@ -194,6 +194,7 @@
     <ClInclude Include="Source\Engine\GUI\ImGuiService.h" />
     <ClInclude Include="Source\External\json.hpp" />
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
+    <ClInclude Include="Source\Engine\Pass\TransparentPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -316,30 +317,53 @@
     <ClCompile Include="Source\Engine\Pass\LightingPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Pass\TransparentPass.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\envmap\cubemap.glsl" />
-    <None Include="Shaders\includes\bindings.glsl" />
-    <None Include="Shaders\includes\material.glsl" />
-    <None Include="Shaders\includes\mesh.glsl" />
-    <None Include="Shaders\includes\pbr.glsl" />
-    <None Include="Shaders\graph.json.bak">
+    <None Include="Shaders\graph.json" />
+    <None Include="Shaders\cubemap.glsl" />
+    <None Include="Shaders\pbr.glsl">
       <Filter>SHADERS</Filter>
     </None>
-    <None Include="Shaders\graph.json" />
+    <None Include="Shaders\constants.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="Shaders\meshdata.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="Shaders\bindless.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
+    <None Include="Shaders\globaldata.glsl">
+      <Filter>SOURCE</Filter>
+    </None>
+    <None Include="Shaders\material.glsl">
+      <Filter>SHADERS</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Shaders\gbuffer\gbuffer.frag.glsl" />
-    <CustomBuild Include="Shaders\gbuffer\gbuffer.vert.glsl" />
-    <CustomBuild Include="Shaders\utils\copy.frag.glsl" />
-    <CustomBuild Include="Shaders\utils\copy.vert.glsl" />
-    <CustomBuild Include="Shaders\debug\debug.frag.glsl" />
-    <CustomBuild Include="Shaders\debug\debug.vert.glsl" />
-    <CustomBuild Include="Shaders\envmap\brdf_lut.comp.glsl" />
-    <CustomBuild Include="Shaders\envmap\hdri_converter.comp.glsl" />
-    <CustomBuild Include="Shaders\envmap\irradiance.comp.glsl" />
-    <CustomBuild Include="Shaders\envmap\prefilter_env.comp.glsl" />
+    <CustomBuild Include="Shaders\hdri_converter.comp.glsl" />
+    <CustomBuild Include="Shaders\prefilter_env.comp.glsl" />
+    <CustomBuild Include="Shaders\irradiance.comp.glsl" />
+    <CustomBuild Include="Shaders\gbuffer.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\main.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\fullscreen.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\fullscreen.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
     <CustomBuild Include="Shaders\lighting.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\brdf_lut.comp.glsl" />
+    <CustomBuild Include="Shaders\main.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

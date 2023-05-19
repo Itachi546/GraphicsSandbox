@@ -32,7 +32,7 @@ void Scene::Initialize()
 	mEnvMap->CalculateBRDFLUT();
 }
 
-void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out)
+void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	if (meshRenderer->IsRenderable())
 	{
@@ -64,12 +64,16 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 
 			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
-			out.push_back(std::move(drawData));
+
+			if (material->IsTransparent())
+				transparent.push_back(std::move(drawData));
+			else
+				opaque.push_back(std::move(drawData));
 		}
 	}
 }
 
-void Scene::GenerateDrawData(std::vector<DrawData>& out)
+void Scene::GenerateDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	auto meshRendererComponents = mComponentManager->GetComponentArray<MeshRenderer>();
 	auto& frustum = mCamera.mFrustum;
@@ -78,11 +82,11 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 	{
 		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
 		const ecs::Entity entity = meshRendererComponents->entities[i];
-		GenerateMeshData(entity, &meshRenderer, out);
+		GenerateMeshData(entity, &meshRenderer, opaque, transparent);
 	}
 }
 
-void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& out)
+void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	// @TODO : Temporary only to visualize bones
 	auto skinnedMeshRendererComponents = mComponentManager->GetComponentArray<SkinnedMeshRenderer>();
@@ -90,7 +94,7 @@ void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& out)
 	{
 		const SkinnedMeshRenderer& meshRenderer = skinnedMeshRendererComponents->components[i];
 		const ecs::Entity entity = skinnedMeshRendererComponents->entities[i];
-		GenerateMeshData(entity, &meshRenderer, out);
+		GenerateMeshData(entity, &meshRenderer, opaque, transparent);
 	}
 }
 
@@ -553,8 +557,9 @@ ecs::Entity Scene::CreateLight(std::string_view name)
 
 void Scene::Update(float dt)
 {
-	mDrawData.clear();
-	mSkinnedMeshDrawData.clear();
+	mOpaqueBatches.clear();
+	mTransparentBatches.clear();
+	mSkinnedBatches.clear();
 
 	mCamera.Update(dt);
 	UpdateTransform();
@@ -563,8 +568,8 @@ void Scene::Update(float dt)
 	if(mShowBoundingBox)
 		DrawBoundingBox();
 
-	GenerateDrawData(mDrawData);
-	GenerateSkinnedMeshDrawData(mSkinnedMeshDrawData);
+	GenerateDrawData(mOpaqueBatches, mTransparentBatches);
+	GenerateSkinnedMeshDrawData(mSkinnedBatches, mTransparentBatches);
 }
 
 void Scene::SetSize(int width, int height)

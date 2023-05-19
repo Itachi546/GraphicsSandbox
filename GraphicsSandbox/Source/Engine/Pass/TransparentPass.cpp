@@ -1,4 +1,4 @@
-#include "LightingPass.h"
+#include "TransparentPass.h"
 
 #include "../Renderer.h"
 #include "../Utils.h"
@@ -9,17 +9,17 @@
 #include "../Camera.h"
 #include "../GUI/ImGuiService.h"
 
-gfx::LightingPass::LightingPass(RenderPassHandle renderPass, Renderer* renderer_) :
+gfx::TransparentPass::TransparentPass(RenderPassHandle renderPass, Renderer* renderer_) :
 	renderer(renderer_)
 {
 	PipelineDesc pipelineDesc = {};
 
 	ShaderDescription shaders[2];
 	uint32_t size = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::FULLSCREEN_VERT_PATH, &size);
+	char* vertexCode = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);
 	shaders[0] = { vertexCode, size };
 
-	char* fragmentCode = Utils::ReadFile(StringConstants::LIGHTING_FRAG_PATH, &size);
+	char* fragmentCode = Utils::ReadFile(StringConstants::MAIN_FRAG_PATH, &size);
 	shaders[1] = { fragmentCode, size };
 
 	pipelineDesc.shaderCount = 2;
@@ -31,16 +31,16 @@ gfx::LightingPass::LightingPass(RenderPassHandle renderPass, Renderer* renderer_
 	pipelineDesc.rasterizationState.enableDepthClamp = true;
 
 	gfx::BlendState blendState = {};
+	blendState.enable = true;
 	pipelineDesc.blendStates = &blendState;
 	pipelineDesc.blendStateCount = 1;
 	pipeline = gfx::GetDevice()->CreateGraphicsPipeline(&pipelineDesc);
 
 	delete[] vertexCode;
 	delete[] fragmentCode;
-
 }
 
-void gfx::LightingPass::Render(CommandList* commandList, Scene* scene)
+void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	DescriptorInfo descriptorInfo = { renderer->mLightBuffer, 0, sizeof(LightData) * 128, gfx::DescriptorType::StorageBuffer };
@@ -50,7 +50,7 @@ void gfx::LightingPass::Render(CommandList* commandList, Scene* scene)
 	device->Draw(commandList, 6, 0, 1);
 }
 
-void gfx::LightingPass::Shutdown()
+void gfx::TransparentPass::Shutdown()
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	device->Destroy(pipeline);

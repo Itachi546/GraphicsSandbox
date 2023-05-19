@@ -1,29 +1,18 @@
 #version 450
 #extension GL_GOOGLE_include_directive: require
 
-#include "includes/pbr.glsl"
-
-struct LightData
-{
-    vec3 position;
-	float radius;
-	vec3 color;
-	float type;
-};
+#include "pbr.glsl"
+#include "globaldata.glsl"
+#include "material.glsl"
 
 layout(location = 0) in vec2 vUv;
-
 layout(location = 0) out vec4 fragColor;
-//layout(location = 1) out vec4 brightColor;
 
 layout(binding = 0) readonly buffer LightBuffer {
    LightData lightData[];
 } lightBuffer;
 
-#extension GL_EXT_nonuniform_qualifier : enable
-layout (set = 1, binding = 10) uniform sampler2D uTextures[];
-layout (set = 1, binding = 10 )	uniform	sampler3D uTextures3D[];
-layout (set = 1, binding = 10 )	uniform	samplerCube uTexturesCube[];
+#include "bindless.glsl"
 
 layout(push_constant) uniform PushConstants
 {

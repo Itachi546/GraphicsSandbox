@@ -53,13 +53,17 @@ public:
 
 	std::vector<ecs::Entity> FindChildren(ecs::Entity entity);
 
-	std::vector<DrawData>& GetStaticDrawData() {
-		return mDrawData;
+	std::vector<DrawData>& GetDrawDataOpaque() {
+		return mOpaqueBatches;
 	}
 
-	std::vector<DrawData>& GetSkinnedMeshDrawData()
+	std::vector<DrawData>& GetDrawDataTransparent() {
+		return mTransparentBatches;
+	}
+
+	std::vector<DrawData>& GetDrawDataSkinned()
 	{
-		return mSkinnedMeshDrawData;
+		return mSkinnedBatches;
 	}
 
 	void Shutdown();
@@ -82,11 +86,12 @@ private:
 	std::unique_ptr<EnvironmentMap> mEnvMap;
 	std::vector<gfx::BufferHandle> mAllocatedBuffers;
 
-	std::vector<DrawData> mDrawData;
-	std::vector<DrawData> mSkinnedMeshDrawData;
+	std::vector<DrawData> mOpaqueBatches;
+	std::vector<DrawData> mTransparentBatches;
+	std::vector<DrawData> mSkinnedBatches;
 
-	void GenerateDrawData(std::vector<DrawData>& out);
-	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& out);
+	void GenerateDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
+	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
 
 	void UpdateTransform();
 	void UpdateHierarchy();
@@ -126,7 +131,7 @@ private:
 
 	void RemoveChild(ecs::Entity parent, ecs::Entity child);
 
-	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out);
+	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
 
 	friend class Renderer;
 };

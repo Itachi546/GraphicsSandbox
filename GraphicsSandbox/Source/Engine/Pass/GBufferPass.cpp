@@ -13,7 +13,7 @@ gfx::GBufferPass::GBufferPass(RenderPassHandle renderPass, Renderer* renderer_)
 
 	ShaderDescription shaders[2];
 	uint32_t size = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::GBUFFER_VERT_PATH, &size);
+	char* vertexCode = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);
 	shaders[0] = { vertexCode, size };
 
 	char* fragmentCode = Utils::ReadFile(StringConstants::GBUFFER_FRAG_PATH, &size);
@@ -46,7 +46,7 @@ void gfx::GBufferPass::Render(CommandList* commandList, Scene* scene)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 
-	std::vector<DrawData>& drawDatas = scene->GetStaticDrawData();
+	std::vector<DrawData>& drawDatas = scene->GetDrawDataOpaque();
 
 	//Bind Pipeline
 	std::vector<RenderBatch> renderBatches;

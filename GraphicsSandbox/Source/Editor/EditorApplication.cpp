@@ -105,14 +105,16 @@ void EditorApplication::InitializeScene()
 	auto compMgr = mScene.GetComponentManager();
 
 	//character = mScene.CreateMesh("Assets/Models/character2.sbox");
-
+	/*
 	character = mScene.CreateMesh("Assets/Models/michelle.sbox");
 	compMgr->GetComponent<TransformComponent>(character)->position = glm::vec3(5.0f, 0.0f, 6.0f);
-	//ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/sponza.sbox");
+	ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/ortiz.sbox");
+	*/
+
+	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
 
 	ecs::Entity plane = mScene.CreatePlane("Plane00");
 	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
-
 	{
 		ecs::Entity helmet = mScene.CreateMesh("Assets/Models/DamagedHelmet.sbox");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
@@ -121,6 +123,7 @@ void EditorApplication::InitializeScene()
 		transform->scale *= 0.5f;
 		transform->rotation = glm::quat(glm::vec3(0.0, glm::pi<float>() * 0.5, 0.0f));
 	}
+
 }
 
 void EditorApplication::InitializeCSMScene()

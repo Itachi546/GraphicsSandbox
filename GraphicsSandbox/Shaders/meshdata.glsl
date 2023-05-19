@@ -1,3 +1,6 @@
+#ifndef MESHDATA_GLSL
+#define MESHDATA_GLSL
+
 /*
 * We cannot use the 
 * struct Vertex 
@@ -11,6 +14,7 @@
 */
 #extension GL_EXT_shader_8bit_storage: require
 #extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
+
 struct Vertex 
 {
 	float px, py, pz;
@@ -41,3 +45,6 @@ vec3 UnpackU8toFloat(uint nx, uint ny, uint nz)
 {
    return vec3((nx - 127.5f) / 127.0f, (ny - 127.5f) / 127.0f, (nz - 127.5f) / 127.0f);
 }
+
+
+#endif

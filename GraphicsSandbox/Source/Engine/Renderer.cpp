@@ -26,8 +26,8 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
 	// Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::COPY_VERT_PATH, &vertexLen);
-	char* fragmentCode = Utils::ReadFile(StringConstants::COPY_FRAG_PATH, &fragmentLen);
+	char* vertexCode = Utils::ReadFile(StringConstants::FULLSCREEN_VERT_PATH, &vertexLen);
+	char* fragmentCode = Utils::ReadFile(StringConstants::FULLSCREEN_FRAG_PATH, &fragmentLen);
 	assert(vertexCode != nullptr);
 	assert(fragmentCode != nullptr);
 
@@ -70,6 +70,22 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 		mFinalOutput = 0;
 }
 
+
+void Renderer::SetScene(Scene* scene)
+{
+	mScene = scene;
+	// Update Environment data
+	mEnvironmentData.exposure = 1.0f;
+	auto& env = mScene->GetEnvironmentMap();
+	mEnvironmentData.brdfLUT = env->GetBRDFLUT().handle;
+	mEnvironmentData.irradianceMap = env->GetIrradianceMap().handle;
+	mEnvironmentData.prefilterEnvMap = env->GetPrefilterMap().handle;
+	mEnvironmentData.pbrBuffer = mFrameGraphBuilder.AccessResource("gbuffer_metallic_roughness_occlusion")->info.texture.texture.handle;
+	mEnvironmentData.colorBuffer = mFrameGraphBuilder.AccessResource("gbuffer_colour")->info.texture.texture.handle;
+	mEnvironmentData.normalBuffer = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture.handle;
+	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
+}
+
 // TODO: temp width and height variable
 void Renderer::Update(float dt)
 {
@@ -83,7 +99,6 @@ void Renderer::Update(float dt)
 	mGlobalUniformData.VP = P * V;
 	mGlobalUniformData.cameraPosition = camera->GetPosition();
 	mGlobalUniformData.dt += dt;
-	mGlobalUniformData.bloomThreshold = 1.0;
 	mDevice->CopyToBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
 
 	// Update Light Uniform Data
@@ -109,7 +124,12 @@ void Renderer::Update(float dt)
 
 	uint32_t nLights = static_cast<uint32_t>(lights.size());
 	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
+
+	// Update Environment data
+	mEnvironmentData.cameraPosition = mScene->GetCamera()->GetPosition();
+	mEnvironmentData.nLight = (uint32_t)mScene->GetComponentManager()->GetComponentArray<LightComponent>()->components.size();
 }
+
 
 void Renderer::Render(gfx::CommandList* commandList)
 {

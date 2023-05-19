@@ -32,6 +32,21 @@ struct LightData
 	float lightType;
 };
 
+struct EnvironmentData {
+	uint32_t nLight;
+	uint32_t irradianceMap;
+	uint32_t prefilterEnvMap;
+	uint32_t brdfLUT;
+
+	uint32_t positionBuffer;
+	uint32_t normalBuffer;
+	uint32_t pbrBuffer;
+	uint32_t colorBuffer;
+
+	glm::vec3 cameraPosition;
+	float exposure;
+};
+
 struct GlobalUniformData
 {
 	glm::mat4 P;
@@ -39,9 +54,6 @@ struct GlobalUniformData
 	glm::mat4 VP;
 	glm::vec3 cameraPosition;
 	float dt;
-	float bloomThreshold;
-	int enabledNormalMapping;
-	int enableCascadeDebug;
 };
 
 class Renderer
@@ -51,7 +63,7 @@ public:
 
 	void Update(float dt);
 
-	void SetScene(Scene* scene) { mScene = scene; }
+	void SetScene(Scene* scene);
 
 	void Render(gfx::CommandList* commandList);
 
@@ -71,7 +83,7 @@ public:
 	gfx::BufferHandle mSkinnedMatrixBuffer;
 	gfx::FrameGraphBuilder mFrameGraphBuilder;
 	gfx::FrameGraph mFrameGraph;
-
+	EnvironmentData mEnvironmentData;
 private:
 
 	gfx::GraphicsDevice* mDevice;
@@ -80,20 +92,11 @@ private:
 	std::vector<std::string> mOutputAttachments;
 	uint32_t mFinalOutput;
 
-	//gfx::PipelineHandle mMeshPipeline;
-	//gfx::PipelineHandle mSkinnedMeshPipeline;
 	gfx::PipelineHandle mCubemapPipeline;
 	gfx::RenderPassHandle mSwapchainRP;
 	gfx::PipelineHandle mFullScreenPipeline;
 
-	//gfx::RenderPassHandle mHdrRenderPass;
-	//gfx::FramebufferHandle mHdrFramebuffer;
-	
-	//gfx::Format mHDRDepthFormat = gfx::Format::D32_SFLOAT;
-	//gfx::Format mHDRColorFormat = gfx::Format::R16B16G16A16_SFLOAT;
-
 	const int kMaxEntity = 10'000;
-
 	GlobalUniformData mGlobalUniformData;
 
 	void InitializeBuffers();

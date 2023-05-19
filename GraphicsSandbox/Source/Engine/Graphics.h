@@ -265,7 +265,6 @@ namespace gfx
 		BlendFactor dstColor = BlendFactor::OneMinusSrcColor;
 		BlendFactor srcAlpha = BlendFactor::SrcAlpha;
 		BlendFactor dstAlpha = BlendFactor::OneMinusSrcAlpha;
-
 	};
 
 

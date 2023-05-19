@@ -122,7 +122,7 @@ private:
 				material.roughness = 0.9f;
 				material.albedo = glm::vec4(0.37f, .26f, .95f, 1.0f);
 				material.metallic = 0.1f;
-				material.emissive = 20.0f;
+				material.emissive = glm::vec3(20.0f);
 			}
 		}
 
@@ -150,7 +150,7 @@ private:
 			material.roughness = 1.0f;
 			material.albedo = glm::vec4(lightColor, 1.0f);
 			material.metallic = 0.0f;
-			material.emissive = 10.0f;
+			material.emissive = glm::vec3(10.0f);
 		}
 
 		mScene.SetEnableFrustumCulling(false);

@@ -3,7 +3,7 @@
 layout(local_size_x = 32, local_size_y = 32, local_size_z = 1) in;
 
 #extension GL_GOOGLE_include_directive : require
-#include "../includes/pbr.glsl"
+#include "pbr.glsl"
 
 layout(binding = 0, rg16f) uniform image2D uBRDFTexture;
 

@@ -5,6 +5,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
+#include <assimp/GLTFMaterial.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -181,10 +182,10 @@ namespace MeshConverter {
 		// Ignore emissive color for now
 		//if (aiGetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT, &color) == AI_SUCCESS)
 		//	materialComp.emissive = 1.0f;
-		if (aiGetMaterialColor(assimpMat, AI_MATKEY_COLOR_DIFFUSE, &color) == AI_SUCCESS)
+		if (aiGetMaterialColor(assimpMat, AI_MATKEY_BASE_COLOR, &color) == AI_SUCCESS)
 			material.albedo = { color.r, color.g, color.b, color.a };
 		if (aiGetMaterialColor(assimpMat, AI_MATKEY_COLOR_EMISSIVE, &color) == AI_SUCCESS)
-			material.emissive = color.r;
+			material.emissive = glm::vec3(color.r, color.g, color.b);
 
 		// PBR Roughness and Metallic
 		float temp = 1.0f;
@@ -205,7 +206,7 @@ namespace MeshConverter {
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_EMISSIVE, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 			material.emissiveMap = AddUnique(textureFiles, Path.C_Str());
 
-		if (aiGetMaterialTexture(assimpMat, aiTextureType_DIFFUSE, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
+		if (aiGetMaterialTexture(assimpMat, aiTextureType_BASE_COLOR, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 			material.albedoMap = AddUnique(textureFiles, Path.C_Str());
 
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_NORMALS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
@@ -225,25 +226,20 @@ namespace MeshConverter {
 			material.opacityMap = AddUnique(textureFiles, Path.C_Str());
 		}
 
-		float opacity = 1.0f;
-		if (aiGetMaterialFloat(assimpMat, AI_MATKEY_OPACITY, &opacity) == AI_SUCCESS)
+		aiString alphaMode;
+		if (assimpMat->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode) == AI_SUCCESS)
 		{
-			material.opacity = glm::clamp(1.0f - opacity, 0.0f, 1.0f);
-			if (material.opacity >= 0.95)
-				material.opacity = 0.0f;
-		}
-
-		if (aiGetMaterialFloat(assimpMat, AI_MATKEY_TRANSPARENCYFACTOR, &opacity) == AI_SUCCESS)
-		{
-			material.opacity = glm::clamp(1.0f - opacity, 0.0f, 1.0f);
-			if (material.opacity >= 0.95)
-				material.opacity = 0.0f;
-		}
-
-		aiColor4D transparencyColor = { 1.0f, 1.0f, 1.0f , 1.0f };
-		if (aiGetMaterialColor(assimpMat, AI_MATKEY_COLOR_TRANSPARENT, &transparencyColor) == AI_SUCCESS)
-		{
-			material.opacity = std::max(transparencyColor.r, std::max(transparencyColor.g, transparencyColor.b));
+			float cutoff = 1.0f;
+			assimpMat->Get(AI_MATKEY_GLTF_ALPHACUTOFF, cutoff);
+			if (alphaMode == aiString("BLEND"))
+			{
+				material.alphaMode = ALPHAMODE_BLEND;
+			}
+			else  if (alphaMode == aiString("MASK"))
+			{
+				material.alphaMode = ALPHAMODE_MASK;
+				material.alphaCutoff = cutoff;
+			}
 		}
 	}
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma once
+
 #include "../FrameGraph.h"
 #include "../GlmIncludes.h"
 
@@ -7,9 +9,9 @@ class Scene;
 class Renderer;
 
 namespace gfx {
-	struct LightingPass : public FrameGraphPass
+	struct TransparentPass : public FrameGraphPass
 	{
-		LightingPass(RenderPassHandle renderPass, Renderer* renderer);
+		TransparentPass(RenderPassHandle renderPass, Renderer* renderer);
 
 		void Render(CommandList* commandList, Scene* scene) override;
 
@@ -17,9 +19,6 @@ namespace gfx {
 
 		PipelineHandle pipeline;
 		Renderer* renderer;
-
-		
 	};
-
 }
 

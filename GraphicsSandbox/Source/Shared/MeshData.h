@@ -143,14 +143,21 @@ inline bool IsTextureValid(uint32_t texture)
 {
 	return texture != INVALID_TEXTURE;
 }
+
+constexpr int ALPHAMODE_NONE = 0;
+constexpr int ALPHAMODE_BLEND = 1;
+constexpr int ALPHAMODE_MASK = 2;
+
 struct MaterialComponent {
 	glm::vec4 albedo = glm::vec4(1.0f);
-	
-	float emissive = 0.0f;
-	float roughness = 0.9f;
+	glm::vec3 emissive = glm::vec3(0.0f);
+
 	float metallic = 0.01f;
+	float roughness = 0.9f;
 	float ao = 1.0f;
-	float opacity = 1.0f;
+	float transparency = 1.0f;
+	float alphaCutoff = 0.0f;
+	int alphaMode = ALPHAMODE_NONE;
 
 	union {
 		uint32_t textures[7] = {
@@ -169,7 +176,7 @@ struct MaterialComponent {
 			uint32_t metallicMap;
 			uint32_t roughnessMap;
 			uint32_t ambientOcclusionMap;
-			uint32_t opacityMap;;
+			uint32_t opacityMap;
 		};
 	};
 
@@ -191,6 +198,11 @@ struct MaterialComponent {
 		if (opacityMap != INVALID_TEXTURE)
 			count += 1;
 		return count;
+	}
+
+	bool IsTransparent()
+	{
+		return alphaMode != ALPHAMODE_NONE;
 	}
 };
 

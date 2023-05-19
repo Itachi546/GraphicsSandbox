@@ -36,7 +36,7 @@ void gfx::DepthPrePass::Render(CommandList* commandList, Scene* scene)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 
-	std::vector<DrawData>& drawDatas = scene->GetStaticDrawData();
+	std::vector<DrawData>& drawDatas = scene->GetDrawDataOpaque();
 
 	//Bind Pipeline
 	std::vector<RenderBatch> renderBatches;

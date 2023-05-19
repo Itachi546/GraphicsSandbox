@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>C:\Users\Dell\OneDrive\Documents\Mastering-Graphics-Programming-with-Vulkan\deps\src\glTF-Sample-Models\2.0\Sponza\glTF\Sponza.gltf C:\Users\Dell\OneDrive\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Users\Dell\OneDrive\Documents\3D-Assets\Models\Sponza\Sponza.gltf C:\Users\Dell\OneDrive\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>

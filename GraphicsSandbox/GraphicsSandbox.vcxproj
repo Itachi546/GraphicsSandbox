@@ -170,6 +170,7 @@
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
     <ClInclude Include="Source\Editor\FileDialog.h" />
+    <ClInclude Include="Source\Engine\Pass\TransparentPass.h" />
     <ClInclude Include="Source\External\ImGui\IconsFontAwesome5.h" />
     <ClInclude Include="Source\External\ImGui\imconfig.h" />
     <ClInclude Include="Source\External\ImGui\imgui.h" />
@@ -229,8 +230,18 @@
     <ClInclude Include="Source\Test\SponzaTest.h" />
   </ItemGroup>
   <ItemGroup>
+    <CustomBuild Include="Shaders\fullscreen.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\fullscreen.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="Shaders\globaldata.glsl">
+      <FileType>Document</FileType>
+    </None>
     <ClCompile Include="Source\Engine\Pass\LightingPass.cpp" />
     <ClCompile Include="Source\Editor\EditorApplication.cpp" />
+    <ClCompile Include="Source\Engine\Pass\TransparentPass.cpp" />
     <ClCompile Include="Source\External\ImGui\imgui.cpp" />
     <ClCompile Include="Source\External\ImGui\imgui_demo.cpp" />
     <ClCompile Include="Source\External\ImGui\imgui_draw.cpp" />
@@ -271,46 +282,37 @@
     <ClCompile Include="Source\Shared\MathUtils.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="Shaders\gbuffer\gbuffer.frag.glsl">
+    <None Include="Shaders\bindless.glsl" />
+    <CustomBuild Include="Shaders\brdf_lut.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\gbuffer\gbuffer.vert.glsl">
+    <None Include="Shaders\constants.glsl" />
+    <None Include="Shaders\cubemap.glsl" />
+    <CustomBuild Include="Shaders\gbuffer.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="Shaders\graph.json" />
-    <None Include="Shaders\graph.json.bak" />
-    <None Include="Shaders\includes\material.glsl" />
-    <None Include="Shaders\includes\mesh.glsl" />
-    <None Include="Shaders\includes\pbr.glsl" />
-    <CustomBuild Include="Shaders\utils\copy.frag.glsl">
+    <CustomBuild Include="Shaders\hdri_converter.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\utils\copy.vert.glsl">
+    <CustomBuild Include="Shaders\irradiance.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\debug\debug.frag.glsl">
+    <CustomBuild Include="Shaders\prefilter_env.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\debug\debug.vert.glsl">
+    <CustomBuild Include="Shaders\main.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\envmap\brdf_lut.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <None Include="Shaders\envmap\cubemap.glsl" />
-    <CustomBuild Include="Shaders\envmap\hdri_converter.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\envmap\irradiance.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\envmap\prefilter_env.comp.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
-    <None Include="Shaders\includes\bindings.glsl" />
     <CustomBuild Include="Shaders\lighting.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\main.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="Shaders\material.glsl" />
+    <None Include="Shaders\meshdata.glsl" />
+    <None Include="Shaders\pbr.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

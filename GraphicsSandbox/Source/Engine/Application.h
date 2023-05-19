@@ -14,6 +14,7 @@
 #include <memory>
 
 class Renderer;
+struct ImGuiService;
 
 class Application
 {
@@ -22,8 +23,6 @@ public:
 	virtual void Initialize() = 0;
 	virtual void PreUpdate(float dt){}
 	virtual void PostUpdate(float dt) {}
-
-	virtual void RenderUI(gfx::CommandList* commandList){}
 
 	void Run();
 
@@ -59,13 +58,9 @@ protected:
 
 	Platform::WindowType mWindow = nullptr;
 	std::shared_ptr<gfx::GraphicsDevice > mDevice = nullptr;
+	ImGuiService* mGuiService = nullptr;
 
-	gfx::RenderPassHandle mSwapchainRP;
-	gfx::PipelineHandle mSwapchainPipeline;
 	std::unique_ptr<Renderer> mRenderer;
-
-	gfx::Format mSwapchainColorFormat = gfx::Format::B8G8R8A8_UNORM;
-	gfx::Format mSwapchainDepthFormat = gfx::Format::D32_SFLOAT;
 
 	std::stringstream mWindowTitle;
 

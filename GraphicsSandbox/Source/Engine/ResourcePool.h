@@ -93,3 +93,5 @@ struct ResourcePool
 	// Count of used indices
 	uint32_t usedIndices;
 };
+
+

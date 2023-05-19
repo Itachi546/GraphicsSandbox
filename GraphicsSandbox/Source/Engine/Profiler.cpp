@@ -17,10 +17,14 @@ namespace Profiler
 	uint64_t queryResult[128];
 	double gpuTimestampFrequency = 0.0;
 
+	void BeginFrame()
+	{
+		id = 0;
+	}
+
 	void BeginFrameGPU(gfx::CommandList* commandList)
 	{
 		queryIdx = 0;
-		id = 0;
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		if (!initialized)
 		{
@@ -47,7 +51,7 @@ namespace Profiler
 		if (found != gRangeData.end())
 		{
 			auto& range = found->second;
-			auto dt = (float)range.cpuTimer.elapsedMilliseconds();
+			auto dt = range.cpuTimer.elapsedMilliseconds();
 
 			range.sampleTime += dt;
 			if (found->second.sampleCount == 0)
@@ -100,7 +104,7 @@ namespace Profiler
 			if (v.IsCpuRange())
 				continue;
 
-			float dt = static_cast<float>((queryResult[v.gpuEnd] - queryResult[v.gpuBegin]) * gpuTimestampFrequency * 1e-6);
+			double dt = double((queryResult[v.gpuEnd] - queryResult[v.gpuBegin]) * gpuTimestampFrequency * 1e-6);
 			v.sampleTime += dt;
 			if (v.sampleCount == 0)
 				v.time = dt;

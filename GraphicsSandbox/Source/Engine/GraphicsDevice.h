@@ -10,13 +10,13 @@ namespace gfx
 	public:
 		virtual ~GraphicsDevice() = default;
 
-		virtual bool CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window) = 0;
+		virtual bool CreateSwapchain(Platform::WindowType window) = 0;
 		virtual RenderPassHandle CreateRenderPass(const RenderPassDesc* desc) = 0;
 		virtual PipelineHandle CreateGraphicsPipeline(const PipelineDesc* desc) =  0;
 		virtual PipelineHandle CreateComputePipeline(const PipelineDesc* desc) = 0;
 		virtual BufferHandle CreateBuffer(const GPUBufferDesc* desc) = 0;
 		virtual TextureHandle CreateTexture(const GPUTextureDesc* desc) = 0;
-		virtual FramebufferHandle CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount) = 0;
+		virtual FramebufferHandle  CreateFramebuffer(const FramebufferDesc* desc) = 0;
 		virtual SemaphoreHandle CreateSemaphore() = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
@@ -41,8 +41,8 @@ namespace gfx
 		virtual void PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers) = 0;
 		virtual void CopyToSwapchain(CommandList* commandList, TextureHandle texture, ImageLayout finalSwapchainImageLayout, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 
-		virtual void BeginDebugMarker(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) = 0;
-		virtual void EndDebugMarker(CommandList* commandList) = 0;
+		virtual void BeginDebugLabel(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) = 0;
+		virtual void EndDebugLabel(CommandList* commandList) = 0;
 
 
 		virtual void BeginFrame() = 0;
@@ -72,7 +72,7 @@ namespace gfx
 		* zero. So in such case the swapchain is not ready and we skip rendering
 		* the frame.
 		*/
-		virtual bool IsSwapchainReady(RenderPassHandle rp) = 0;
+		virtual bool IsSwapchainReady() = 0;
 
 		virtual void Destroy(RenderPassHandle renderPass) = 0;
 		virtual void Destroy(PipelineHandle pipeline) = 0;

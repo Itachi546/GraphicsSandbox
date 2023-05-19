@@ -221,7 +221,7 @@ void SceneHierarchy::DrawMaterialComponent(MaterialComponent* material)
 		ImGui::ColorEdit3("Albedo", &material->albedo[0]);
 		ImGui::SliderFloat("Roughness", &material->roughness, 0.0f, 1.0f);
 		ImGui::SliderFloat("Metallic", &material->metallic, 0.0f, 1.0f);
-		ImGui::SliderFloat("Emissive", &material->emissive, 0.0f, 100.0f);
+		ImGui::ColorEdit3("Emissive", &material->emissive[0]);
 		ImGui::SliderFloat("AO", &material->ao, 0.0f, 1.0f);
 
 		auto ShowTexture = [](uint32_t index, std::string textureType) {

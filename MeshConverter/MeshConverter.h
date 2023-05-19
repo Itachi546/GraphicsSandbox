@@ -5,6 +5,7 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 #include <assimp/material.h>
+#include <assimp/GLTFMaterial.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -107,7 +108,7 @@ namespace MeshConverter {
 			fprintf(stdout, "Loaded [%s] %dx%d texture with %d channels\n", filename.c_str(), width, height, nChannel);
 		}
 
-		ResizeAndExportTexture(pixels, width, height, EXPORT_TEXTURE_SIZE, EXPORT_TEXTURE_SIZE, nChannel, outputImagePath);
+		ResizeAndExportTexture(pixels, width, height, width, height, nChannel, outputImagePath);
 
 		stbi_image_free(pixels);
 
@@ -181,10 +182,10 @@ namespace MeshConverter {
 		// Ignore emissive color for now
 		//if (aiGetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT, &color) == AI_SUCCESS)
 		//	materialComp.emissive = 1.0f;
-		if (aiGetMaterialColor(assimpMat, AI_MATKEY_COLOR_DIFFUSE, &color) == AI_SUCCESS)
+		if (aiGetMaterialColor(assimpMat, AI_MATKEY_BASE_COLOR, &color) == AI_SUCCESS)
 			material.albedo = { color.r, color.g, color.b, color.a };
 		if (aiGetMaterialColor(assimpMat, AI_MATKEY_COLOR_EMISSIVE, &color) == AI_SUCCESS)
-			material.emissive = color.r;
+			material.emissive = glm::vec3(color.r, color.g, color.b);
 
 		// PBR Roughness and Metallic
 		float temp = 1.0f;
@@ -205,7 +206,7 @@ namespace MeshConverter {
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_EMISSIVE, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 			material.emissiveMap = AddUnique(textureFiles, Path.C_Str());
 
-		if (aiGetMaterialTexture(assimpMat, aiTextureType_DIFFUSE, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
+		if (aiGetMaterialTexture(assimpMat, aiTextureType_BASE_COLOR, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 			material.albedoMap = AddUnique(textureFiles, Path.C_Str());
 
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_NORMALS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
@@ -220,11 +221,26 @@ namespace MeshConverter {
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_METALNESS, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
 			material.metallicMap = AddUnique(textureFiles, Path.C_Str());
 
-		/*
 		if (aiGetMaterialTexture(assimpMat, aiTextureType_OPACITY, 0, &Path, &Mapping, &UVIndex, &Blend, &TextureOp, TextureMapMode, &TextureFlags) == AI_SUCCESS)
+		{
 			material.opacityMap = AddUnique(textureFiles, Path.C_Str());
-			material.transparency = 0.5f;
-			*/
+		}
+
+		aiString alphaMode;
+		if (assimpMat->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode) == AI_SUCCESS)
+		{
+			float cutoff = 1.0f;
+			assimpMat->Get(AI_MATKEY_GLTF_ALPHACUTOFF, cutoff);
+			if (alphaMode == aiString("BLEND"))
+			{
+				material.alphaMode = ALPHAMODE_BLEND;
+			}
+			else  if (alphaMode == aiString("MASK"))
+			{
+				material.alphaMode = ALPHAMODE_MASK;
+				material.alphaCutoff = cutoff;
+			}
+		}
 	}
 
 	// Root bone is the bone that doesn't have any other bone as parent 

@@ -9,77 +9,90 @@
 #include "StringConstants.h"
 #include "DebugDraw.h"
 #include "TransformComponent.h"
+#include "TextureCache.h"
 
+#include "GUI/ImGuiService.h"
 #include "../Shared/MeshData.h"
+#include "Pass/DepthPrePass.h"
+#include "Pass/GBufferPass.h"
+#include "Pass/LightingPass.h"
+#include "Pass/TransparentPass.h"
+
 #include <vector>
 #include <algorithm>
 
-#include "TextureCache.h"
 
 Renderer::Renderer() : mDevice(gfx::GetDevice())
 {
-	initializeBuffers();
+	// Create SwapchainPipeline
+	uint32_t vertexLen = 0, fragmentLen = 0;
+	char* vertexCode = Utils::ReadFile(StringConstants::FULLSCREEN_VERT_PATH, &vertexLen);
+	char* fragmentCode = Utils::ReadFile(StringConstants::FULLSCREEN_FRAG_PATH, &fragmentLen);
+	assert(vertexCode != nullptr);
+	assert(fragmentCode != nullptr);
 
-	gfx::RenderPassDesc desc;
-	desc.width = 1920;
-	desc.height = 1080;
+	gfx::PipelineDesc pipelineDesc = {};
+	std::vector<gfx::ShaderDescription> shaders(2);
+	shaders[0] = { vertexCode, vertexLen };
+	shaders[1] = { fragmentCode, fragmentLen };
+	pipelineDesc.shaderCount = 2;
+	pipelineDesc.shaderDesc = shaders.data();
 
-	gfx::GPUTextureDesc colorAttachment = {};
-	colorAttachment.bCreateSampler = true;
-	colorAttachment.format = mHDRColorFormat;
-	colorAttachment.bindFlag = gfx::BindFlag::RenderTarget | gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
-	colorAttachment.imageAspect = gfx::ImageAspect::Color;
-	colorAttachment.width = desc.width;
-	colorAttachment.height = desc.height;
+	pipelineDesc.renderPass = mSwapchainRP;
+	pipelineDesc.rasterizationState.enableDepthTest = false;
+	pipelineDesc.rasterizationState.enableDepthWrite = false;
+	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
+	gfx::BlendState blendState = {};
+	pipelineDesc.blendStates = &blendState;
+	pipelineDesc.blendStateCount = 1;
+
+	mFullScreenPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
+	delete[] vertexCode;
+	delete[] fragmentCode;
+
+	InitializeBuffers();
+
+	mFrameGraphBuilder.Init(mDevice);
+	mFrameGraph.Init(&mFrameGraphBuilder);
+	mFrameGraph.Parse("GraphicsSandbox/Shaders/graph.json");
+	mFrameGraph.Compile();
+
+	mFrameGraphBuilder.GetAllResourceName(mOutputAttachments);
+
+	mFrameGraph.RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(mFrameGraphBuilder.AccessNode("depth_pre_pass")->renderPass, this));
+	mFrameGraph.RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(mFrameGraphBuilder.AccessNode("gbuffer_pass")->renderPass, this));
+	mFrameGraph.RegisterRenderer("lighting_pass", new gfx::LightingPass(mFrameGraphBuilder.AccessNode("lighting_pass")->renderPass, this));
+	mFrameGraph.RegisterRenderer("transparent_pass", new gfx::TransparentPass(mFrameGraphBuilder.AccessNode("transparent_pass")->renderPass, this));
+
+	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
+	if (found != mOutputAttachments.end())
+		mFinalOutput = (uint32_t)std::distance(mOutputAttachments.begin(), found);
+	else
+		mFinalOutput = 0;
+}
 
 
-	gfx::GPUTextureDesc depthAttachment = {};
-	depthAttachment.bCreateSampler = true;
-	depthAttachment.format = mHDRDepthFormat;
-	depthAttachment.bindFlag = gfx::BindFlag::DepthStencil | gfx::BindFlag::ShaderResource;
-	depthAttachment.imageAspect = gfx::ImageAspect::Depth;
-	depthAttachment.width = desc.width;
-	depthAttachment.height = desc.height;
-
-	std::vector<gfx::Attachment> attachments{
-	{
-		gfx::Attachment{0, colorAttachment},
-		gfx::Attachment{2, depthAttachment},
-		gfx::Attachment{1, colorAttachment}
-	} };
-	desc.attachments = attachments;
-	desc.hasDepthAttachment = true;
-	mHdrRenderPass = mDevice->CreateRenderPass(&desc);
-	mHdrFramebuffer = mDevice->CreateFramebuffer(mHdrRenderPass, 1);
-
-	mMeshPipeline = loadHDRPipeline(StringConstants::MAIN_VERT_PATH, StringConstants::MAIN_FRAG_PATH);
-	mSkinnedMeshPipeline = loadHDRPipeline(StringConstants::SKINNED_VERT_PATH, StringConstants::SKINNED_FRAG_PATH);
-	mCubemapPipeline = loadHDRPipeline(StringConstants::CUBEMAP_VERT_PATH, StringConstants::CUBEMAP_FRAG_PATH, gfx::CullMode::None);
-
-	mBloomFX = std::make_shared<fx::Bloom>(mDevice, desc.width, desc.height, mHDRColorFormat);
-	mShadowMap = std::make_shared<CascadedShadowMap>();
-
-	mGlobalUniformData.enabledNormalMapping = true;
-	mGlobalUniformData.enableCascadeDebug = 0;
+void Renderer::SetScene(Scene* scene)
+{
+	mScene = scene;
+	// Update Environment data
+	mEnvironmentData.exposure = 1.0f;
+	auto& env = mScene->GetEnvironmentMap();
+	mEnvironmentData.brdfLUT = env->GetBRDFLUT().handle;
+	mEnvironmentData.irradianceMap = env->GetIrradianceMap().handle;
+	mEnvironmentData.prefilterEnvMap = env->GetPrefilterMap().handle;
+	mEnvironmentData.pbrBuffer = mFrameGraphBuilder.AccessResource("gbuffer_metallic_roughness_occlusion")->info.texture.texture.handle;
+	mEnvironmentData.colorBuffer = mFrameGraphBuilder.AccessResource("gbuffer_colour")->info.texture.texture.handle;
+	mEnvironmentData.normalBuffer = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture.handle;
+	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
 }
 
 // TODO: temp width and height variable
 void Renderer::Update(float dt)
 {
-	std::vector<DrawData> drawDatas;
-	mScene->GenerateDrawData(drawDatas);
-	CreateBatch(drawDatas, mRenderBatches);
-
-	auto compMgr = mScene->GetComponentManager();
-	// Generate light Direction
-	glm::mat3 transform = compMgr->GetComponent<TransformComponent>(mScene->GetSun())->GetRotationMatrix();
-
-	glm::vec3 direction = normalize(transform * glm::vec3(0.0f, 1.0f, 0.0f));
-	Camera* camera = mScene->GetCamera();
-	mShadowMap->Update(camera, direction);
-	DebugDraw::AddLine(direction * 5.0f, direction, 0xff0000);
-
 	// Update Global Uniform Data
+	auto compMgr = mScene->GetComponentManager();
+	Camera* camera = mScene->GetCamera();
 	glm::mat4 P = camera->GetProjectionMatrix();
 	mGlobalUniformData.P = P;
 	glm::mat4 V = camera->GetViewMatrix();
@@ -87,12 +100,14 @@ void Renderer::Update(float dt)
 	mGlobalUniformData.VP = P * V;
 	mGlobalUniformData.cameraPosition = camera->GetPosition();
 	mGlobalUniformData.dt += dt;
-	mGlobalUniformData.bloomThreshold = mBloomThreshold;
+	mDevice->CopyToBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
 
+	// Update Light Uniform Data
 	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
 	std::vector<LightComponent>& lights = lightArrComponent->components;
 	std::vector<ecs::Entity>& entities = lightArrComponent->entities;
 
+	std::vector<LightData> lightData;
 	for (int i = 0; i < lights.size(); ++i)
 	{
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
@@ -105,16 +120,160 @@ void Renderer::Update(float dt)
 		else {
 			assert(!"Undefined Light Type");
 		}
-		mGlobalUniformData.lights[i] = LightData{ position, lights[i].radius, lights[i].color * lights[i].intensity, (float)lights[i].type };
+		lightData.emplace_back(LightData{ position, lights[i].radius, lights[i].color* lights[i].intensity, (float)lights[i].type });
 	}
 
-	uint32_t nLight = static_cast<uint32_t>(lights.size());
-	mGlobalUniformData.nLight = nLight;
-	//uint32_t uniformDataSize = sizeof(glm::mat4) * 3 + sizeof(float) * 4 + sizeof(int) + nLight * sizeof(LightData);
-	mDevice->CopyToBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
+	uint32_t nLights = static_cast<uint32_t>(lights.size());
+	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
+
+	// Update Environment data
+	mEnvironmentData.cameraPosition = mScene->GetCamera()->GetPosition();
+	mEnvironmentData.nLight = (uint32_t)mScene->GetComponentManager()->GetComponentArray<LightComponent>()->components.size();
 }
 
 
+void Renderer::Render(gfx::CommandList* commandList)
+{
+	// New GUI Frame
+	ImGuiService::GetInstance()->NewFrame();
+	ImGui::Begin("Renderer");
+
+	mScene->AddUI();
+	AddUI();
+
+	for (uint32_t i = 0; i < mFrameGraph.nodeHandles.size(); ++i)
+	{
+		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(mFrameGraph.nodeHandles[i]);
+		if (!node->enabled) continue;
+
+		// Begin GPU Timer
+		RangeId nodeProfilerId = Profiler::StartRangeGPU(commandList, node->name.c_str());
+		mDevice->BeginDebugLabel(commandList, node->name.c_str());
+
+		std::vector<gfx::ImageBarrierInfo> colorAttachmentBarrier;
+		std::vector<gfx::ImageBarrierInfo> depthAttachmentBarrier;
+
+		// Generate the Image barrier from input and output
+		for (uint32_t i = 0; i < node->inputs.size(); ++i)
+		{
+			gfx::FrameGraphResource* input = mFrameGraphBuilder.AccessResource(node->inputs[i]);
+			gfx::FrameGraphResourceInfo resourceInfo = input->info;
+			if (input->type == gfx::FrameGraphResourceType::Texture)
+			{
+				if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
+				{
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+					depthAttachmentBarrier.push_back(barrierInfo);
+				}
+				else {
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
+					colorAttachmentBarrier.push_back(barrierInfo);
+				}
+			}
+		}
+
+		// Pipeline barrier for color attachments
+		if (colorAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::FragmentShader };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+			colorAttachmentBarrier.clear();
+		}
+
+		// Pipeline barrier for depth attachments
+		if (depthAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+			depthAttachmentBarrier.clear();
+		}
+
+		for (uint32_t i = 0; i < node->outputs.size(); ++i)
+		{
+			gfx::FrameGraphResource* output = mFrameGraphBuilder.AccessResource(node->outputs[i]);
+			gfx::FrameGraphResourceInfo resourceInfo = output->info;
+
+			if (output->type == gfx::FrameGraphResourceType::Attachment)
+			{
+				if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
+				{
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+					depthAttachmentBarrier.push_back(barrierInfo);
+				}
+				else {
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, resourceInfo.texture.texture };
+					colorAttachmentBarrier.push_back(barrierInfo);
+				}
+			}
+		}
+
+		// Pipeline barrier for color attachments
+		if (colorAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+		}
+
+		// Pipeline barrier for depth attachments
+		if (depthAttachmentBarrier.size() > 0)
+		{
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+		}
+
+		node->renderer->PreRender(commandList);
+		mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
+		node->renderer->Render(commandList, mScene);
+		mDevice->EndRenderPass(commandList);
+		// End GPU Timer
+		Profiler::EndRangeGPU(commandList, nodeProfilerId);
+		// Draw UI
+		node->renderer->AddUI();
+		mDevice->EndDebugLabel(commandList);
+	}
+	ImGui::End();
+
+	RangeId start = Profiler::StartRangeGPU(commandList, "fullscreen_pass");
+	mDevice->BeginDebugLabel(commandList, "fullscreen_pass");
+
+	gfx::TextureHandle outputTexture = mFrameGraphBuilder.
+		AccessResource(mOutputAttachments[mFinalOutput])->info.
+		texture.texture;
+
+	gfx::ImageBarrierInfo imageBarrier = {
+		gfx::AccessFlag::None,
+		gfx::AccessFlag::ShaderRead,
+		gfx::ImageLayout::ShaderReadOptimal,
+		outputTexture
+	};
+
+	gfx::PipelineBarrierInfo pipelineBarrier = {
+		&imageBarrier,
+		1,
+		gfx::PipelineStage::BottomOfPipe,
+		gfx::PipelineStage::FragmentShader
+	};
+
+	mDevice->PipelineBarrier(commandList, &pipelineBarrier);
+
+	mDevice->BeginRenderPass(commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
+	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
+	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
+	mDevice->BindPipeline(commandList, mFullScreenPipeline);
+	mDevice->Draw(commandList, 6, 0, 1);
+
+	Profiler::EndRangeGPU(commandList, start);
+
+	// Draw GUI
+	start = Profiler::StartRangeGPU(commandList, "imgui");
+	ImGuiService::GetInstance()->Render(commandList);
+
+	mDevice->EndRenderPass(commandList);
+	Profiler::EndRangeGPU(commandList, start);
+	mDevice->EndDebugLabel(commandList);
+}
+
+/*
 void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 {
 	// BeginShadow Pass
@@ -137,9 +296,12 @@ void Renderer::DrawShadowMap(gfx::CommandList* commandList)
 	mShadowMap->EndRender(commandList);
 	Profiler::EndRangeGPU(commandList, rangeId);
 }
+*/
 
+/*
 void Renderer::Render(gfx::CommandList* commandList)
 {
+
 	{
 		// Draw Shadow Map
 		DrawShadowMap(commandList);
@@ -150,8 +312,9 @@ void Renderer::Render(gfx::CommandList* commandList)
 		gfx::PipelineBarrierInfo barrier = { &shadowBarrier, 1, gfx::PipelineStage::LateFramentTest, gfx::PipelineStage::FragmentShader};
 		mDevice->PipelineBarrier(commandList, &barrier);
 	}
-
+	*/
 	// Begin HDR RenderPass
+	/*
 	{
 		gfx::ImageBarrierInfo barriers[] = {
 			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0)},
@@ -166,20 +329,20 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 		auto hdrPass = Profiler::StartRangeGPU(commandList, "HDR Pass");
 		mDevice->BeginRenderPass(commandList, mHdrRenderPass, mHdrFramebuffer);
-
+		*/
 		/*
 		* TODO: Currently PerObjectData is extracted from the
 		* DrawData by iterating through it. In future maybe
 		* we can do culling in the compute shader and set
 		* PerObjectBuffer from compute shader.
 		*/
-		mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
+	//mDevice->BeginDebugMarker(commandList, "Draw Objects", 1.0f, 1.0f, 1.0f, 1.0f);
 
 		// offset is used to keep track of the buffer offset of transform data
 		// so as we don't have to use absolute index but relative
 		// We have all transform and material data in same buffer loaded at one
 		// and the buffer is binded relatively according to the batch
-
+	/*
 		uint32_t offset = 0;
 		for (auto& batch : mRenderBatches)
 		{
@@ -214,8 +377,9 @@ void Renderer::Render(gfx::CommandList* commandList)
 		mBloomFX->Composite(commandList, mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0), mBloomStrength);
 		Profiler::EndRangeGPU(commandList, bloomPass);
 	}
-}
 
+}
+/*
 gfx::TextureHandle Renderer::GetOutputTexture(OutputTextureType colorTextureType)
 {
 	switch (colorTextureType)
@@ -224,8 +388,6 @@ gfx::TextureHandle Renderer::GetOutputTexture(OutputTextureType colorTextureType
 		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0);
 	case OutputTextureType::HDRBrightTexture:
 		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 1);
-	case OutputTextureType::BloomUpSample:
-		return mBloomFX->GetTexture();
 	case OutputTextureType::HDRDepth:
 		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 2);
 	default:
@@ -233,7 +395,8 @@ gfx::TextureHandle Renderer::GetOutputTexture(OutputTextureType colorTextureType
 		return gfx::INVALID_TEXTURE;
 	}
 }
-
+*/
+/*
 gfx::PipelineHandle Renderer::loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode)
 {
 	// Create PBR Pipeline
@@ -264,8 +427,8 @@ gfx::PipelineHandle Renderer::loadHDRPipeline(const char* vsPath, const char* fs
 	delete[] fragmentCode;
 	return handle;
 }
-
-void Renderer::initializeBuffers()
+*/
+void Renderer::InitializeBuffers()
 {
 	// Global Uniform Buffer
 	gfx::GPUBufferDesc uniformBufferDesc = {};
@@ -294,6 +457,30 @@ void Renderer::initializeBuffers()
 	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
 	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
 	mDrawIndirectBuffer = mDevice->CreateBuffer(&bufferDesc);
+
+	// Light Data Buffer
+	bufferDesc.size = sizeof(LightData) * 128;
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	mLightBuffer = mDevice->CreateBuffer(&bufferDesc);
+}
+
+void Renderer::AddUI()
+{
+	if (ImGui::BeginCombo("Final Output", mOutputAttachments[mFinalOutput].c_str()))
+	{
+		for (uint32_t i = 0; i < mOutputAttachments.size(); ++i)
+		{
+			const bool isSelected = (i == mFinalOutput);
+			if (ImGui::Selectable(mOutputAttachments[i].c_str(), isSelected))
+				mFinalOutput = i;
+
+			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+			if (isSelected)
+				ImGui::SetItemDefaultFocus();
+		}
+		ImGui::EndCombo();
+	}
+
 }
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
@@ -312,7 +499,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 
 	descriptorInfos[1].buffer = vb.buffer;
 	descriptorInfos[1].offset = vb.offset;
-	descriptorInfos[1].size = vb.size;
+	descriptorInfos[1].size = vb.count * sizeof(Vertex);
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
 	descriptorInfos[2].texture = &cubemap;
@@ -324,7 +511,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 	mDevice->BindIndexBuffer(commandList, ib.buffer);
 	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.offset / sizeof(uint32_t));
 }
-
+/*
 void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)
 {
 	gfx::BufferView& vbView = batch.vertexBuffer;
@@ -461,7 +648,7 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 		materialOffset += 1;
 	}
 }
-
+*/
 void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch)
 {
 	// Clear previous batch
@@ -534,18 +721,21 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 
 void Renderer::Shutdown()
 {
-	mDevice->Destroy(mMeshPipeline);
-	mDevice->Destroy(mSkinnedMeshPipeline);
-	mDevice->Destroy(mCubemapPipeline);
+	mFrameGraph.Shutdown();
+	mFrameGraphBuilder.Shutdown();
+	mDevice->Destroy(mFullScreenPipeline);
+	//mDevice->Destroy(mMeshPipeline);
+	//mDevice->Destroy(mSkinnedMeshPipeline);
 
 	mDevice->Destroy(mGlobalUniformBuffer);
+	mDevice->Destroy(mLightBuffer);
 	mDevice->Destroy(mTransformBuffer);
 	mDevice->Destroy(mDrawIndirectBuffer);
 	mDevice->Destroy(mMaterialBuffer);
 	mDevice->Destroy(mSkinnedMatrixBuffer);
-	mDevice->Destroy(mHdrRenderPass);
-	mDevice->Destroy(mHdrFramebuffer);
+	//mDevice->Destroy(mHdrRenderPass);
+	//mDevice->Destroy(mHdrFramebuffer);
 
-	mBloomFX->Shutdown();
-	mShadowMap->Shutdown();
+	//mBloomFX->Shutdown();
+	//mShadowMap->Shutdown();
 }

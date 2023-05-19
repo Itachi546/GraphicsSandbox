@@ -5,6 +5,7 @@
 #include "DebugDraw.h"
 #include "../Shared/MathUtils.h"
 #include "StringConstants.h"
+#include "GUI/ImGuiService.h"
 
 #include <execution>
 #include <algorithm>
@@ -31,7 +32,7 @@ void Scene::Initialize()
 	mEnvMap->CalculateBRDFLUT();
 }
 
-void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out)
+void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	if (meshRenderer->IsRenderable())
 	{
@@ -51,8 +52,8 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 		if (isVisible)
 		{
 			DrawData drawData = {};
-			const gfx::BufferView& vertexBuffer = meshRenderer->vertexBuffer;
-			const gfx::BufferView& indexBuffer = meshRenderer->indexBuffer;
+			const gfx::BufferView vertexBuffer = meshRenderer->vertexBuffer;
+			const gfx::BufferView indexBuffer = meshRenderer->indexBuffer;
 
 			drawData.vertexBuffer = vertexBuffer;
 			drawData.indexBuffer = indexBuffer;
@@ -63,12 +64,16 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 
 			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
-			out.push_back(std::move(drawData));
+
+			if (material->IsTransparent())
+				transparent.push_back(std::move(drawData));
+			else
+				opaque.push_back(std::move(drawData));
 		}
 	}
 }
 
-void Scene::GenerateDrawData(std::vector<DrawData>& out)
+void Scene::GenerateDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	auto meshRendererComponents = mComponentManager->GetComponentArray<MeshRenderer>();
 	auto& frustum = mCamera.mFrustum;
@@ -77,11 +82,11 @@ void Scene::GenerateDrawData(std::vector<DrawData>& out)
 	{
 		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
 		const ecs::Entity entity = meshRendererComponents->entities[i];
-		GenerateMeshData(entity, &meshRenderer, out);
+		GenerateMeshData(entity, &meshRenderer, opaque, transparent);
 	}
 }
 
-void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& out)
+void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	// @TODO : Temporary only to visualize bones
 	auto skinnedMeshRendererComponents = mComponentManager->GetComponentArray<SkinnedMeshRenderer>();
@@ -89,7 +94,7 @@ void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& out)
 	{
 		const SkinnedMeshRenderer& meshRenderer = skinnedMeshRendererComponents->components[i];
 		const ecs::Entity entity = skinnedMeshRendererComponents->entities[i];
-		GenerateMeshData(entity, &meshRenderer, out);
+		GenerateMeshData(entity, &meshRenderer, opaque, transparent);
 	}
 }
 
@@ -336,11 +341,11 @@ void Scene::UpdateEntity(ecs::Entity parent,
 			}
 			meshRenderer->vertexBuffer.buffer = stagingMeshData.vertexBuffer;
 			meshRenderer->vertexBuffer.offset = mesh.vertexOffset;
-			meshRenderer->vertexBuffer.size = mesh.vertexCount;
+			meshRenderer->vertexBuffer.count = mesh.vertexCount;
 
 			meshRenderer->indexBuffer.buffer = stagingMeshData.indexBuffer;
 			meshRenderer->indexBuffer.offset = mesh.indexOffset;
-			meshRenderer->indexBuffer.size = mesh.indexCount;
+			meshRenderer->indexBuffer.count = mesh.indexCount;
 
 			meshRenderer->boundingBox = stagingMeshData.boxes_[meshId];
 
@@ -552,12 +557,19 @@ ecs::Entity Scene::CreateLight(std::string_view name)
 
 void Scene::Update(float dt)
 {
+	mOpaqueBatches.clear();
+	mTransparentBatches.clear();
+	mSkinnedBatches.clear();
+
 	mCamera.Update(dt);
 	UpdateTransform();
 	UpdateHierarchy();
 
 	if(mShowBoundingBox)
 		DrawBoundingBox();
+
+	GenerateDrawData(mOpaqueBatches, mTransparentBatches);
+	GenerateSkinnedMeshDrawData(mSkinnedBatches, mTransparentBatches);
 }
 
 void Scene::SetSize(int width, int height)
@@ -581,6 +593,20 @@ void Scene::Destroy(ecs::Entity entity)
 		}
 	}
 	ecs::DestroyEntity(mComponentManager.get(), entity);
+}
+
+void Scene::AddUI()
+{
+	LightComponent* light = mComponentManager->GetComponent<LightComponent>(mSun);
+	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(mSun);
+	if (ImGui::CollapsingHeader("Directional Light"))
+	{
+		ImGui::PushID("dirlight");
+		ImGui::SliderFloat3("rotation", &transform->rotation[0], -glm::pi<float>(), glm::pi<float>());
+		ImGui::SliderFloat("intensity", &light->intensity, 0.0f, 4.0f);
+		ImGui::ColorPicker3("color", &light->color[0]);
+		ImGui::PopID();
+	}
 }
 
 std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)
@@ -909,6 +935,21 @@ void Scene::InitializeLights()
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
 	light.intensity = 1.0f;
 	light.type = LightType::Directional;
+/*
+	for (uint32_t i = 0; i < 50; ++i)
+	{
+		ecs::Entity light = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
+		TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(light);
+		transform.position = glm::vec3(MathUtils::Rand01() * 50 - 25, MathUtils::Rand01() * 25, MathUtils::Rand01() * 50 - 25);
+		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+		//transform.rotation = glm::vec3(0.0f, 0.021f, 0.375f);
+		LightComponent& lightComp = mComponentManager->AddComponent<LightComponent>(light);
+		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
+		lightComp.intensity = 10.0f;
+		lightComp.type = LightType::Point;
+	}
+	*/
 }
 
 void Scene::RemoveChild(ecs::Entity parent, ecs::Entity child)

@@ -34,9 +34,6 @@ public:
 
 	void Update(float dt);
 
-	void GenerateDrawData(std::vector<DrawData>& out);
-	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& out);
-
 	void SetSize(int width, int height);
 
 	void SetShowBoundingBox(bool state) { mShowBoundingBox = state; }
@@ -46,6 +43,8 @@ public:
 
 	void Destroy(ecs::Entity entity);
 
+	void AddUI();
+
 	Camera* GetCamera() {
 		return &mCamera;
 	}
@@ -53,6 +52,19 @@ public:
 	inline std::unique_ptr<EnvironmentMap>& GetEnvironmentMap() { return mEnvMap; }
 
 	std::vector<ecs::Entity> FindChildren(ecs::Entity entity);
+
+	std::vector<DrawData>& GetDrawDataOpaque() {
+		return mOpaqueBatches;
+	}
+
+	std::vector<DrawData>& GetDrawDataTransparent() {
+		return mTransparentBatches;
+	}
+
+	std::vector<DrawData>& GetDrawDataSkinned()
+	{
+		return mSkinnedBatches;
+	}
 
 	void Shutdown();
 	virtual ~Scene() = default; 
@@ -73,6 +85,13 @@ private:
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;
 	std::vector<gfx::BufferHandle> mAllocatedBuffers;
+
+	std::vector<DrawData> mOpaqueBatches;
+	std::vector<DrawData> mTransparentBatches;
+	std::vector<DrawData> mSkinnedBatches;
+
+	void GenerateDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
+	void GenerateSkinnedMeshDrawData(std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
 
 	void UpdateTransform();
 	void UpdateHierarchy();
@@ -112,7 +131,7 @@ private:
 
 	void RemoveChild(ecs::Entity parent, ecs::Entity child);
 
-	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& out);
+	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
 
 	friend class Renderer;
 };

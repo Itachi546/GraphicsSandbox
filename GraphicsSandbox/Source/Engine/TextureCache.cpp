@@ -19,11 +19,23 @@ namespace TextureCache
 	std::unordered_map<std::string, gfx::TextureHandle> gAllTextureIndex;
 	std::vector<std::string> gAllTextureName(1024);
 	gfx::TextureHandle gSolidTexture;
-	const uint32_t kMaxMipLevel = 6;
 
 	gfx::TextureHandle GetDefaultTexture()
 	{
 		return gSolidTexture;
+	}
+
+	static uint32_t CalculateMipLevels(uint32_t width, uint32_t height)
+	{
+		uint32_t mipLevels = 0;
+
+		uint32_t size = std::max(width, height);
+		while (size > 1)
+		{
+			mipLevels++;
+			size /= 2;
+		}
+		return mipLevels;
 	}
 
 	gfx::TextureHandle CreateTexture(unsigned char* pixels, int width, int height, int nChannel, bool generateMipmap)
@@ -32,7 +44,7 @@ namespace TextureCache
 		desc.width = width;
 		desc.height = height;
 		desc.depth = 1;
-		desc.mipLevels = generateMipmap ? kMaxMipLevel : 1;
+		desc.mipLevels = generateMipmap ? CalculateMipLevels(width, height) : 1;
 		desc.arrayLayers = 1;
 		desc.bCreateSampler = true;
 		desc.bindFlag = gfx::BindFlag::ShaderResource;

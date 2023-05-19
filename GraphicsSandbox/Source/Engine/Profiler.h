@@ -14,8 +14,8 @@ namespace Profiler
 	{
 		std::string name;
 		Timer cpuTimer;
-		float time = 0.0f;
-		float sampleTime = 0.0f;
+		double time = 0.0f;
+		double sampleTime = 0.0f;
 		uint32_t sampleCount = 0;
 
 		uint32_t gpuBegin = ~0u;
@@ -29,6 +29,8 @@ namespace Profiler
 			return gpuBegin == ~0u;
 		}
 	};
+
+	void BeginFrame();
 
 	void BeginFrameGPU(gfx::CommandList* commandList);
 

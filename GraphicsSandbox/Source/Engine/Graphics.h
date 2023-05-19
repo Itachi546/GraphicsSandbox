@@ -169,10 +169,15 @@ namespace gfx
 	struct BufferView
 	{
 		BufferHandle buffer;
+
+		// Offset in byte to the parent buffer
 		uint32_t offset;
-		uint32_t size;
+
+		// Count of underlying data
+		uint32_t count;
 	};
 
+/*
 	struct SwapchainDesc
 	{
 		union
@@ -191,7 +196,7 @@ namespace gfx
 		bool enableDepth = false;
 		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
-
+	*/
 	enum class AccessFlag
 	{
 		None,
@@ -260,11 +265,10 @@ namespace gfx
 	struct BlendState
 	{
 		bool enable = false;
-		BlendFactor srcColor = BlendFactor::SrcColor;
-		BlendFactor dstColor = BlendFactor::OneMinusSrcColor;
+		BlendFactor srcColor = BlendFactor::SrcAlpha;
+		BlendFactor dstColor = BlendFactor::OneMinusSrcAlpha;
 		BlendFactor srcAlpha = BlendFactor::SrcAlpha;
 		BlendFactor dstAlpha = BlendFactor::OneMinusSrcAlpha;
-
 	};
 
 
@@ -275,7 +279,7 @@ namespace gfx
 		ShaderDescription* shaderDesc = nullptr;
 		Topology topology = Topology::TriangleList;
 		RasterizationState rasterizationState = {};
-		BlendState* blendState = nullptr;
+		BlendState* blendStates = nullptr;
 		uint32_t blendStateCount = 0;
 		RenderPassHandle renderPass = { K_INVALID_RESOURCE_HANDLE };
 	};
@@ -285,6 +289,13 @@ namespace gfx
 		Default, //CPU No access, GPU read/write
 		Upload, // CPU Write, GPU Read
 		ReadBack
+	};
+	
+	enum class RenderPassOperation {
+		DontCare,
+		Load,
+		Clear,
+		Count
 	};
 
 	enum class BindFlag
@@ -336,18 +347,33 @@ namespace gfx
 
 	struct Attachment
 	{
-		uint32_t index;
-		GPUTextureDesc desc;
-		bool loadOp = false;
+		Format format;
+		RenderPassOperation operation;
+		ImageAspect imageAspect;
 	};
 
 
 	struct RenderPassDesc
 	{
-		std::vector<Attachment> attachments;
-		uint32_t width;
-		uint32_t height;
+		std::vector<Attachment> colorAttachments;
+		Attachment depthAttachment;
 		bool hasDepthAttachment = false;
+	};
+
+
+	struct FramebufferDesc {
+		RenderPassHandle renderPass;
+		std::vector<TextureHandle> outputTextures;
+
+		bool hasDepthStencilAttachment = false;
+		TextureHandle depthStencilAttachment;
+
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t layers = 1;
+
+		float scalingX = 1.0f;
+		float scalingY = 1.0f;
 	};
 
 	/*

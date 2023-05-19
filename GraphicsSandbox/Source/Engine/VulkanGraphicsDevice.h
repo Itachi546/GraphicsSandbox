@@ -28,14 +28,14 @@ namespace gfx
 		VulkanGraphicsDevice(const VulkanGraphicsDevice&) = delete;
 		void operator=(const VulkanGraphicsDevice&) = delete;
 
-		bool               CreateSwapchain(const SwapchainDesc* swapchainDesc, Platform::WindowType window)  override;
+		bool               CreateSwapchain(Platform::WindowType window)  override;
 		RenderPassHandle   CreateRenderPass(const RenderPassDesc* desc)                                      override;
 		PipelineHandle     CreateGraphicsPipeline(const PipelineDesc* desc)                                  override;
 		PipelineHandle     CreateComputePipeline(const PipelineDesc* desc)                                   override;
 		BufferHandle       CreateBuffer(const GPUBufferDesc* desc)                                           override;
 		TextureHandle      CreateTexture(const GPUTextureDesc* desc)                                         override;
 		SemaphoreHandle    CreateSemaphore()                                                                 override;
-		FramebufferHandle  CreateFramebuffer(RenderPassHandle renderPass, uint32_t layerCount)               override;
+		FramebufferHandle  CreateFramebuffer(const FramebufferDesc* desc)                                    override;
 		void               CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
 		void ResetQueryPool(CommandList* commandList, QueryPool* pool, uint32_t first, uint32_t count)                   override;
@@ -72,8 +72,8 @@ namespace gfx
 		void BindPipeline(CommandList* commandList, PipelineHandle pipeline)                        override;
 		void BindIndexBuffer(CommandList* commandList, BufferHandle buffer)                      override;
 
-		void BeginDebugMarker(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) override;
-		void EndDebugMarker(CommandList* commandList) override;
+		void BeginDebugLabel(CommandList* commandList, const char* name, float r = 1.0f, float g = 1.0f, float b = 1.0f, float a = 1.0f) override;
+		void EndDebugLabel(CommandList* commandList) override;
 		// Dynamic field allows to create new descriptor set 
 		// However it shouldn't be used in loop because there  
 		// is currently no way to free allocated descriptor set
@@ -85,7 +85,7 @@ namespace gfx
 		void DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
 		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;
 
-		bool IsSwapchainReady(RenderPassHandle rp) override;
+		bool IsSwapchainReady() override;
 
 		VkInstance GetInstance() { return instance_; }
 		VkDevice GetDevice() { return device_; }
@@ -93,7 +93,7 @@ namespace gfx
 		VkQueue GetQueue() { return queue_; }
 		uint32_t GetSwapchainImageCount() { return swapchain_->imageCount; }
 
-		VkRenderPass Get(RenderPassHandle rp);
+		VkRenderPass GetSwapchainRenderPass();
 		VkCommandBuffer Get(CommandList* commandList);
 		VkDescriptorPool GetDescriptorPool() { return descriptorPools_[swapchain_->imageCount]; }
 
@@ -114,7 +114,7 @@ namespace gfx
 		VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;
 		VkDevice device_ = VK_NULL_HANDLE;
 		VkQueue queue_ = VK_NULL_HANDLE;
-		VkSurfaceKHR surface_ = VK_NULL_HANDLE;
+
 		bool debugMarkerEnabled_ = false;
 		bool supportBindless = false;
 
@@ -123,6 +123,7 @@ namespace gfx
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
 		VkFence mComputeFence_ = VK_NULL_HANDLE;
+		uint32_t currentFrame = 0;
 
 		std::vector<VkDescriptorPool> descriptorPools_;
 
@@ -155,14 +156,15 @@ namespace gfx
 			VkQueue queue = VK_NULL_HANDLE;
 		} queues;
 
-		std::shared_ptr<VulkanSwapchain> swapchain_ = nullptr;
+		std::unique_ptr<VulkanSwapchain> swapchain_ = nullptr;
+		RenderPassHandle mSwapchainRP;
 		std::shared_ptr<VulkanCommandList> commandList_;
 
 		void findAvailableInstanceLayer(const std::vector<VkLayerProperties>& availableLayers, std::vector<const char*>& outLayers);
 		void findAvailableInstanceExtensions(const std::vector<VkExtensionProperties>& availableExtensions, std::vector<const char*>& outExtensions);
 		bool isSwapchainResized();
 		VkPhysicalDevice findSuitablePhysicalDevice(const std::vector<const char*>& requiredDeviceExtensions);
-		bool createSwapchainInternal(VkRenderPass renderPass);
+		bool createSwapchainInternal();
 		VkShaderModule createShader(VkDevice device, const char* data, uint32_t sizeInByte, VkShaderStageFlagBits shaderStage);
 		void destroyReleasedResources();
 

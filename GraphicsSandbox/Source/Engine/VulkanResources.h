@@ -21,8 +21,6 @@ struct VulkanCommandList
 {
 	VkCommandBuffer commandBuffer;
 	VkCommandPool commandPool;
-
-	std::vector<VkPipelineStageFlags> waitStages;
 };
 
 

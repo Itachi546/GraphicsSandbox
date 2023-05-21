@@ -175,7 +175,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		// Pipeline barrier for color attachments
 		if (colorAttachmentBarrier.size() > 0)
 		{
-			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::FragmentShader };
+			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::FragmentShader };
 			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 			colorAttachmentBarrier.clear();
 		}
@@ -183,7 +183,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 		// Pipeline barrier for depth attachments
 		if (depthAttachmentBarrier.size() > 0)
 		{
-			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::LateFramentTest, gfx::PipelineStage::EarlyFramentTest };
 			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 			depthAttachmentBarrier.clear();
 		}

@@ -2012,6 +2012,8 @@ namespace gfx {
         vkWaitForFences(device_, fenceCount, currentFence, VK_TRUE, UINT64_MAX);
         vkResetFences(device_, fenceCount, currentFence);
 
+        // Add a signal semaphore to notify the queue that the image has been 
+        // acquired for rendering
         VkSemaphore acquireSemaphore = swapchain_->acquireSemaphore;
         VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore, VK_NULL_HANDLE, &swapchain_->currentImageIndex));
     }
@@ -2079,8 +2081,6 @@ namespace gfx {
         passBeginInfo.renderArea.extent.width = width;
         passBeginInfo.renderArea.extent.height = height;
         vkCmdBeginRenderPass(vkCmdList->commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-        vkCmdList->waitStages.push_back(VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
         VkViewport viewport = {0.0f, 0.0f, (float)width, (float)height, 0.0f, 1.0f};
         VkRect2D scissor = { {0, 0}, {width, height} };
@@ -2210,10 +2210,11 @@ namespace gfx {
         VulkanCommandList* cmdList = GetCommandList(commandList);
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
+        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount = 0;
         submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.pWaitDstStageMask = cmdList->waitStages.data();
+        submitInfo.pWaitDstStageMask = &waitStage;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
         submitInfo.signalSemaphoreCount = 0;
@@ -2229,29 +2230,40 @@ namespace gfx {
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
         submitInfo.waitSemaphoreCount = 1;
+
+        VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
+        // Add a acquire semaphore brefore submitting the workload
         submitInfo.pWaitSemaphores = &swapchain_->acquireSemaphore; 
-        submitInfo.pWaitDstStageMask = cmdList->waitStages.data();
+        submitInfo.pWaitDstStageMask = &waitStages;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
         submitInfo.signalSemaphoreCount = 1;
+        // Also add a signal semaphore to signal the presentation queue
+        // that the queue has been processed and ready to submit.
         submitInfo.pSignalSemaphores = &signalSemaphore; 
 
+        // @TODO look into it
+        // Might have caused the issue on the intel gpu
+        // We wait for signal through the fence of current frame but wait 
+        // for the fence of next frame before start drawing
         VkFence renderEndFence = swapchain_->inFlightFences[currentFrame];
         vkQueueSubmit(queue_, 1, &submitInfo, renderEndFence);
 
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.pImageIndices = &swapchain_->currentImageIndex;
         presentInfo.waitSemaphoreCount = 1;
+
+        // Wait for the semaphore to signal before presenting
         presentInfo.pWaitSemaphores = &signalSemaphore;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &swapchain_->swapchain;
 
         VK_CHECK(vkQueuePresentKHR(queue_, &presentInfo));
-        commandList_->waitStages.clear();
 
         destroyReleasedResources();
 
-        currentFrame = (currentFrame + 1) % swapchain_->imageCount;
+		currentFrame = (currentFrame + 1) % swapchain_->imageCount;
     }
 
     void VulkanGraphicsDevice::CopyToBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)

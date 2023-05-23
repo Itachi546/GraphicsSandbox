@@ -34,7 +34,7 @@ namespace gfx
 		PipelineHandle     CreateComputePipeline(const PipelineDesc* desc)                                   override;
 		BufferHandle       CreateBuffer(const GPUBufferDesc* desc)                                           override;
 		TextureHandle      CreateTexture(const GPUTextureDesc* desc)                                         override;
-		SemaphoreHandle    CreateSemaphore()                                                                 override;
+		//SemaphoreHandle    CreateSemaphore(const SemaphoreDesc* desc)                                        override;
 		FramebufferHandle  CreateFramebuffer(const FramebufferDesc* desc)                                    override;
 		void               CreateQueryPool(QueryPool* out, uint32_t count, QueryType type)                   override;
 
@@ -102,7 +102,7 @@ namespace gfx
 		void Destroy(BufferHandle buffer) override;
 		void Destroy(TextureHandle texture) override;
 		void Destroy(FramebufferHandle framebuffer) override;
-		void Destroy(SemaphoreHandle semaphore) override;
+		//void Destroy(SemaphoreHandle semaphore) override;
 
 		TextureHandle GetFramebufferAttachment(FramebufferHandle, uint32_t index) override;
 
@@ -117,12 +117,12 @@ namespace gfx
 
 		bool debugMarkerEnabled_ = false;
 		bool supportBindless = false;
+		bool supportTimelineSemaphore = false;
 
 		VkCommandPool* commandPool_ = nullptr;
 		VkCommandBuffer* commandBuffer_ = nullptr;
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
-		VkFence mComputeFence_ = VK_NULL_HANDLE;
 		uint32_t currentFrame = 0;
 
 		std::vector<VkDescriptorPool> descriptorPools_;
@@ -135,6 +135,21 @@ namespace gfx
 		VkDescriptorSetLayout bindlessDescriptorLayout_;
 		VkDescriptorSet bindlessDescriptorSet_;
 		std::vector<TextureHandle> textureToUpdateBindless_;
+
+		// Synchronization 
+        // Acquire Semaphore
+		static const uint32_t kMaxFrame = 1;
+		VkSemaphore mImageAcquireSemaphore = VK_NULL_HANDLE;
+
+		// In flight fences
+		VkSemaphore mRenderCompleteSemaphore[kMaxFrame];
+		VkFence mInFlightFences[kMaxFrame];
+
+		// Timeline semaphore
+		VkSemaphore mRenderSemaphore = VK_NULL_HANDLE;
+		VkSemaphore mComputeSemaphore = VK_NULL_HANDLE;
+		VkFence mComputeFence_ = VK_NULL_HANDLE;
+
 
 		struct VulkanQueryPool
 		{
@@ -188,6 +203,5 @@ namespace gfx
 		ResourcePool<VulkanBuffer> buffers;
 		ResourcePool<VulkanTexture> textures;
 		ResourcePool<VulkanFramebuffer> framebuffers;
-		ResourcePool<VulkanSemaphore> semaphores;
 	};
 };

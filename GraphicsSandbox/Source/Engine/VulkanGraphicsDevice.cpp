@@ -147,7 +147,7 @@ namespace gfx {
             return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
         case PipelineStage::EarlyFramentTest:
 			return VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        case PipelineStage::LateFramentTest:
+        case PipelineStage::LateFragmentTest:
             return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         case PipelineStage::BottomOfPipe:
             return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
@@ -1252,10 +1252,26 @@ namespace gfx {
         // List required device extension
         std::vector<const char*> requiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+            VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
+            VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
         };
 
         // Create physical device
         physicalDevice_ = findSuitablePhysicalDevice(requiredDeviceExtensions);
+
+        // Check for extension support
+        uint32_t deviceExtensionCount = 0;
+        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, nullptr));
+        std::vector<VkExtensionProperties> availableExtension(deviceExtensionCount);
+        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, availableExtension.data()));
+        for (auto& extension : availableExtension)
+        {
+            if (std::strcmp(extension.extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0)
+            {
+                supportTimelineSemaphore = true;
+                Logger::Info("Timeline semaphore supported");
+            }
+        }
 
         // Check for bindless support
         VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
@@ -1296,12 +1312,14 @@ namespace gfx {
         features2_.features.depthClamp = true;
 
         features11_.shaderDrawParameters = true;
+
         features12_.drawIndirectCount = true;
 		features12_.shaderInt8 = true;
         features12_.hostQueryReset = true;
         features12_.uniformAndStorageBuffer8BitAccess = true;
         features12_.separateDepthStencilLayouts = true;
         features12_.shaderSampledImageArrayNonUniformIndexing = true;
+        features12_.timelineSemaphore = true;
 
         if (supportBindless)
         {
@@ -1311,8 +1329,8 @@ namespace gfx {
             features12_.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
             features12_.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
         }
+        features2_.pNext = &features11_;
         features11_.pNext = &features12_;
-        features12_.pNext = &features2_;
 
         // Create logical device
         VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
@@ -1321,7 +1339,7 @@ namespace gfx {
         deviceCreateInfo.pEnabledFeatures = nullptr;
         deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
         deviceCreateInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
-        deviceCreateInfo.pNext = &features11_;
+        deviceCreateInfo.pNext = &features2_;
 
         VK_CHECK(vkCreateDevice(physicalDevice_, &deviceCreateInfo, nullptr, &device_));
         volkLoadDevice(device_);
@@ -1370,7 +1388,6 @@ namespace gfx {
         buffers.Initialize(256);
         textures.Initialize(1024);
         framebuffers.Initialize(64);
-        semaphores.Initialize(64);
 
         if (supportBindless)
         {
@@ -1435,10 +1452,31 @@ namespace gfx {
             VK_CHECK(vkAllocateDescriptorSets(device_, &alloc_info, &bindlessDescriptorSet_));
         }
 
-        // Create compute fence
-        VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-        fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-		VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &mComputeFence_));
+        // Create synchronization primitives accordingly
+        VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mImageAcquireSemaphore));
+
+        supportTimelineSemaphore = false;
+        if (supportTimelineSemaphore)
+        {
+            VkSemaphoreTypeCreateInfo typeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+            typeCreateInfo.initialValue = 0;
+            typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+            semaphoreCreateInfo.pNext = &typeCreateInfo;
+            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mRenderSemaphore));
+            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mComputeSemaphore));
+        }
+        else {
+            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+            for (uint32_t i = 0; i < kMaxFrame; ++i)
+            {
+				VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mRenderCompleteSemaphore[i]));
+                VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &mInFlightFences[i]));
+            }
+            // Create compute fence
+            VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &mComputeFence_));
+        }
     }
 
     bool VulkanGraphicsDevice::CreateSwapchain(Platform::WindowType window)
@@ -1462,22 +1500,7 @@ namespace gfx {
         assert(vkRenderPass != nullptr);
 		createSwapchainInternal();
 
-        if (swapchain_->signalSemaphores.size() == 0)
-        {
-            VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-			VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &swapchain_->acquireSemaphore));
-
-            swapchain_->signalSemaphores.resize(swapchain_->imageCount);
-			for (auto& signalSemaphore : swapchain_->signalSemaphores)
-				VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &signalSemaphore));
-
-            swapchain_->inFlightFences.resize(swapchain_->imageCount);
-            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-			fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-            for (auto& fence : swapchain_->inFlightFences)
-				VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &fence));
-        }
-
+		
         if (commandPool_ == nullptr)
         {
             commandPool_ = new VkCommandPool[swapchain_->imageCount];
@@ -1934,16 +1957,30 @@ namespace gfx {
         texture->allocation = allocation;
         return textureHandle;
     }
-
-    SemaphoreHandle VulkanGraphicsDevice::CreateSemaphore()
+/*
+    SemaphoreHandle VulkanGraphicsDevice::CreateSemaphore(const SemaphoreDesc* desc)
     {
         SemaphoreHandle semaphoreHandle = { semaphores.ObtainResource() };
         VulkanSemaphore* vkSemaphore = semaphores.AccessResource(semaphoreHandle.handle);
+
+        VkSemaphoreTypeCreateInfo typeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
+        if (desc->type == SemaphoreType::Timeline)
+        {
+            assert(supportTimelineSemaphore == true);
+            typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
+            typeCreateInfo.initialValue = desc->initialValue;
+        }
+        else {
+            typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_BINARY;
+        }
+
         VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+        createInfo.pNext = &typeCreateInfo;
+
         VK_CHECK(vkCreateSemaphore(device_, &createInfo, nullptr, &vkSemaphore->semaphore));
         return semaphoreHandle;
     }
-
+    */
     CommandList VulkanGraphicsDevice::BeginCommandList()
     {
         // Initialize Descriptor Pools
@@ -2003,7 +2040,7 @@ namespace gfx {
 
     void VulkanGraphicsDevice::BeginFrame()
     {
-        VkFence currentFence[2] = { swapchain_->inFlightFences[currentFrame], mComputeFence_ };
+        VkFence currentFence[2] = { mInFlightFences[currentFrame], mComputeFence_ };
         uint32_t fenceCount = 2;
 
         if (vkGetFenceStatus(device_, mComputeFence_) == VK_SUCCESS)
@@ -2014,8 +2051,7 @@ namespace gfx {
 
         // Add a signal semaphore to notify the queue that the image has been 
         // acquired for rendering
-        VkSemaphore acquireSemaphore = swapchain_->acquireSemaphore;
-        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, acquireSemaphore, VK_NULL_HANDLE, &swapchain_->currentImageIndex));
+        VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, mImageAcquireSemaphore, VK_NULL_HANDLE, &swapchain_->currentImageIndex));
     }
 
     void VulkanGraphicsDevice::PrepareSwapchain(CommandList* commandList)
@@ -2159,7 +2195,7 @@ namespace gfx {
         VkFilter filter = VK_FILTER_LINEAR;
         VkImage dstImage = swapchain_->images[imageIndex];
         VkPipelineStageFlagBits pipelineStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        if (src->imageAspect == VK_IMAGE_ASPECT_DEPTH_BIT)
+        if ((src->imageAspect & VK_IMAGE_ASPECT_DEPTH_BIT) == VK_IMAGE_ASPECT_DEPTH_BIT)
         {
             imageAspect = VK_IMAGE_ASPECT_DEPTH_BIT;
             filter = VK_FILTER_NEAREST;
@@ -2225,7 +2261,7 @@ namespace gfx {
     void VulkanGraphicsDevice::Present(CommandList* commandList)
     {
         VulkanCommandList* cmdList = GetCommandList(commandList);
-        VkSemaphore signalSemaphore = swapchain_->signalSemaphores[currentFrame];
+        VkSemaphore signalSemaphore = mRenderCompleteSemaphore[currentFrame];
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
@@ -2234,7 +2270,7 @@ namespace gfx {
         VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 
         // Add a acquire semaphore brefore submitting the workload
-        submitInfo.pWaitSemaphores = &swapchain_->acquireSemaphore; 
+        submitInfo.pWaitSemaphores = &mImageAcquireSemaphore; 
         submitInfo.pWaitDstStageMask = &waitStages;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &cmdList->commandBuffer;
@@ -2247,7 +2283,7 @@ namespace gfx {
         // Might have caused the issue on the intel gpu
         // We wait for signal through the fence of current frame but wait 
         // for the fence of next frame before start drawing
-        VkFence renderEndFence = swapchain_->inFlightFences[currentFrame];
+        VkFence renderEndFence = mInFlightFences[currentFrame];
         vkQueueSubmit(queue_, 1, &submitInfo, renderEndFence);
 
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
@@ -2263,7 +2299,7 @@ namespace gfx {
 
         destroyReleasedResources();
 
-		currentFrame = (currentFrame + 1) % swapchain_->imageCount;
+		currentFrame = (currentFrame + 1) % kMaxFrame;
     }
 
     void VulkanGraphicsDevice::CopyToBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)
@@ -2730,7 +2766,7 @@ namespace gfx {
         gAllocationHandler.destroyedFramebuffers_.push_back(vkFramebuffer->framebuffer);
         framebuffers.ReleaseResource(framebuffer.handle);
     }
-
+/*
     void VulkanGraphicsDevice::Destroy(SemaphoreHandle semaphore)
     {
         VulkanSemaphore* vkSemaphore = semaphores.AccessResource(semaphore.handle);
@@ -2738,7 +2774,7 @@ namespace gfx {
         gAllocationHandler.destroyedSemaphore_.push_back(vkSemaphore->semaphore);
         semaphores.ReleaseResource(semaphore.handle);
     }
-
+    */
     TextureHandle VulkanGraphicsDevice::GetFramebufferAttachment(FramebufferHandle handle, uint32_t index)
     {
         VulkanFramebuffer* framebuffer = framebuffers.AccessResource(handle.handle);
@@ -2762,14 +2798,20 @@ namespace gfx {
             swapchain_->depthImageViews.clear();
         }
 
-        gAllocationHandler.destroyedSemaphore_.push_back(swapchain_->acquireSemaphore);
-        gAllocationHandler.destroyedFences_.push_back(mComputeFence_);
-
-        gAllocationHandler.destroyedSemaphore_.insert(gAllocationHandler.destroyedSemaphore_.end(), swapchain_->signalSemaphores.begin(), swapchain_->signalSemaphores.end());
-        swapchain_->signalSemaphores.clear();
-
-        gAllocationHandler.destroyedFences_.insert(gAllocationHandler.destroyedFences_.end(), swapchain_->inFlightFences.begin(), swapchain_->inFlightFences.end());
-        swapchain_->inFlightFences.clear();
+        gAllocationHandler.destroyedSemaphore_.push_back(mImageAcquireSemaphore);
+        if (!supportTimelineSemaphore)
+        {
+            gAllocationHandler.destroyedFences_.push_back(mComputeFence_);
+            for (uint32_t i = 0; i < kMaxFrame; ++i)
+            {
+                gAllocationHandler.destroyedSemaphore_.push_back(mRenderCompleteSemaphore[i]);
+                gAllocationHandler.destroyedFences_.push_back(mInFlightFences[i]);
+            }
+        }
+        else {
+            gAllocationHandler.destroyedSemaphore_.push_back(mRenderSemaphore);
+            gAllocationHandler.destroyedSemaphore_.push_back(mComputeSemaphore);
+        }
 
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
         swapchain_->framebuffers.clear();
@@ -2783,7 +2825,7 @@ namespace gfx {
         buffers.Shutdown();
         textures.Shutdown();
         pipelines.Shutdown();
-        semaphores.Shutdown();
+		//semaphores.Shutdown();
 
         destroyReleasedResources();
 

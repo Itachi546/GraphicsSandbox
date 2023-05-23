@@ -47,11 +47,6 @@ struct VulkanSwapchain
 	uint32_t imageCount;
 	uint32_t currentImageIndex;
 
-	// Acquire Semaphore
-	VkSemaphore acquireSemaphore;
-	std::vector<VkSemaphore> signalSemaphores;
-	std::vector<VkFence> inFlightFences;
-
 	VulkanRenderPass* renderPass = nullptr;
 
 	uint32_t width = UINT32_MAX;

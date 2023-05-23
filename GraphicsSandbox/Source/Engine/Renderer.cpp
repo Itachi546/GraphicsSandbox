@@ -166,13 +166,14 @@ void Renderer::Render(gfx::CommandList* commandList)
 					depthAttachmentBarrier.push_back(barrierInfo);
 				}
 				else {
-					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
+					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
 					colorAttachmentBarrier.push_back(barrierInfo);
 				}
 			}
 		}
 
 		// Pipeline barrier for color attachments
+		// Color inputs are always an output of ColorAttachment and used in Fragment shader
 		if (colorAttachmentBarrier.size() > 0)
 		{
 			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::FragmentShader };
@@ -181,9 +182,10 @@ void Renderer::Render(gfx::CommandList* commandList)
 		}
 
 		// Pipeline barrier for depth attachments
+		// Depth attachment are output of the depth testing and further used as depth testing
 		if (depthAttachmentBarrier.size() > 0)
 		{
-			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::LateFramentTest, gfx::PipelineStage::EarlyFramentTest };
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::LateFragmentTest, gfx::PipelineStage::EarlyFramentTest };
 			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 			depthAttachmentBarrier.clear();
 		}
@@ -210,14 +212,14 @@ void Renderer::Render(gfx::CommandList* commandList)
 		// Pipeline barrier for color attachments
 		if (colorAttachmentBarrier.size() > 0)
 		{
-			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::ColorAttachmentOutput };
+			gfx::PipelineBarrierInfo pipelineBarrier = { colorAttachmentBarrier.data(), (uint32_t)colorAttachmentBarrier.size(), gfx::PipelineStage::ColorAttachmentOutput, gfx::PipelineStage::ColorAttachmentOutput };
 			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 		}
 
 		// Pipeline barrier for depth attachments
 		if (depthAttachmentBarrier.size() > 0)
 		{
-			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
+			gfx::PipelineBarrierInfo pipelineBarrier = { depthAttachmentBarrier.data(), (uint32_t)depthAttachmentBarrier.size(), gfx::PipelineStage::LateFragmentTest, gfx::PipelineStage::EarlyFramentTest };
 			mDevice->PipelineBarrier(commandList, &pipelineBarrier);
 		}
 
@@ -724,17 +726,12 @@ void Renderer::Shutdown()
 	mFrameGraph.Shutdown();
 	mFrameGraphBuilder.Shutdown();
 	mDevice->Destroy(mFullScreenPipeline);
-	//mDevice->Destroy(mMeshPipeline);
-	//mDevice->Destroy(mSkinnedMeshPipeline);
-
 	mDevice->Destroy(mGlobalUniformBuffer);
 	mDevice->Destroy(mLightBuffer);
 	mDevice->Destroy(mTransformBuffer);
 	mDevice->Destroy(mDrawIndirectBuffer);
 	mDevice->Destroy(mMaterialBuffer);
 	mDevice->Destroy(mSkinnedMatrixBuffer);
-	//mDevice->Destroy(mHdrRenderPass);
-	//mDevice->Destroy(mHdrFramebuffer);
 
 	//mBloomFX->Shutdown();
 	//mShadowMap->Shutdown();

@@ -218,7 +218,7 @@ namespace gfx
 		VertexShader,
 		ComputeShader,
 		EarlyFramentTest,
-		LateFramentTest,
+		LateFragmentTest,
 		BottomOfPipe,
 		TransferBit,
 		ColorAttachmentOutput
@@ -270,8 +270,18 @@ namespace gfx
 		BlendFactor srcAlpha = BlendFactor::SrcAlpha;
 		BlendFactor dstAlpha = BlendFactor::OneMinusSrcAlpha;
 	};
+/*
+	enum class SemaphoreType {
+		Binary,
+		Timeline
+	};
 
-
+	struct SemaphoreDesc
+	{
+		SemaphoreType type;
+		uint64_t initialValue;
+	};
+	*/
 	struct PipelineDesc
 	{
 		uint32_t pushConstantSize = 0;

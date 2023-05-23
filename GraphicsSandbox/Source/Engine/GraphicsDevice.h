@@ -17,7 +17,7 @@ namespace gfx
 		virtual BufferHandle CreateBuffer(const GPUBufferDesc* desc) = 0;
 		virtual TextureHandle CreateTexture(const GPUTextureDesc* desc) = 0;
 		virtual FramebufferHandle  CreateFramebuffer(const FramebufferDesc* desc) = 0;
-		virtual SemaphoreHandle CreateSemaphore() = 0;
+		//virtual SemaphoreHandle CreateSemaphore(const SemaphoreDesc* desc) = 0;
 		virtual void CreateQueryPool(QueryPool* out, uint32_t count, QueryType type) = 0;
 
 		virtual void CopyToBuffer(BufferHandle buffer, void* data, uint32_t offset, uint32_t size) = 0;
@@ -79,7 +79,7 @@ namespace gfx
 		virtual void Destroy(BufferHandle buffer) = 0;
 		virtual void Destroy(TextureHandle texture) = 0;
 		virtual void Destroy(FramebufferHandle framebuffer) = 0;
-		virtual void Destroy(SemaphoreHandle semaphore) = 0;
+		//virtual void Destroy(SemaphoreHandle semaphore) = 0;
 		virtual void Shutdown() = 0;
 
 	protected:

@@ -1097,7 +1097,7 @@ namespace gfx {
             VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtension.data()));
 
             vkGetPhysicalDeviceProperties2(physicalDevice, &properties2_);
-            Logger::Info("Enumerating extension for device: " + std::string(properties2_.properties.deviceName));
+            Logger::Info("Device Found: " + std::string(properties2_.properties.deviceName));
 
             bool suitable = true;
             for (auto& extension : requiredDeviceExtensions)
@@ -1107,7 +1107,6 @@ namespace gfx {
                 {
                     if (std::strcmp(extension, available.extensionName) == 0)
 					{
-                        Logger::Debug("Found extension: " + std::string(extension));
                         found = true;
                         break;
                     }
@@ -1115,7 +1114,6 @@ namespace gfx {
 
                 if (!found)
                 {
-                    Logger::Debug("Extension not available: " + std::string(extension));
                     suitable = false;
                     break;
                 }
@@ -1162,6 +1160,37 @@ namespace gfx {
         return shaderModule;
     }
 
+    void VulkanGraphicsDevice::checkExtensionSupportForPhysicalDevice(VkPhysicalDevice physicalDevice, std::vector<const char*>& requiredDeviceExtensions)
+    {
+        uint32_t deviceExtensionCount = 0;
+        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, nullptr));
+        std::vector<VkExtensionProperties> availableExtension(deviceExtensionCount);
+        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, availableExtension.data()));
+        for (auto& required : requiredDeviceExtensions)
+        {
+            bool found = false;
+            for (auto& extension : availableExtension)
+            {
+                if (std::strcmp(extension.extensionName, required) == 0) {
+                    Logger::Info("Extension Supported: " + std::string(extension.extensionName));
+                    found = true;
+                    break;
+                }
+            }
+            if (found)
+            {
+                if (std::strcmp(required, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0)
+                    supportTimelineSemaphore = true;
+
+                if (std::strcmp(required, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0)
+                    supportSynchronization2 = true;
+            }
+            else {
+                Logger::Info("Extension not supported: " + std::string(required));
+            }
+        }
+    }
+
     VkPipelineLayout VulkanGraphicsDevice::createPipelineLayout(VkDescriptorSetLayout* setLayout, uint32_t setLayoutCount, const std::vector<VkPushConstantRange>& ranges)
     {
         VkPipelineLayoutCreateInfo createInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
@@ -1174,6 +1203,13 @@ namespace gfx {
         VK_CHECK(vkCreatePipelineLayout(device_, &createInfo, nullptr, &pipelineLayout));
         return pipelineLayout;
     }
+
+    void VulkanGraphicsDevice::AdvanceFrameCounter()
+    {
+        currentFrame = (currentFrame + 1) % kMaxFrame;
+        absoluteFrame++;
+    }
+
     bool VulkanGraphicsDevice::isSwapchainResized()
     {
         VkSurfaceCapabilitiesKHR surfaceCaps = {};
@@ -1259,19 +1295,10 @@ namespace gfx {
         // Create physical device
         physicalDevice_ = findSuitablePhysicalDevice(requiredDeviceExtensions);
 
+        Logger::Debug("Selected Physical Device: " + std::string(properties2_.properties.deviceName));
+
         // Check for extension support
-        uint32_t deviceExtensionCount = 0;
-        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, nullptr));
-        std::vector<VkExtensionProperties> availableExtension(deviceExtensionCount);
-        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, availableExtension.data()));
-        for (auto& extension : availableExtension)
-        {
-            if (std::strcmp(extension.extensionName, VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME) == 0)
-            {
-                supportTimelineSemaphore = true;
-                Logger::Info("Timeline semaphore supported");
-            }
-        }
+        checkExtensionSupportForPhysicalDevice(physicalDevice_, requiredDeviceExtensions);
 
         // Check for bindless support
         VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
@@ -1283,9 +1310,6 @@ namespace gfx {
             indexingFeatures.descriptorBindingSampledImageUpdateAfterBind && 
             indexingFeatures.descriptorBindingStorageImageUpdateAfterBind;
 #endif
-
-        Logger::Debug("Selected Physical Device: " + std::string(properties2_.properties.deviceName));
-
         queueFamilyIndices_ = FindGraphicsQueueIndex(physicalDevice_);
 
         // TODO Check presentation support at the time of choosing physical device
@@ -1323,7 +1347,7 @@ namespace gfx {
 
         if (supportBindless)
         {
-            Logger::Info("Bindless support found");
+            Logger::Info("Bindless Support Found");
             features12_.descriptorBindingPartiallyBound = VK_TRUE;
             features12_.runtimeDescriptorArray = VK_TRUE;
             features12_.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
@@ -1331,6 +1355,10 @@ namespace gfx {
         }
         features2_.pNext = &features11_;
         features11_.pNext = &features12_;
+
+        VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR };
+        synchronization2Features.synchronization2 = true;
+        features12_.pNext = &synchronization2Features;
 
         // Create logical device
         VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
@@ -1456,22 +1484,23 @@ namespace gfx {
         VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
         VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mImageAcquireSemaphore));
 
-        supportTimelineSemaphore = false;
+        for (uint32_t i = 0; i < kMaxFrame; ++i)
+            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mRenderCompleteSemaphore[i]));
+		
         if (supportTimelineSemaphore)
         {
             VkSemaphoreTypeCreateInfo typeCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO };
             typeCreateInfo.initialValue = 0;
             typeCreateInfo.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE;
             semaphoreCreateInfo.pNext = &typeCreateInfo;
-            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mRenderSemaphore));
-            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mComputeSemaphore));
+            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mRenderTimelineSemaphore));
+            VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mComputeTimelineSemaphore));
         }
         else {
             VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
             fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
             for (uint32_t i = 0; i < kMaxFrame; ++i)
             {
-				VK_CHECK(vkCreateSemaphore(device_, &semaphoreCreateInfo, nullptr, &mRenderCompleteSemaphore[i]));
                 VK_CHECK(vkCreateFence(device_, &fenceCreateInfo, nullptr, &mInFlightFences[i]));
             }
             // Create compute fence
@@ -2040,15 +2069,31 @@ namespace gfx {
 
     void VulkanGraphicsDevice::BeginFrame()
     {
-        VkFence currentFence[2] = { mInFlightFences[currentFrame], mComputeFence_ };
-        uint32_t fenceCount = 2;
+        if (supportTimelineSemaphore) {
+            if (absoluteFrame >= kMaxFrame) {
+                uint64_t computeTimelineValue = lastComputeSemaphoreValue;
+                uint64_t graphicsTimelineValue = absoluteFrame - (kMaxFrame - 1);
 
-        if (vkGetFenceStatus(device_, mComputeFence_) == VK_SUCCESS)
-            fenceCount = 1;
+                uint64_t waitValues[] = { graphicsTimelineValue, computeTimelineValue };
+                VkSemaphore waitSemaphores[] = { mRenderTimelineSemaphore, mComputeTimelineSemaphore };
 
-        vkWaitForFences(device_, fenceCount, currentFence, VK_TRUE, UINT64_MAX);
-        vkResetFences(device_, fenceCount, currentFence);
+                VkSemaphoreWaitInfo waitInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO };
+                waitInfo.pSemaphores = waitSemaphores;
+                waitInfo.semaphoreCount = (uint32_t)std::size(waitSemaphores);
+                waitInfo.pValues = waitValues;
+                vkWaitSemaphores(device_, &waitInfo, UINT64_MAX);
+            }
+        }
+        else {
+            VkFence currentFence[2] = { mInFlightFences[currentFrame], mComputeFence_ };
+            uint32_t fenceCount = 2;
 
+            if (vkGetFenceStatus(device_, mComputeFence_) == VK_SUCCESS)
+                fenceCount = 1;
+
+            vkWaitForFences(device_, fenceCount, currentFence, VK_TRUE, UINT64_MAX);
+            vkResetFences(device_, fenceCount, currentFence);
+        }
         // Add a signal semaphore to notify the queue that the image has been 
         // acquired for rendering
         VK_CHECK(vkAcquireNextImageKHR(device_, swapchain_->swapchain, ~0ull, mImageAcquireSemaphore, VK_NULL_HANDLE, &swapchain_->currentImageIndex));
@@ -2240,22 +2285,46 @@ namespace gfx {
 
     void VulkanGraphicsDevice::SubmitComputeLoad(CommandList* commandList)
     {
-        while (vkGetFenceStatus(device_, mComputeFence_) != VK_SUCCESS);
-        vkResetFences(device_, 1, &mComputeFence_);
-
         VulkanCommandList* cmdList = GetCommandList(commandList);
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
-        VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.waitSemaphoreCount = 0;
-        submitInfo.pWaitSemaphores = nullptr;
-        submitInfo.pWaitDstStageMask = &waitStage;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &cmdList->commandBuffer;
-        submitInfo.signalSemaphoreCount = 0;
-        submitInfo.pSignalSemaphores = nullptr;
-        vkQueueSubmit(queue_, 1, &submitInfo, mComputeFence_);
+        if (supportTimelineSemaphore)
+        {
+            bool hasWaitSemaphore = lastComputeSemaphoreValue > 0;
+            VkSemaphoreSubmitInfoKHR waitSemaphores[]{
+                {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, mComputeTimelineSemaphore, lastComputeSemaphoreValue, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, 0}
+            };
+
+            lastComputeSemaphoreValue++;
+            VkSemaphoreSubmitInfoKHR signalSemaphores[]{
+                {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, mComputeTimelineSemaphore, lastComputeSemaphoreValue, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT_KHR, 0}
+            };
+
+            VkCommandBufferSubmitInfoKHR commandBufferInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR };
+            commandBufferInfo.commandBuffer = cmdList->commandBuffer;
+
+            VkSubmitInfo2KHR submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR };
+            submitInfo.waitSemaphoreInfoCount = hasWaitSemaphore ? 1 : 0;
+            submitInfo.pWaitSemaphoreInfos = waitSemaphores;
+            submitInfo.signalSemaphoreInfoCount = 1;
+            submitInfo.pSignalSemaphoreInfos = signalSemaphores;
+            submitInfo.commandBufferInfoCount = 1;
+            submitInfo.pCommandBufferInfos = &commandBufferInfo;
+            vkQueueSubmit2KHR(queue_, 1, &submitInfo, VK_NULL_HANDLE);
+        }
+        else {
+            while (vkGetFenceStatus(device_, mComputeFence_) != VK_SUCCESS);
+            vkResetFences(device_, 1, &mComputeFence_);
+            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submitInfo.waitSemaphoreCount = 0;
+            submitInfo.pWaitSemaphores = nullptr;
+            submitInfo.pWaitDstStageMask = nullptr;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &cmdList->commandBuffer;
+            submitInfo.signalSemaphoreCount = 0;
+            submitInfo.pSignalSemaphores = nullptr;
+            vkQueueSubmit(queue_, 1, &submitInfo, mComputeFence_);
+        }
     }
 
     void VulkanGraphicsDevice::Present(CommandList* commandList)
@@ -2264,27 +2333,56 @@ namespace gfx {
         VkSemaphore signalSemaphore = mRenderCompleteSemaphore[currentFrame];
         VK_CHECK(vkEndCommandBuffer(cmdList->commandBuffer));
 
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.waitSemaphoreCount = 1;
+        if (supportTimelineSemaphore) {
 
-        VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VkCommandBufferSubmitInfoKHR cbInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO_KHR };
+            cbInfo.commandBuffer = cmdList->commandBuffer;
 
-        // Add a acquire semaphore brefore submitting the workload
-        submitInfo.pWaitSemaphores = &mImageAcquireSemaphore; 
-        submitInfo.pWaitDstStageMask = &waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &cmdList->commandBuffer;
-        submitInfo.signalSemaphoreCount = 1;
-        // Also add a signal semaphore to signal the presentation queue
-        // that the queue has been processed and ready to submit.
-        submitInfo.pSignalSemaphores = &signalSemaphore; 
+            VkSemaphoreSubmitInfoKHR waitSemaphores[]{
+                { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, mImageAcquireSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, 0 },
+                { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, mComputeTimelineSemaphore, lastComputeSemaphoreValue, VK_PIPELINE_STAGE_2_VERTEX_ATTRIBUTE_INPUT_BIT_KHR, 0 },
+                { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, mRenderTimelineSemaphore, absoluteFrame - (kMaxFrame - 1), VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT, 0}
+            };
+            uint32_t waitSemaphoreCount = 2;
 
-        // @TODO look into it
-        // Might have caused the issue on the intel gpu
-        // We wait for signal through the fence of current frame but wait 
-        // for the fence of next frame before start drawing
-        VkFence renderEndFence = mInFlightFences[currentFrame];
-        vkQueueSubmit(queue_, 1, &submitInfo, renderEndFence);
+            VkSemaphoreSubmitInfoKHR signalSemaphores[]{
+                { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, signalSemaphore, 0, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, 0 },
+                { VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO_KHR, nullptr, mRenderTimelineSemaphore, absoluteFrame + 1, VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR, 0 },
+            };
+
+            bool waitForTimelineSemaphore = absoluteFrame >= kMaxFrame;
+            if (waitForTimelineSemaphore) waitSemaphoreCount++;
+
+            VkSubmitInfo2KHR submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO_2_KHR };
+            submitInfo.commandBufferInfoCount = 1;
+            submitInfo.pCommandBufferInfos = &cbInfo;
+            submitInfo.signalSemaphoreInfoCount = (uint32_t)std::size(signalSemaphores);
+            submitInfo.pSignalSemaphoreInfos = signalSemaphores;
+            submitInfo.waitSemaphoreInfoCount = waitSemaphoreCount;
+            submitInfo.pWaitSemaphoreInfos = waitSemaphores;
+            vkQueueSubmit2KHR(queue_, 1, &submitInfo, mInFlightFences[currentFrame]);
+        }
+        else {
+            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submitInfo.waitSemaphoreCount = 1;
+            VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+            // Add a acquire semaphore brefore submitting the workload
+            submitInfo.pWaitSemaphores = &mImageAcquireSemaphore;
+            submitInfo.pWaitDstStageMask = &waitStages;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &cmdList->commandBuffer;
+            submitInfo.signalSemaphoreCount = 1;
+            // Also add a signal semaphore to signal the presentation queue
+            // that the queue has been processed and ready to submit.
+            submitInfo.pSignalSemaphores = &signalSemaphore;
+
+            // @TODO look into it
+            // Might have caused the issue on the intel gpu
+            // We wait for signal through the fence of current frame but wait 
+            // for the fence of next frame before start drawing
+            VkFence renderEndFence = mInFlightFences[currentFrame];
+            vkQueueSubmit(queue_, 1, &submitInfo, renderEndFence);
+        }
 
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
         presentInfo.pImageIndices = &swapchain_->currentImageIndex;
@@ -2299,7 +2397,7 @@ namespace gfx {
 
         destroyReleasedResources();
 
-		currentFrame = (currentFrame + 1) % kMaxFrame;
+        AdvanceFrameCounter();
     }
 
     void VulkanGraphicsDevice::CopyToBuffer(BufferHandle handle, void* data, uint32_t offset, uint32_t size)
@@ -2803,14 +2901,13 @@ namespace gfx {
         {
             gAllocationHandler.destroyedFences_.push_back(mComputeFence_);
             for (uint32_t i = 0; i < kMaxFrame; ++i)
-            {
-                gAllocationHandler.destroyedSemaphore_.push_back(mRenderCompleteSemaphore[i]);
                 gAllocationHandler.destroyedFences_.push_back(mInFlightFences[i]);
-            }
         }
         else {
-            gAllocationHandler.destroyedSemaphore_.push_back(mRenderSemaphore);
-            gAllocationHandler.destroyedSemaphore_.push_back(mComputeSemaphore);
+            gAllocationHandler.destroyedSemaphore_.push_back(mRenderTimelineSemaphore);
+            gAllocationHandler.destroyedSemaphore_.push_back(mComputeTimelineSemaphore);
+            for (uint32_t i = 0; i < kMaxFrame; ++i)
+                gAllocationHandler.destroyedSemaphore_.push_back(mRenderCompleteSemaphore[i]);
         }
 
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());

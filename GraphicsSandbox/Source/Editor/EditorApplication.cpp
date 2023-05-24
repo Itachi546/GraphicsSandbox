@@ -111,10 +111,10 @@ void EditorApplication::InitializeScene()
 	ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/ortiz.sbox");
 	*/
 
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
+	//ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
 
-	//ecs::Entity plane = mScene.CreatePlane("Plane00");
-	//compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
+	ecs::Entity plane = mScene.CreatePlane("Plane00");
+	compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
 	{
 		ecs::Entity helmet = mScene.CreateMesh("Assets/Models/DamagedHelmet.sbox");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);

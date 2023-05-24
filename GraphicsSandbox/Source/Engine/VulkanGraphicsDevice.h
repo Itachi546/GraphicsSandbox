@@ -116,14 +116,19 @@ namespace gfx
 		VkQueue queue_ = VK_NULL_HANDLE;
 
 		bool debugMarkerEnabled_ = false;
+
 		bool supportBindless = false;
 		bool supportTimelineSemaphore = false;
+		bool supportSynchronization2 = false;
 
 		VkCommandPool* commandPool_ = nullptr;
 		VkCommandBuffer* commandBuffer_ = nullptr;
 		VkCommandPool   stagingCmdPool_ = VK_NULL_HANDLE;
 		VkCommandBuffer stagingCmdBuffer_ = VK_NULL_HANDLE;
+		uint32_t previousFrame = 0;
 		uint32_t currentFrame = 0;
+		uint32_t lastComputeSemaphoreValue = 0;
+		uint32_t absoluteFrame = 0;
 
 		std::vector<VkDescriptorPool> descriptorPools_;
 
@@ -138,6 +143,8 @@ namespace gfx
 
 		// Synchronization 
         // Acquire Semaphore
+		// @Note if this is going to be greater than 1, this must be handle in
+		// the timeline semaphore
 		static const uint32_t kMaxFrame = 1;
 		VkSemaphore mImageAcquireSemaphore = VK_NULL_HANDLE;
 
@@ -146,8 +153,8 @@ namespace gfx
 		VkFence mInFlightFences[kMaxFrame];
 
 		// Timeline semaphore
-		VkSemaphore mRenderSemaphore = VK_NULL_HANDLE;
-		VkSemaphore mComputeSemaphore = VK_NULL_HANDLE;
+		VkSemaphore mRenderTimelineSemaphore = VK_NULL_HANDLE;
+		VkSemaphore mComputeTimelineSemaphore = VK_NULL_HANDLE;
 		VkFence mComputeFence_ = VK_NULL_HANDLE;
 
 
@@ -181,6 +188,8 @@ namespace gfx
 		VkPhysicalDevice findSuitablePhysicalDevice(const std::vector<const char*>& requiredDeviceExtensions);
 		bool createSwapchainInternal();
 		VkShaderModule createShader(VkDevice device, const char* data, uint32_t sizeInByte, VkShaderStageFlagBits shaderStage);
+		void checkExtensionSupportForPhysicalDevice(VkPhysicalDevice physicalDevice, std::vector<const char*>& requiredDeviceExtensions);
+
 		void destroyReleasedResources();
 
 		VkRenderPass createRenderPass(const RenderPassDesc* desc);
@@ -196,6 +205,8 @@ namespace gfx
 
 		VkRenderPass createDefaultRenderPass(VkFormat colorFormat);
 		inline VulkanCommandList* GetCommandList(CommandList* commandList) { return (VulkanCommandList*)commandList->internalState; }
+
+		void AdvanceFrameCounter();
 
 		// Resource Pools
 		ResourcePool<VulkanRenderPass> renderPasses;

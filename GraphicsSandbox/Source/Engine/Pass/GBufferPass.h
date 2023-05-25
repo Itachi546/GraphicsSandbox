@@ -8,7 +8,9 @@ namespace gfx {
 	struct GBufferPass : public FrameGraphPass
 	{
 
-		GBufferPass(RenderPassHandle renderPass, Renderer* renderer);
+		GBufferPass(Renderer* renderer);
+
+		void Initialize(RenderPassHandle renderPass) override;
 
 		void Render(CommandList* commandList, Scene* scene) override;
 

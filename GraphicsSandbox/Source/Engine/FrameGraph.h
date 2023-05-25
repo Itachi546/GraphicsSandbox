@@ -79,6 +79,7 @@ namespace gfx
 	struct FrameGraphPass
 	{
 		virtual void AddUI() {}
+		virtual void Initialize(RenderPassHandle renderPass) {}
 		virtual void PreRender(CommandList* commandList) {}
 		virtual void Render(CommandList* commandList, Scene* scene) {}
 		virtual void OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height) {}
@@ -177,7 +178,7 @@ namespace gfx
 			if (node)
 				node->renderer = renderer;
 			else
-				Logger::Error("Failed to find framegraph node: " + name);
+				Logger::Warn("Failed to find framegraph node: " + name);
 		}
 
 		FrameGraphBuilder* builder;

@@ -31,6 +31,11 @@ struct TransformComponent
 		return glm::toMat4(rotation);
 	}
 
+	void SetRotationFomEuler(float x, float y, float z)
+	{
+		rotation = glm::vec3(x, y, z);
+	}
+
 	static TransformComponent Combine(TransformComponent a, TransformComponent b)
 	{
 		TransformComponent out = {};

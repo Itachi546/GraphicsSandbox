@@ -195,7 +195,10 @@ namespace gfx {
 			json pass = passes[i];
 			FrameGraphNodeCreation nodeCreation;
 			nodeCreation.name = pass.value("name", "");
-			nodeCreation.enabled = pass.value("enabled", true);
+			bool enabled = pass.value("enabled", true);
+			if (!enabled) continue;
+
+			nodeCreation.enabled = enabled;
 
 			json inputs = pass["inputs"];
 			json outputs = pass["outputs"];
@@ -341,9 +344,9 @@ namespace gfx {
 			if (!node->enabled)
 				continue;
 
-			if (node->renderPass.handle = K_INVALID_RESOURCE_HANDLE)
+			if (node->renderPass.handle = K_INVALID_RESOURCE_HANDLE && node->enabled)
 				node->renderPass = CreateRenderPass(node);
-			if (node->framebuffer.handle = K_INVALID_RESOURCE_HANDLE)
+			if (node->framebuffer.handle = K_INVALID_RESOURCE_HANDLE && node->enabled)
 				node->framebuffer = CreateFramebuffer(node);
 		}
 	}

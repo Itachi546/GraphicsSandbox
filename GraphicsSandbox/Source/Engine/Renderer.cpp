@@ -60,11 +60,18 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 
 	mFrameGraphBuilder.GetAllResourceName(mOutputAttachments);
 
-	mFrameGraph.RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(mFrameGraphBuilder.AccessNode("depth_pre_pass")->renderPass, this));
-	mFrameGraph.RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(mFrameGraphBuilder.AccessNode("gbuffer_pass")->renderPass, this));
-	mFrameGraph.RegisterRenderer("lighting_pass", new gfx::LightingPass(mFrameGraphBuilder.AccessNode("lighting_pass")->renderPass, this));
-	mFrameGraph.RegisterRenderer("transparent_pass", new gfx::TransparentPass(mFrameGraphBuilder.AccessNode("transparent_pass")->renderPass, this));
-	mFrameGraph.RegisterRenderer("fxaa_pass", new gfx::FXAAPass(mFrameGraphBuilder.AccessNode("fxaa_pass")->renderPass, this, width, height));
+	auto RegisterRenderer = [&](const std::string name, gfx::FrameGraphPass* pass) {
+		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(name);
+		if (node == nullptr) return;
+		mFrameGraph.RegisterRenderer(name, pass);
+		pass->Initialize(node->renderPass);
+	};
+
+	RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(this));
+	RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(this));
+	RegisterRenderer("lighting_pass", new gfx::LightingPass(this));
+	RegisterRenderer("transparent_pass", new gfx::TransparentPass(this));
+	RegisterRenderer("fxaa_pass", new gfx::FXAAPass(this, width, height));
 
 	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
 	if (found != mOutputAttachments.end())

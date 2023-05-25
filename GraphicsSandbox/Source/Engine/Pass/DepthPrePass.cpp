@@ -5,10 +5,12 @@
 #include "../Utils.h"
 #include "../Renderer.h"
 
-gfx::DepthPrePass::DepthPrePass(RenderPassHandle renderPass, Renderer* renderer_)
+gfx::DepthPrePass::DepthPrePass(Renderer* renderer_) : renderer(renderer_)
 {
-	renderer = renderer_;
+}
 
+void gfx::DepthPrePass::Initialize(RenderPassHandle renderPass)
+{
 	PipelineDesc pipelineDesc = {};
 	uint32_t size = 0;
 	char* code = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);

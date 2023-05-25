@@ -9,7 +9,9 @@ class Renderer;
 namespace gfx {
 	struct LightingPass : public FrameGraphPass
 	{
-		LightingPass(RenderPassHandle renderPass, Renderer* renderer);
+		LightingPass(Renderer* renderer);
+
+		void Initialize(RenderPassHandle renderPass) override;
 
 		void Render(CommandList* commandList, Scene* scene) override;
 

@@ -12,7 +12,9 @@ struct DrawData;
 namespace gfx {
 	struct TransparentPass : public FrameGraphPass
 	{
-		TransparentPass(RenderPassHandle renderPass, Renderer* renderer);
+		TransparentPass(Renderer* renderer);
+
+		void Initialize(RenderPassHandle renderPass) override;
 
 		void Render(CommandList* commandList, Scene* scene) override;
 

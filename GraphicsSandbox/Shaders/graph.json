@@ -95,6 +95,7 @@
         }
       ],
       "name": "transparent_pass",
+      "enabled":  true,
       "outputs": [
         {
           "type": "reference",
@@ -110,6 +111,7 @@
         }
       ],
       "name": "fxaa_pass",
+      "enabled":  false,
       "outputs": [
         {
           "type": "attachment",

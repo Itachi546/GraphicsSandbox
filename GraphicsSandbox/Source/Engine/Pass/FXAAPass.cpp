@@ -4,7 +4,15 @@
 #include "../Renderer.h"
 #include "../GUI/ImGuiService.h"
 
-gfx::FXAAPass::FXAAPass(RenderPassHandle renderPass, Renderer* renderer, uint32_t width, uint32_t height) : renderer(renderer)
+gfx::FXAAPass::FXAAPass(Renderer* renderer, uint32_t width, uint32_t height) : renderer(renderer)
+{
+	uniformData.invHeight = 1.0f / width;
+	uniformData.invHeight = 1.0f / height;
+	uniformData.edgeThresholdMax = 0.0312f;
+	uniformData.edgeThresholdMin = 0.125f;
+}
+
+void gfx::FXAAPass::Initialize(RenderPassHandle renderPass)
 {
 	PipelineDesc pipelineDesc = {};
 
@@ -27,11 +35,6 @@ gfx::FXAAPass::FXAAPass(RenderPassHandle renderPass, Renderer* renderer, uint32_
 	pipelineDesc.blendStates = &blendState;
 	pipelineDesc.blendStateCount = 1;
 	pipeline = gfx::GetDevice()->CreateGraphicsPipeline(&pipelineDesc);
-
-	uniformData.invHeight = 1.0f / width;
-	uniformData.invHeight = 1.0f / height;
-	uniformData.edgeThresholdMax = 0.0312f;
-	uniformData.edgeThresholdMin = 0.125f;
 
 	delete[] vertexCode;
 	delete[] fragmentCode;

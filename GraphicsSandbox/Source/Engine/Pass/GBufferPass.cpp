@@ -5,10 +5,12 @@
 #include "../StringConstants.h"
 #include "../Scene.h"
 
-gfx::GBufferPass::GBufferPass(RenderPassHandle renderPass, Renderer* renderer_)
+gfx::GBufferPass::GBufferPass(Renderer* renderer_) : renderer(renderer_)
 {
-	renderer = renderer_;
+}
 
+void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
+{
 	PipelineDesc pipelineDesc = {};
 
 	ShaderDescription shaders[2];

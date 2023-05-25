@@ -113,6 +113,19 @@ void EditorApplication::InitializeScene()
 
 	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
 
+	ecs::Entity defaultMesh = mScene.CreatePlane("plane");;
+
+	TransformComponent* defaultTransform = compMgr->GetComponent<TransformComponent>(defaultMesh);
+	defaultTransform->position.y += 1.0f;
+	defaultTransform->SetRotationFomEuler(0.0f, 0.0f, glm::pi<float>() * 0.5f);
+
+	MaterialComponent* defaultMeshMaterial = compMgr->GetComponent<MaterialComponent>(defaultMesh);
+	if (defaultMeshMaterial)
+	{
+		defaultMeshMaterial->transparency = 0.5f;
+		defaultMeshMaterial->alphaMode = ALPHAMODE_BLEND;
+		defaultMeshMaterial->albedo = glm::vec4(0.3f, 0.4f, 0.8f, 1.0f);
+	}
 	//ecs::Entity plane = mScene.CreatePlane("Plane00");
 	//compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
 	{
@@ -121,7 +134,7 @@ void EditorApplication::InitializeScene()
 		transform->position.y += 0.5f;
 		transform->position.x += 1.0f;
 		transform->scale *= 0.5f;
-		transform->rotation = glm::quat(glm::vec3(0.0, glm::pi<float>() * 0.5, 0.0f));
+		transform->SetRotationFomEuler(0.0f, glm::pi<float>() * 0.5f, 0.0f);
 	}
 }
 

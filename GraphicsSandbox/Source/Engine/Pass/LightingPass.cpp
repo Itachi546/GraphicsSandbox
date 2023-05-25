@@ -9,8 +9,12 @@
 #include "../Camera.h"
 #include "../GUI/ImGuiService.h"
 
-gfx::LightingPass::LightingPass(RenderPassHandle renderPass, Renderer* renderer_) :
+gfx::LightingPass::LightingPass(Renderer* renderer_) :
 	renderer(renderer_)
+{
+}
+
+void gfx::LightingPass::Initialize(RenderPassHandle renderPass)
 {
 	PipelineDesc pipelineDesc = {};
 
@@ -38,7 +42,6 @@ gfx::LightingPass::LightingPass(RenderPassHandle renderPass, Renderer* renderer_
 
 	delete[] vertexCode;
 	delete[] fragmentCode;
-
 }
 
 void gfx::LightingPass::Render(CommandList* commandList, Scene* scene)

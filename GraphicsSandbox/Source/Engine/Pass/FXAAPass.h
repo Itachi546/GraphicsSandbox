@@ -7,10 +7,11 @@ class Scene;
 
 namespace gfx {
 
-	class FXAAPass : public FrameGraphPass
+	struct FXAAPass : public FrameGraphPass
 	{
-	public:
-		FXAAPass(RenderPassHandle renderPass, Renderer* renderer, uint32_t width, uint32_t height);
+		FXAAPass(Renderer* renderer, uint32_t width, uint32_t height);
+
+		void Initialize(RenderPassHandle renderPass) override;
 
 		void Render(CommandList* commandList, Scene* scene) override;
 		void Shutdown() override;

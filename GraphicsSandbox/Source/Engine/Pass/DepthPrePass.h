@@ -8,7 +8,8 @@ namespace gfx {
 
 	struct DepthPrePass : public FrameGraphPass
 	{
-		DepthPrePass(RenderPassHandle renderPass, Renderer* renderer);
+		DepthPrePass(Renderer* renderer);
+		void Initialize(RenderPassHandle renderPass) override;
 		void Render(CommandList* commandList, Scene* scene) override;
 		void Shutdown() override;
 

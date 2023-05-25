@@ -8,8 +8,12 @@
 #include "../FrameGraph.h"
 #include "../Camera.h"
 
-gfx::TransparentPass::TransparentPass(RenderPassHandle renderPass, Renderer* renderer_) :
+gfx::TransparentPass::TransparentPass(Renderer* renderer_) :
 	renderer(renderer_)
+{
+}
+
+void gfx::TransparentPass::Initialize(RenderPassHandle renderPass)
 {
 	PipelineDesc pipelineDesc = {};
 
@@ -40,7 +44,6 @@ gfx::TransparentPass::TransparentPass(RenderPassHandle renderPass, Renderer* ren
 	delete[] fragmentCode;
 
 	descriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
-
 }
 
 void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)

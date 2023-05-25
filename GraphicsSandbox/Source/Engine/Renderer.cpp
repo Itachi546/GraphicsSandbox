@@ -17,12 +17,13 @@
 #include "Pass/GBufferPass.h"
 #include "Pass/LightingPass.h"
 #include "Pass/TransparentPass.h"
+#include "Pass/FXAAPass.h"
 
 #include <vector>
 #include <algorithm>
 
 
-Renderer::Renderer() : mDevice(gfx::GetDevice())
+Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 {
 	// Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
@@ -63,6 +64,7 @@ Renderer::Renderer() : mDevice(gfx::GetDevice())
 	mFrameGraph.RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(mFrameGraphBuilder.AccessNode("gbuffer_pass")->renderPass, this));
 	mFrameGraph.RegisterRenderer("lighting_pass", new gfx::LightingPass(mFrameGraphBuilder.AccessNode("lighting_pass")->renderPass, this));
 	mFrameGraph.RegisterRenderer("transparent_pass", new gfx::TransparentPass(mFrameGraphBuilder.AccessNode("transparent_pass")->renderPass, this));
+	mFrameGraph.RegisterRenderer("fxaa_pass", new gfx::FXAAPass(mFrameGraphBuilder.AccessNode("fxaa_pass")->renderPass, this, width, height));
 
 	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
 	if (found != mOutputAttachments.end())
@@ -85,6 +87,7 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.colorBuffer = mFrameGraphBuilder.AccessResource("gbuffer_colour")->info.texture.texture.handle;
 	mEnvironmentData.normalBuffer = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture.handle;
 	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
+	mEnvironmentData.globalAO = 0.2f;
 }
 
 // TODO: temp width and height variable
@@ -482,7 +485,7 @@ void Renderer::AddUI()
 		}
 		ImGui::EndCombo();
 	}
-
+	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
 }
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
@@ -719,6 +722,11 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 			lastOffset += (uint32_t)batch.transforms.size();
 		}
 	}
+}
+
+void Renderer::onResize(uint32_t width, uint32_t height)
+{
+	mFrameGraph.onResize(width, height);
 }
 
 void Renderer::Shutdown()

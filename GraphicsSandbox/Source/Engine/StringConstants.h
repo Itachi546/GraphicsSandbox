@@ -19,6 +19,9 @@ namespace StringConstants
 	constexpr const char* FULLSCREEN_VERT_PATH = "Assets/SPIRV/fullscreen.vert.spv";
 	constexpr const char* FULLSCREEN_FRAG_PATH = "Assets/SPIRV/fullscreen.frag.spv";
 
+	// FXAA
+	constexpr const char* FXAA_FRAG_PATH = "Assets/SPIRV/fxaa.frag.spv";
+
 	// EnvironmentMap
 	constexpr const char* HDRI_CONVERTER_COMP_PATH = "Assets/SPIRV/hdri_converter.comp.spv";
 	constexpr const char* IRRADIANCE_COMP_PATH = "Assets/SPIRV/irradiance.comp.spv";

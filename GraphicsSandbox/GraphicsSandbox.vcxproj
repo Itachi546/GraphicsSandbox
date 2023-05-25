@@ -167,6 +167,7 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
     <ClInclude Include="Source\Editor\FileDialog.h" />
@@ -236,9 +237,13 @@
     <CustomBuild Include="Shaders\fullscreen.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\fxaa.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>
+    <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\LightingPass.cpp" />
     <ClCompile Include="Source\Editor\EditorApplication.cpp" />
     <ClCompile Include="Source\Engine\Pass\TransparentPass.cpp" />

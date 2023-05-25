@@ -29,6 +29,7 @@ gfx::LightingPass::LightingPass(RenderPassHandle renderPass, Renderer* renderer_
 	pipelineDesc.rasterizationState.enableDepthTest = false;
 	pipelineDesc.rasterizationState.enableDepthWrite = false;
 	pipelineDesc.rasterizationState.enableDepthClamp = true;
+	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
 
 	gfx::BlendState blendState = {};
 	pipelineDesc.blendStates = &blendState;

@@ -37,6 +37,7 @@ layout(push_constant) uniform PushConstants
 
 	vec3 uCameraPosition;
 	float exposure;
+	float globalAO;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -103,6 +104,8 @@ vec4 CalculateColor(vec2 uv)
     float ao = material.ao;
     if(material.ambientOcclusionMap != INVALID_TEXTURE)
       ao = texture(uTextures[nonuniformEXT(material.ambientOcclusionMap)], fs_in.uv).r;
+
+	ao *= globalAO;
 
 	vec3 worldPos = fs_in.worldPos;
 	

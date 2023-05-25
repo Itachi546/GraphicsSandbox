@@ -45,6 +45,7 @@ struct EnvironmentData {
 
 	glm::vec3 cameraPosition;
 	float exposure;
+	float globalAO;
 };
 
 struct GlobalUniformData
@@ -59,7 +60,7 @@ struct GlobalUniformData
 class Renderer
 {
 public:
-	Renderer();
+	Renderer(uint32_t width, uint32_t height);
 
 	void Update(float dt);
 
@@ -68,6 +69,7 @@ public:
 	void Render(gfx::CommandList* commandList);
 
 	//gfx::TextureHandle GetOutputTexture(OutputTextureType colorTextureType);
+	void onResize(uint32_t width, uint32_t height);
 
 	void Shutdown();
 

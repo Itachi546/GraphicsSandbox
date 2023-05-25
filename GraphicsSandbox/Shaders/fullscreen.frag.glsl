@@ -8,6 +8,6 @@ layout(binding = 0) uniform sampler2D uInputTexture;
 
 void main()
 {
-    vec3 col = texture(uInputTexture, vec2(uv.x, uv.y)).rgb;
+    vec3 col = texture(uInputTexture, vec2(uv.x, 1.0f - uv.y)).rgb;
     fragColor = vec4(col, 1.0f);
 }

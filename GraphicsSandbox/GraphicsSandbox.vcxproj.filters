@@ -195,6 +195,7 @@
     <ClInclude Include="Source\External\json.hpp" />
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
     <ClInclude Include="Source\Engine\Pass\TransparentPass.h" />
+    <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -320,6 +321,9 @@
     <ClCompile Include="Source\Engine\Pass\TransparentPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -367,6 +371,9 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="Shaders\transparent.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\fxaa.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

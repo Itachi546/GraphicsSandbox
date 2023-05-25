@@ -32,7 +32,7 @@ void Application::initialize_()
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);
 
-	mRenderer = std::make_unique<Renderer>();
+	mRenderer = std::make_unique<Renderer>(mWidth, mHeight);
 	mRenderer->SetScene(&mScene);
 
 	EventDispatcher::Subscribe(EventType::WindowResize, BIND_EVENT_FN(Application::windowResizeEvent));

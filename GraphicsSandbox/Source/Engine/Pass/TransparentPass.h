@@ -39,6 +39,7 @@ namespace gfx {
 
 			glm::vec3 cameraPosition;
 			float exposure;
+			float globalAO;
 		} mPushConstantData;
 
 		void CreateBatch(Scene* scene, std::vector<DrawData>& drawData, std::vector<TransparentDrawData>& batches);

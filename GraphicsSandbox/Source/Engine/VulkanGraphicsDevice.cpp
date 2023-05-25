@@ -1823,7 +1823,8 @@ namespace gfx {
 
         vkPipeline->pipelineLayout = pipelineLayout;
         vkPipeline->pipeline = pipeline;
-        vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, vkPipeline->setLayout, shaderReflection);
+        if(shaderReflection.descriptorSetLayoutCount > 0)
+			vkPipeline->updateTemplate = CreateUpdateTemplate(device_, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, vkPipeline->setLayout, shaderReflection);
         return pipelineHandle;
     }
 
@@ -2175,11 +2176,12 @@ namespace gfx {
         auto cmdList = GetCommandList(commandList);
         auto vkPipeline = pipelines.AccessResource(pipeline.handle);
         vkCmdBindPipeline(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipeline);
-		vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
+
+        if(vkPipeline->descriptorSet)
+			vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, 0, 1, &vkPipeline->descriptorSet, 0, 0);
+
         if (vkPipeline->hasBindless)
-        {
             vkCmdBindDescriptorSets(cmdList->commandBuffer, vkPipeline->bindPoint, vkPipeline->pipelineLayout, kBindlessSet, 1, &bindlessDescriptorSet_, 0, 0);
-        }
     }
 
     void VulkanGraphicsDevice::Draw(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)

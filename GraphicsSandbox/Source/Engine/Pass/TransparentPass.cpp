@@ -68,6 +68,7 @@ void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
 	mPushConstantData.prefilterEnvMap = renderer->mEnvironmentData.prefilterEnvMap;
 	mPushConstantData.cameraPosition = renderer->mEnvironmentData.cameraPosition;
 	mPushConstantData.exposure = renderer->mEnvironmentData.exposure;
+	mPushConstantData.globalAO = renderer->mEnvironmentData.globalAO;
 
 	uint32_t matSize = sizeof(MaterialComponent);
 	uint32_t lastOffset = (uint32_t)scene->GetDrawDataOpaque().size();

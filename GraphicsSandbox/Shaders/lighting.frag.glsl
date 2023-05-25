@@ -5,7 +5,7 @@
 #include "globaldata.glsl"
 #include "material.glsl"
 
-layout(location = 0) in vec2 vUv;
+layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 fragColor;
 
 layout(binding = 0) readonly buffer LightBuffer {
@@ -28,6 +28,7 @@ layout(push_constant) uniform PushConstants
 
 	vec3 uCameraPosition;
 	float exposure;
+	float globalAO;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -47,7 +48,7 @@ vec3 CalculateColor(vec2 uv)
 	vec3 pbrFactor = texture(uTextures[nonuniformEXT(uPBRBuffer)], uv).rgb;
 	float metallic = pbrFactor.r;
 	float roughness = pbrFactor.g;
-	float ao = pbrFactor.b;
+	float ao = pbrFactor.b * globalAO;
 
     vec3 n = texture(uTextures[nonuniformEXT(uNormalBuffer)], uv).rgb;
 
@@ -126,7 +127,6 @@ vec3 CalculateColor(vec2 uv)
 
 void main()
 {
-    vec2 uv = vec2(vUv.x, 1.0 - vUv.y);
 	vec3 Lo = CalculateColor(uv);
  	Lo = ACESFilm(Lo * exposure);
     Lo = pow(Lo, vec3(0.4545));

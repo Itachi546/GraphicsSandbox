@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>C:\Users\Dell\OneDrive\Documents\3D-Assets\Models\NewSponza\NewSponza_Main_glTF_002.gltf C:\Users\Dell\OneDrive\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Users\Dell\OneDrive\Documents\3D-Assets\Models\DamagedHelmet\DamagedHelmet.gltf C:\Users\Dell\OneDrive\Desktop\GraphicsSandbox\Assets\Models</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup>

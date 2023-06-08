@@ -308,7 +308,11 @@ namespace MeshConverter {
 			stream.push_back(*(ptr + i));
 	}
 
-	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<uint8_t>& out_vertices, std::vector<uint32_t>& indices, BoundingBox& aabb, std::vector<SkeletonNode>& skeletonNodes, std::vector<std::string>& bones)
+	Mesh ParseMesh(const aiMesh* mesh, const aiScene* scene, std::vector<uint8_t>& out_vertices,
+		std::vector<uint32_t>& indices,
+		BoundingBox& aabb,
+		std::vector<SkeletonNode>& skeletonNodes,
+		std::vector<std::string>& bones)
 	{
 		uint32_t vertexOffset = static_cast<uint32_t>(out_vertices.size());
 		uint32_t indexOffset = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));

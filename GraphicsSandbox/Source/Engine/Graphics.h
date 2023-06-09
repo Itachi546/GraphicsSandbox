@@ -171,10 +171,10 @@ namespace gfx
 		BufferHandle buffer;
 
 		// Offset in byte to the parent buffer
-		uint32_t offset;
+		uint32_t byteOffset;
 
 		// Count of underlying data
-		uint32_t count;
+		uint32_t byteLength;
 	};
 
 /*

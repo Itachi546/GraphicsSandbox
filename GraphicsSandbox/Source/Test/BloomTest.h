@@ -54,6 +54,7 @@ private:
 
 	void InitializeScene()
 	{
+		/*
 		auto compMgr = mScene.GetComponentManager();
 		{
 			ecs::Entity cube = mScene.CreateCube("TestCube");
@@ -152,7 +153,7 @@ private:
 			material.metallic = 0.0f;
 			material.emissive = glm::vec3(10.0f);
 		}
-
+						*/
 		mScene.SetEnableFrustumCulling(false);
 		mScene.SetShowBoundingBox(false);
 		DebugDraw::SetEnable(false);

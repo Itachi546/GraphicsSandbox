@@ -156,7 +156,7 @@ struct MeshRenderer : public IMeshRenderer
 	}
 
 	uint32_t GetIndexCount() const override {
-		return static_cast<uint32_t>(indices->size());
+		return indexBuffer.byteLength / sizeof(uint32_t);
 	}
 
 	void CopyVertices(void* data, uint32_t count) override

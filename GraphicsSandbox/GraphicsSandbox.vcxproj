@@ -243,7 +243,6 @@
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>
-    <ClCompile Include="Source\Engine\GLTF-Mesh.cpp" />
     <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\LightingPass.cpp" />
     <ClCompile Include="Source\Editor\EditorApplication.cpp" />

@@ -6,6 +6,7 @@
 #include "../Shared/MathUtils.h"
 #include "StringConstants.h"
 #include "GUI/ImGuiService.h"
+#include "GLTF-Mesh.h"
 
 #include <execution>
 #include <algorithm>
@@ -22,7 +23,6 @@ void Scene::Initialize()
 	mComponentManager->RegisterComponent<LightComponent>();
 	mComponentManager->RegisterComponent<HierarchyComponent>();
 
-	InitializePrimitiveMeshes();
 	InitializeLights();
 
 	mEnvMap = std::make_unique<EnvironmentMap>();
@@ -118,433 +118,6 @@ void Scene::DrawBoundingBox()
 	}
 }
 
-ecs::Entity Scene::CreateCube(std::string_view name)
-{
-	ecs::Entity entity = ecs::CreateEntity();
-	{
-		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
-		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mCube);
-		meshRenderer.Copy(renderer);
-		meshRenderer.SetRenderable(true);
-	}
-
-	if (!name.empty())
-		mComponentManager->AddComponent<NameComponent>(entity).name = name;
-
-	mComponentManager->AddComponent<TransformComponent>(entity);
-	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
-	return entity;
-}
-
-ecs::Entity Scene::CreatePlane(std::string_view name)
-{
-	ecs::Entity entity = ecs::CreateEntity();
-	if (!name.empty())
-		mComponentManager->AddComponent<NameComponent>(entity).name = name;
-	{
-		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
-		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mPlane);
-		meshRenderer.Copy(renderer);
-		meshRenderer.SetRenderable(true);
-	}
-
-	mComponentManager->AddComponent<TransformComponent>(entity);
-	mComponentManager->AddComponent<MaterialComponent>(entity);
-
-	return entity;
-
-}
-
-ecs::Entity Scene::CreateSphere(std::string_view name)
-{
-	ecs::Entity entity = ecs::CreateEntity();
-	if (!name.empty())
-		mComponentManager->AddComponent<NameComponent>(entity).name = name;
-
-	mComponentManager->AddComponent<TransformComponent>(entity);
-	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
-	{
-		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
-		MeshRenderer* renderer = mComponentManager->GetComponent<MeshRenderer>(mSphere);
-		meshRenderer.Copy(renderer);
-		meshRenderer.SetRenderable(true);
-	}
-	return entity;
-}
-
-void TraverseSkeletonHierarchy(uint32_t root, uint32_t parent, const std::vector<SkeletonNode>& skeletonNodes, Skeleton& skeleton)
-{
-	/*
-	* BoneIndex
-	* Parent
-	* Root
-	* mJointNames => BoneIndex
-	*/
-
-	if (root == -1)
-		return;
-
-	const SkeletonNode& node = skeletonNodes[root];
-	uint32_t parentIndex = -1;
-	glm::mat4 offsetMatrix4 = glm::inverse(node.offsetMatrix);
-	if (parent != -1)
-	{
-		parentIndex = skeletonNodes[parent].boneIndex;
-		offsetMatrix4 = skeletonNodes[parent].offsetMatrix * offsetMatrix4;
-	}
-
-	// @NOTE we use boneIndex to store the parent child relationship instead of
-	// nodeIndex as it can be used later to index into the matrix without any 
-	// additional information. The shader access the matrix pallete based on the
-	// bone index defined by weight matrix.
-	// Node index is used to traverse the hierarchy whereas all the data regarding
-	// bones are stored by using boneIndex.
-	TransformComponent localTransform;
-	glm::mat4 localTransformMat = node.localTransform;
-	TransformComponent::From(node.localTransform, localTransform);
-
-	// Update Rest Pose Parent/Transform
-	Pose& restPose = skeleton.GetRestPose();
-	restPose.SetParent(node.boneIndex, parentIndex);
-	restPose.SetLocalTransform(node.boneIndex, localTransform);
-
-	// Update Bind Pose Parent/Transform
-	TransformComponent bindTransform;
-	TransformComponent::From(offsetMatrix4, bindTransform);
-	Pose& bindPose = skeleton.GetBindPose();
-	bindPose.SetParent(node.boneIndex, parentIndex);
-	bindPose.SetLocalTransform(node.boneIndex, bindTransform);
-
-	Pose& animatedPose = skeleton.GetAnimatedPose();
-	animatedPose.SetParent(node.boneIndex, parentIndex);
-
-	skeleton.SetInvBindPose(node.boneIndex, node.offsetMatrix);
-	skeleton.SetJointName(node.boneIndex, node.name);
-
-	if (node.firstChild != -1)
-		TraverseSkeletonHierarchy(node.firstChild, root, skeletonNodes, skeleton);
-
-	// Check sibling
-	if (node.nextSibling != -1)
-		TraverseSkeletonHierarchy(node.nextSibling, parent, skeletonNodes, skeleton);
-}
-
-
-void Scene::ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, uint32_t rootBone, const std::vector<SkeletonNode>& skeletonNodes)
-{
-	skeleton.Resize(mesh.boneCount);
-
-	Pose& restPose = skeleton.GetRestPose();
-	restPose.Resize(mesh.boneCount);
-
-	Pose& bindPose = skeleton.GetBindPose();
-	bindPose.Resize(mesh.boneCount);
-
-	Pose& animatedPose = skeleton.GetAnimatedPose();
-	animatedPose.Resize(mesh.boneCount);
-
-	skeleton.SetRootBone(skeletonNodes[rootBone].boneIndex);
-	TraverseSkeletonHierarchy(rootBone, ~0u, skeletonNodes, skeleton);
-}
-
-void Scene::ParseAnimation(const StagingMeshData& meshData, std::vector<AnimationClip>& animationClips)
-{
-	for (auto& animation : meshData.animations_)
-	{
-		AnimationClip animationClip = {};
-		animationClip.SetTickPerSeconds(animation.framePerSecond);
-		animationClip.SetStartTime(0.0f);
-		animationClip.SetEndTime(animation.duration);
-		std::vector<TransformTrack>& transformTracks = animationClip.GetTracks();
-		transformTracks.resize(meshData.skeletonNodes_.size());
-
-		uint32_t channelStart = animation.channelStart;
-		uint32_t channelCount = animation.channelCount;
-		for (uint32_t i = channelStart; i < channelStart + channelCount; ++i)
-		{
-			const Channel& channel = meshData.channels_[i];
-
-			uint32_t tS = channel.translationTrack;
-			uint32_t tC = channel.traslationCount;
-			std::vector<Vector3Track> translations(tC);
-			std::copy(meshData.vector3Tracks_.begin() + tS, meshData.vector3Tracks_.begin() + tS + tC, translations.begin());
-
-			uint32_t rS = channel.rotationTrack;
-			uint32_t rC = channel.rotationCount;
-			std::vector<QuaternionTrack> rotations(rC);
-			std::copy(meshData.quaternionTracks_.begin() + rS, meshData.quaternionTracks_.begin() + rS + rC, rotations.begin());
-
-			uint32_t sS = channel.scalingTrack;
-			uint32_t sC = channel.scalingCount;
-			std::vector<Vector3Track> scaling(sC);
-			std::copy(meshData.vector3Tracks_.begin() + sS, meshData.vector3Tracks_.begin() + sS + sC, scaling.begin());
-
-			transformTracks[channel.boneId].AddPositions(translations);
-			transformTracks[channel.boneId].AddRotations(rotations);
-			transformTracks[channel.boneId].AddScale(scaling);
-		}
-		animationClips.push_back(std::move(animationClip));
-	}
-
-}
-
-void Scene::UpdateEntity(ecs::Entity parent,
-	uint32_t nodeIndex,
-	const StagingMeshData& stagingMeshData)
-{
-	std::vector<uint32_t> meshIds;
-	for (uint32_t i = 0; i < stagingMeshData.meshes_.size(); ++i)
-	{
-		if (stagingMeshData.meshes_[i].nodeIndex == nodeIndex)
-			meshIds.push_back(i);
-	}
-
-	if (meshIds.size() > 0)
-	{
-		auto hierarchyCompArr = mComponentManager->GetComponentArray<HierarchyComponent>();
-
-		// if parent doesn't have hierarchyComponent add it
-		std::size_t parentIndex = hierarchyCompArr->GetIndex(parent);
-		if (parentIndex == ~0ull)
-		{
-			mComponentManager->AddComponent<HierarchyComponent>(parent);
-			parentIndex = hierarchyCompArr->GetIndex(parent);
-		}
-
-		for (auto meshId : meshIds)
-		{
-			// For Each mesh create entity
-			const Mesh& mesh = stagingMeshData.meshes_[meshId];
-
-			ecs::Entity meshEntity = ecs::CreateEntity();
-			mComponentManager->AddComponent<NameComponent>(meshEntity).name = std::string(mesh.meshName);
-			auto& transform = mComponentManager->AddComponent<TransformComponent>(meshEntity);
-
-			// Add parent entity 
-			mComponentManager->AddComponent<HierarchyComponent>(meshEntity).parent = parent;
-			hierarchyCompArr->components[parentIndex].childrens.push_back(meshEntity);
-
-			// Update MeshRenderer Component
-			IMeshRenderer* meshRenderer = nullptr;
-			if (mesh.skeletonIndex == -1)
-			{
-				meshRenderer = &mComponentManager->AddComponent<MeshRenderer>(meshEntity);
-				meshRenderer->SetSkinned(false);
-			}
-			else {
-				meshRenderer = &mComponentManager->AddComponent<SkinnedMeshRenderer>(meshEntity);
-				meshRenderer->SetSkinned(true);
-				SkinnedMeshRenderer* skinnedMeshRenderer = reinterpret_cast<SkinnedMeshRenderer*>(meshRenderer);
-				// Parse Skeleton
-				ParseSkeleton(mesh, skinnedMeshRenderer->skeleton, mesh.skeletonIndex, stagingMeshData.skeletonNodes_);
-				ParseAnimation(stagingMeshData, skinnedMeshRenderer->animationClips);
-			}
-			meshRenderer->vertexBuffer.buffer = stagingMeshData.vertexBuffer;
-			meshRenderer->vertexBuffer.offset = mesh.vertexOffset;
-			meshRenderer->vertexBuffer.count = mesh.vertexCount;
-
-			meshRenderer->indexBuffer.buffer = stagingMeshData.indexBuffer;
-			meshRenderer->indexBuffer.offset = mesh.indexOffset;
-			meshRenderer->indexBuffer.count = mesh.indexCount;
-
-			meshRenderer->boundingBox = stagingMeshData.boxes_[meshId];
-
-			// @TODO Seperate between Skinned and StaticMesh
-			meshRenderer->CopyVertices((void*)(stagingMeshData.vertexData_.data() + mesh.vertexOffset), mesh.vertexCount);
-			meshRenderer->CopyIndices((void*)(stagingMeshData.indexData_.data() + mesh.indexOffset), mesh.indexCount);
-
-			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(meshEntity);
-			uint32_t materialIndex = mesh.materialIndex;
-			if (stagingMeshData.materials_.size() > 0 && materialIndex != -1)
-			{
-				const std::vector<std::string>& textures = stagingMeshData.textures_;
-
-				material = stagingMeshData.materials_[materialIndex];
-				// @TODO Maybe it is not correct to generate mipmap for normal map and 
-				// sample it like base mip level. But for now, I don't know any other 
-				// ways to remove the normal map aliasing artifacts other than using mipmap.
-				if (material.albedoMap != INVALID_TEXTURE)
-					material.albedoMap = TextureCache::LoadTexture(textures[material.albedoMap], true);
-				if (material.normalMap != INVALID_TEXTURE)
-					material.normalMap = TextureCache::LoadTexture(textures[material.normalMap], true);
-				if (material.emissiveMap != INVALID_TEXTURE)
-					material.emissiveMap = TextureCache::LoadTexture(textures[material.emissiveMap]);
-				if (material.metallicMap != INVALID_TEXTURE)
-					material.metallicMap = TextureCache::LoadTexture(textures[material.metallicMap], true);
-				if (material.roughnessMap != INVALID_TEXTURE)
-					material.roughnessMap = TextureCache::LoadTexture(textures[material.roughnessMap], true);
-				if (material.ambientOcclusionMap != INVALID_TEXTURE)
-					material.ambientOcclusionMap = TextureCache::LoadTexture(textures[material.ambientOcclusionMap], true);
-				if (material.opacityMap != INVALID_TEXTURE)
-					material.opacityMap = TextureCache::LoadTexture(textures[material.opacityMap]);
-			}
-		}
-	}
-}
-
-
-ecs::Entity Scene::CreateMeshEntity(uint32_t nodeIndex, ecs::Entity parent, const StagingMeshData& stagingMeshData)
-{
-	ecs::Entity entity = ecs::CreateEntity();
-	const Node& node = stagingMeshData.nodes_[nodeIndex];
-
-	// Name Component
-	mComponentManager->AddComponent<NameComponent>(entity).name = node.name;
-
-	// TransformComponent
-	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(entity);
-	transform.defaultMatrix = node.localTransform;
-
-	UpdateEntity(entity, nodeIndex, stagingMeshData);
-
-	if (parent != ecs::INVALID_ENTITY)
-	{
-		auto hierarchyCompArr = mComponentManager->GetComponentArray<HierarchyComponent>();
-		mComponentManager->AddComponent<HierarchyComponent>(entity).parent = parent;
-		std::size_t parentIndex = hierarchyCompArr->GetIndex(parent);
-		if (parentIndex == ~0ull)
-			mComponentManager->AddComponent<HierarchyComponent>(parent).childrens.push_back(entity);
-		else
-			hierarchyCompArr->components[parentIndex].childrens.push_back(entity);
-	}
-
-	return entity;
-}
-
-
-ecs::Entity Scene::TraverseNode(uint32_t root, ecs::Entity parent, const StagingMeshData& stagingData)
-{
-	if (root == -1)
-		return ecs::INVALID_ENTITY;
-
-	ecs::Entity entity = CreateMeshEntity(root, parent, stagingData);
-
-	// Add Child
-	const Node& node = stagingData.nodes_[root];
-	if(node.firstChild != -1)
-		TraverseNode(node.firstChild, entity, stagingData);
-
-	// Check sibling
-	if(node.nextSibling != -1)
-		TraverseNode(node.nextSibling, parent, stagingData);
-
-	return entity;
-}
-
-ecs::Entity Scene::CreateMesh(const char* file)
-{
-	std::ifstream inFile(file, std::ios::binary);
-	if (!inFile)
-	{
-		Logger::Warn("Failed to load: " + std::string(file));
-		return ecs::INVALID_ENTITY;
-	}
-
-	// Read Header
-	MeshFileHeader header = {};
-	inFile.read(reinterpret_cast<char*>(&header), sizeof(MeshFileHeader));
-	assert(header.magicNumber == 0x12345678u);
-
-	std::string name = file;
-	std::size_t lastPathSplit = name.find_last_of("/\\");
-	std::string folder = name.substr(0, lastPathSplit + 1);
-
-	name = name.substr(lastPathSplit + 1, name.size() - 1);
-	name = name.substr(0, name.find_first_of('.'));
-
-	// Create a meshdata struct
-	StagingMeshData stagingMeshData;
-
-	// Read Nodes
-	uint32_t nNodes = header.nodeCount;
-	stagingMeshData.nodes_.resize(nNodes);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.nodes_.data()), sizeof(Node) * nNodes);
-
-	// Read Meshes
-	uint32_t nMeshes = header.meshCount;
-	stagingMeshData.meshes_.resize(nMeshes);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.meshes_.data()), sizeof(Mesh) * nMeshes);
-
-	// Read Materials
-	uint32_t nMaterial = header.materialCount;
-	stagingMeshData.materials_.resize(nMaterial);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.materials_.data()), sizeof(MaterialComponent) * nMaterial);
-	
-	// Read Texture Path
-	stagingMeshData.textures_.resize(header.textureCount);
-	if (header.textureCount > 0)
-	{
-		for (uint32_t i = 0; i < header.textureCount; ++i)
-		{
-			uint32_t size = 0;
-			inFile.read(reinterpret_cast<char*>(&size), 4);
-
-			std::string& path = stagingMeshData.textures_[i];
-			path.resize(size);
-			inFile.read(path.data(), size);
-			path = folder + path;
-		}
-	}
-
-	// Read BoundingBox
-	stagingMeshData.boxes_.resize(nMeshes);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.boxes_.data()), sizeof(BoundingBox) * nMeshes);
-
-	//Read VertexData
-	stagingMeshData.vertexData_.resize(header.vertexDataSize);
-	stagingMeshData.indexData_.resize(header.indexDataSize);
-	inFile.seekg(header.dataBlockStartOffset, std::ios::beg);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.vertexData_.data()), header.vertexDataSize);
-	inFile.read(reinterpret_cast<char*>(stagingMeshData.indexData_.data()), header.indexDataSize);
-
-	// Read Skeleton Nodes
-	uint32_t nSkeletonNodes = header.skeletonNodeCount;
-	if (nSkeletonNodes > 0)
-	{
-		stagingMeshData.skeletonNodes_.resize(nSkeletonNodes);
-		inFile.read(reinterpret_cast<char*>(stagingMeshData.skeletonNodes_.data()), sizeof(SkeletonNode) * nSkeletonNodes);
-
-		uint32_t nAnimation = header.animationCount;
-		if (nAnimation > 0)
-		{
-			stagingMeshData.animations_.resize(nAnimation);
-			inFile.read(reinterpret_cast<char*>(stagingMeshData.animations_.data()), sizeof(Animation) * nAnimation);
-
-			uint32_t nChannel = header.animationChannelCount;
-			stagingMeshData.channels_.resize(nChannel);
-			inFile.read(reinterpret_cast<char*>(stagingMeshData.channels_.data()), sizeof(Channel) * nChannel);
-
-			uint32_t nV3Track = header.v3TrackCount;
-			stagingMeshData.vector3Tracks_.resize(nV3Track);
-			inFile.read(reinterpret_cast<char*>(stagingMeshData.vector3Tracks_.data()), sizeof(Vector3Track) * nV3Track);
-
-			uint32_t nQuatTrack = header.quatTrackCount;
-			stagingMeshData.quaternionTracks_.resize(nQuatTrack);
-			inFile.read(reinterpret_cast<char*>(stagingMeshData.quaternionTracks_.data()), sizeof(QuaternionTrack) * nQuatTrack);
-
-		}
-	}
-	
-	inFile.close();
-
-	// Allocate GPU Memory
-	gfx::GraphicsDevice* gfxDevice = gfx::GetDevice();
-	gfx::GPUBufferDesc bufferDesc;
-	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
-	bufferDesc.usage = gfx::Usage::Default;
-	bufferDesc.size = header.vertexDataSize;
-	stagingMeshData.vertexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
-	mAllocatedBuffers.push_back(stagingMeshData.vertexBuffer);
-
-	bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
-	bufferDesc.size = header.indexDataSize;
-	stagingMeshData.indexBuffer = gfxDevice->CreateBuffer(&bufferDesc);
-	mAllocatedBuffers.push_back(stagingMeshData.indexBuffer);
-
-	gfxDevice->CopyToBuffer(stagingMeshData.vertexBuffer, stagingMeshData.vertexData_.data(), 0, header.vertexDataSize);
-	gfxDevice->CopyToBuffer(stagingMeshData.indexBuffer, stagingMeshData.indexData_.data(), 0, header.indexDataSize);
-	return TraverseNode(0, ecs::INVALID_ENTITY, stagingMeshData);
-}
 
 ecs::Entity Scene::CreateLight(std::string_view name)
 {
@@ -676,243 +249,6 @@ void Scene::UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform)
 
 }
 
-void Scene::InitializePrimitiveMeshes()
-{
-	// Careful create all entity and add component first and then upload the data
-	// to prevent the invalidation of refrence when container is resized
-	uint32_t vertexCount = 0;
-	uint32_t indexCount = 0;
-	{
-		mCube = ecs::CreateEntity();
-		mComponentManager->AddComponent<NameComponent>(mCube).name = "Cube";
-		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mCube);
-		meshRenderer.SetRenderable(false);
-		InitializeCubeMesh(meshRenderer);
-		vertexCount += (uint32_t)meshRenderer.vertices->size();
-		indexCount += (uint32_t)meshRenderer.indices->size();
-	}
-
-	{
-		mSphere = ecs::CreateEntity();
-		mComponentManager->AddComponent<NameComponent>(mSphere).name = "Sphere";
-		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mSphere);
-		meshRenderer.SetRenderable(false);
-		InitializeSphereMesh(meshRenderer);
-		vertexCount += (uint32_t)meshRenderer.vertices->size();
-		indexCount += (uint32_t)meshRenderer.indices->size();
-	}
-
-	{
-		mPlane = ecs::CreateEntity();
-		mComponentManager->AddComponent<NameComponent>(mPlane).name = "Plane";
-		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mPlane);
-		meshRenderer.SetRenderable(false);
-		InitializePlaneMesh(meshRenderer);
-		vertexCount += (uint32_t)meshRenderer.vertices->size();
-		indexCount += (uint32_t)meshRenderer.indices->size();
-	}
-
-	{
-		// Allocate Vertex Buffer
-		uint32_t vertexBufferIndex = 0;
-		gfx::GPUBufferDesc bufferDesc = { vertexCount * static_cast<uint32_t>(sizeof(Vertex)),
-			gfx::Usage::Default,
-			gfx::BindFlag::ShaderResource };
-
-		gfx::GraphicsDevice* device = gfx::GetDevice();
-		gfx::BufferHandle vertexBuffer = device->CreateBuffer(&bufferDesc);
-		mAllocatedBuffers.push_back(vertexBuffer);
-
-		// Allocate Index Buffer
-		uint32_t indexBufferIndex = 0;
-		bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
-		bufferDesc.size = indexCount * static_cast<uint32_t>(sizeof(uint32_t));
-		gfx::BufferHandle indexBuffer = device->CreateBuffer(&bufferDesc);
-		mAllocatedBuffers.push_back(indexBuffer);
-
-		auto UploadUpdateMeshBuffer = [&](gfx::BufferHandle bufferHandle, gfx::BufferView& bufferView, uint32_t& outOffset, void* data, uint32_t elmCount, uint32_t elmSize) {
-			uint32_t dataSize = elmCount * elmSize;
-			device->CopyToBuffer(bufferHandle, data, outOffset, dataSize);
-			bufferView = { bufferHandle, outOffset, elmCount };
-			outOffset += dataSize;
-		};
-
-		uint32_t vertexOffset = 0;
-		uint32_t sizeofVertex = sizeof(Vertex);
-		uint32_t indexOffset = 0;
-		uint32_t sizeofU32 = sizeof(uint32_t);
-
-		MeshRenderer* cubeMesh = mComponentManager->GetComponent<MeshRenderer>(mCube);
-		UploadUpdateMeshBuffer(vertexBuffer, cubeMesh->vertexBuffer, vertexOffset, cubeMesh->vertices->data(), (uint32_t)cubeMesh->vertices->size(), sizeofVertex);
-		UploadUpdateMeshBuffer(indexBuffer, cubeMesh->indexBuffer, indexOffset, cubeMesh->indices->data(), static_cast<uint32_t>(cubeMesh->indices->size()), sizeofU32);
-
-		MeshRenderer* sphereMesh = mComponentManager->GetComponent<MeshRenderer>(mSphere);
-		UploadUpdateMeshBuffer(vertexBuffer, sphereMesh->vertexBuffer, vertexOffset, sphereMesh->vertices->data(), (uint32_t)sphereMesh->vertices->size(), sizeofVertex);
-		UploadUpdateMeshBuffer(indexBuffer, sphereMesh->indexBuffer, indexOffset, sphereMesh->indices->data(), static_cast<uint32_t>(sphereMesh->indices->size()), sizeofU32);
-
-		MeshRenderer* planeMesh = mComponentManager->GetComponent<MeshRenderer>(mPlane);
-		UploadUpdateMeshBuffer(vertexBuffer, planeMesh->vertexBuffer, vertexOffset, planeMesh->vertices->data(), (uint32_t)planeMesh->vertices->size(), sizeofVertex);
-		UploadUpdateMeshBuffer(indexBuffer, planeMesh->indexBuffer, indexOffset, planeMesh->indices->data(), static_cast<uint32_t>(planeMesh->indices->size()), sizeofU32);
-	}
-}
-
-void Scene::InitializeCubeMesh(MeshRenderer& meshRenderer)
-{
-	if (!meshRenderer.vertices)
-		meshRenderer.vertices = std::make_shared<std::vector<Vertex>>();
-	if (!meshRenderer.indices)
-		meshRenderer.indices = std::make_shared<std::vector<uint32_t>>();
-
-	*meshRenderer.vertices = {
-		Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +1.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, +0.0f, -1.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, +1.0f, -1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(-1.0f, +1.0f, -1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(-1.0f, +0.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(-1.0f, +1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, +0.0f, +1.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-
-		Vertex{glm::vec3(-1.0f, -1.0f, -1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(-1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-		Vertex{glm::vec3(+1.0f, -1.0f, +1.0f), glm::vec3(+0.0f, -1.0f, +0.0f), glm::vec2(0.0f)},
-	};
-
-	*meshRenderer.indices = {
-		0,   1,  2,  0,  2,  3, // Top
-		4,   5,  6,  4,  6,  7, // Front
-		8,   9, 10,  8, 10, 11, // Right
-		12, 13, 14, 12, 14, 15, // Left
-		16, 17, 18, 16, 18, 19, // Back
-		20, 22, 21, 20, 23, 22, // Bottom
-	};
-
-	meshRenderer.boundingBox.min = glm::vec3(-1.0f);
-	meshRenderer.boundingBox.max = glm::vec3(1.0f);
-}
-
-void Scene::InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide)
-{
-	if (!meshRenderer.vertices)
-		meshRenderer.vertices = std::make_shared<std::vector<Vertex>>();
-	if (!meshRenderer.indices)
-		meshRenderer.indices = std::make_shared<std::vector<uint32_t>>();
-
-	float dims = (float)subdivide;
-	float stepSize = 2.0f / float(subdivide);
-
-	std::shared_ptr<std::vector<Vertex>> vertices = meshRenderer.vertices;
-	for (uint32_t y = 0; y <= subdivide; ++y)
-	{
-		float yPos = y * stepSize - 1.0f;
-		for (uint32_t x = 0; x <= subdivide; ++x)
-		{
-			vertices->push_back(Vertex{ glm::vec3(x * stepSize - 1.0f, 0.0f, yPos),
-				glm::vec3(0.0f, 1.0f, 0.0f),
-				glm::vec2(x * stepSize, y * stepSize) });
-		}
-	}
-
-	uint32_t totalGrid = subdivide * subdivide;
-	uint32_t nIndices =  totalGrid * 6;
-
-	std::shared_ptr<std::vector<unsigned int>> indices = meshRenderer.indices;
-	indices->reserve(nIndices);
-	for (uint32_t y = 0; y < subdivide; ++y)
-	{
-		for (uint32_t x = 0; x < subdivide; ++x)
-		{
-			uint32_t i0 = y * (subdivide + 1) + x;
-			uint32_t i1 = i0 + 1;
-			uint32_t i2 = i0 + subdivide + 1;
-			uint32_t i3 = i2 + 1;
-
-			indices->push_back(i0);  indices->push_back(i2); indices->push_back(i1);
-			indices->push_back(i2);  indices->push_back(i3); indices->push_back(i1);
-		}
-	}
-
-	meshRenderer.boundingBox.min = glm::vec3(-1.0f, -0.01f, -1.0f);
-	meshRenderer.boundingBox.max = glm::vec3(1.0f, 0.01f, 1.0f);
-}
-
-void Scene::InitializeSphereMesh(MeshRenderer& meshRenderer)
-{
-	if (!meshRenderer.vertices)
-		meshRenderer.vertices = std::make_shared<std::vector<Vertex>>();
-	if (!meshRenderer.indices)
-		meshRenderer.indices = std::make_shared<std::vector<uint32_t>>();
-
-	const int nSector = 32;
-	const int nRing = 32;
-
-	// x = r * sinTheta * cosPhi
-	// y = r * sinTheta * sinPhi
-	// z = r * cosTheta
-
-	auto& vertices = meshRenderer.vertices;
-
-	constexpr float pi = glm::pi<float>();
-	constexpr float kdTheta = pi / float(nRing);
-	constexpr float kdPhi = (pi * 2.0f) / float(nSector);
-
-	for (int s = 0; s <= nRing; ++s)
-	{
-		float theta = pi * 0.5f - s * kdTheta;
-		float cosTheta = static_cast<float>(cos(theta));
-		float sinTheta = static_cast<float>(sin(theta));
-		for (int r = 0; r <= nSector; ++r)
-		{
-			float phi = r * kdPhi;
-			float x = cosTheta * static_cast<float>(cos(phi));
-			float y = sinTheta;
-			float z = cosTheta * static_cast<float>(sin(phi)); 
-			vertices->push_back(Vertex{ glm::vec3(x, y, z), glm::vec3(x, y, z), glm::vec2(0.0f, 0.0f) });
-		}
-	}
-
-	auto& indices = meshRenderer.indices;
-	uint32_t numIndices = (nSector + 1) * (nRing + 1) * 6;
-
-	for (unsigned int r = 0; r < nRing; ++r)
-	{
-		for (unsigned int s = 0; s < nSector; ++s)
-		{
-			unsigned int i0 = r * (nSector + 1) + s;
-			unsigned int i1 = i0 + (nSector + 1);
-
-			indices->push_back(i0);
-			indices->push_back(i0 + 1);
-			indices->push_back(i1);
-
-			indices->push_back(i1);
-			indices->push_back(i0 + 1);
-			indices->push_back(i1 + 1);
-		}
-	}
-	meshRenderer.boundingBox.min = glm::vec3(-1.0f);
-	meshRenderer.boundingBox.max = glm::vec3(1.0f);
-}
-
 void Scene::InitializeLights()
 {
 	mSun = ecs::CreateEntity();
@@ -925,13 +261,13 @@ void Scene::InitializeLights()
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
 	light.intensity = 1.0f;
 	light.type = LightType::Directional;
-/*
-	for (uint32_t i = 0; i < 50; ++i)
+
+	for (uint32_t i = 0; i < 10; ++i)
 	{
 		ecs::Entity light = ecs::CreateEntity();
 		mComponentManager->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
 		TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(light);
-		transform.position = glm::vec3(MathUtils::Rand01() * 50 - 25, MathUtils::Rand01() * 25, MathUtils::Rand01() * 50 - 25);
+		transform.position = glm::vec3(MathUtils::Rand01() * 5 - 2.5, MathUtils::Rand01() * 5, MathUtils::Rand01() * 5 - 2.5);
 		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 		//transform.rotation = glm::vec3(0.0f, 0.021f, 0.375f);
 		LightComponent& lightComp = mComponentManager->AddComponent<LightComponent>(light);
@@ -939,8 +275,175 @@ void Scene::InitializeLights()
 		lightComp.intensity = 10.0f;
 		lightComp.type = LightType::Point;
 	}
-	*/
+
 }
+
+ecs::Entity Scene::createEntity(const std::string& name) {
+	ecs::Entity entity = ecs::CreateEntity();
+	mComponentManager->AddComponent<TransformComponent>(entity);
+	mComponentManager->AddComponent<NameComponent>(entity).name = name;
+	return entity;
+}
+
+void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex) {
+	tinygltf::Node& node = model->nodes[nodeIndex];
+
+	// Create entity and write the transforms
+	ecs::Entity entity = createEntity(node.name);
+	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
+	if (node.translation.size() > 0)
+		transform->position = glm::vec3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
+	if (node.rotation.size() > 0)
+		transform->rotation = glm::fquat((float)node.rotation[3], (float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]);
+	if (node.scale.size() > 0)
+		transform->scale = glm::vec3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
+
+	// Update MeshData
+	tinygltf::Mesh& mesh = model->meshes[node.mesh];
+	for (auto& primitive : mesh.primitives)
+	{
+		// Parse position
+		const tinygltf::Accessor& positionAccessor = model->accessors[primitive.attributes["POSITION"]];
+		float* positions = (float*)gltfMesh::getBufferPtr(model, positionAccessor);
+		uint32_t numPosition = (uint32_t)positionAccessor.count;
+
+		// Parse normals
+		float* normals = nullptr;
+		auto normalAttributes = primitive.attributes.find("NORMAL");
+		if (normalAttributes != primitive.attributes.end()) {
+			const tinygltf::Accessor& normalAccessor = model->accessors[normalAttributes->second];
+			assert(numPosition == normalAccessor.count);
+			normals = (float*)gltfMesh::getBufferPtr(model, normalAccessor);
+		}
+
+		// Parse UV
+		float* uvs = nullptr;
+		auto uvAttributes = primitive.attributes.find("TEXCOORD_0");
+		if (uvAttributes != primitive.attributes.end()) {
+			const tinygltf::Accessor& uvAccessor = model->accessors[uvAttributes->second];
+			assert(numPosition == uvAccessor.count);
+			uvs = (float*)gltfMesh::getBufferPtr(model, uvAccessor);
+		}
+
+
+		uint32_t vertexOffset = (uint32_t)(mStagingData.vertices.size() * sizeof(Vertex));
+		uint32_t indexOffset = (uint32_t)(mStagingData.indices.size() * sizeof(uint32_t));
+
+		Vertex vertex = {};
+		for (uint32_t i = 0; i < numPosition; ++i) {
+			vertex.px = positions[i * 3 + 0];
+			vertex.py = positions[i * 3 + 1];
+			vertex.pz = positions[i * 3 + 2];
+
+			if (normals)
+			{
+				vertex.nx = uint8_t(normals[i * 3 + 0] * 127.0f + 127.0f);
+				vertex.ny = uint8_t(normals[i * 3 + 1] * 127.0f + 127.0f);
+				vertex.nz = uint8_t(normals[i * 3 + 2] * 127.0f + 127.0f);
+			}
+
+			if (uvs)
+			{
+				vertex.ux = uvs[i * 2 + 0];
+				vertex.uy = uvs[i * 2 + 1];
+			}
+			mStagingData.vertices.push_back(vertex);
+		}
+
+		const tinygltf::Accessor& indicesAccessor = model->accessors[primitive.indices];
+		uint16_t* indicesPtr = (uint16_t*)gltfMesh::getBufferPtr(model, indicesAccessor);
+		uint32_t indexCount = (uint32_t)indicesAccessor.count;
+		mStagingData.indices.insert(mStagingData.indices.end(), indicesPtr, indicesPtr + indexCount);
+
+		ecs::Entity child = createEntity();
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
+		meshRenderer.vertexBuffer.byteOffset = vertexOffset;
+		meshRenderer.vertexBuffer.byteLength = (uint32_t)(numPosition * sizeof(Vertex));
+		meshRenderer.indexBuffer.byteOffset = indexOffset;
+		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
+
+		mComponentManager->AddComponent<MaterialComponent>(child);
+
+		AddChild(entity, child);
+	}
+
+	// Create the scene graph hierarchy
+	AddChild(parent, entity);
+
+	for (auto child : node.children)
+		parseNodeHierarchy(model, entity, child);
+}
+
+void Scene::parseScene(tinygltf::Model* model,
+	tinygltf::Scene* scene, ecs::Entity parent)
+{
+	ecs::Entity entity = createEntity(scene->name);
+	for (auto node : scene->nodes)
+		parseNodeHierarchy(model, parent, node);
+}
+
+ecs::Entity Scene::parseModel(tinygltf::Model* model)
+{
+	ecs::Entity root = createEntity();
+	for (auto& scene : model->scenes) {
+		parseScene(model, &scene, root);
+	}
+	return root;
+}
+
+void Scene::updateMeshRenderer(gfx::BufferHandle vertexBuffer, gfx::BufferHandle indexBuffer, ecs::Entity entity)
+{
+	auto meshRenderer = mComponentManager->GetComponent<MeshRenderer>(entity);
+	if (meshRenderer) {
+		meshRenderer->vertexBuffer.buffer = vertexBuffer;
+		meshRenderer->indexBuffer.buffer = indexBuffer;
+	}
+
+	auto hierarchyComponent = mComponentManager->GetComponent<HierarchyComponent>(entity);
+	if (hierarchyComponent) {
+		for (auto child : hierarchyComponent->childrens)
+			updateMeshRenderer(vertexBuffer, indexBuffer, child);
+	}
+}
+
+ecs::Entity Scene::CreateMesh(const std::string& filename)
+{
+	tinygltf::Model model;
+	if (gltfMesh::loadFile(filename, &model))
+	{
+		// clear the staging data
+		mStagingData.vertices.clear();
+		mStagingData.indices.clear();
+
+		gfx::GraphicsDevice* device = gfx::GetDevice();
+		ecs::Entity entity = parseModel(&model);
+		std::string name = filename.substr(filename.find_last_of("/\\") + 1, filename.size() - 1);
+		name = name.substr(0, name.find_last_of('.'));
+
+		mComponentManager->GetComponent<NameComponent>(entity)->name = name;
+
+		gfx::GPUBufferDesc bufferDesc;
+		bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+		bufferDesc.usage = gfx::Usage::Default;
+		bufferDesc.size = static_cast<uint32_t>(mStagingData.vertices.size() * sizeof(Vertex));
+
+		gfx::BufferHandle vertexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(vertexBuffer);
+		device->CopyToBuffer(vertexBuffer, mStagingData.vertices.data(), 0, bufferDesc.size);
+
+		bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
+		bufferDesc.size = static_cast<uint32_t>(mStagingData.indices.size() * sizeof(uint32_t));
+
+		gfx::BufferHandle indexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(indexBuffer);
+		device->CopyToBuffer(indexBuffer, mStagingData.indices.data(), 0, bufferDesc.size);
+
+		// Update all the mesh component recursively
+		updateMeshRenderer(vertexBuffer, indexBuffer, entity);
+	}
+	return ecs::INVALID_ENTITY;
+}
+
 
 void Scene::RemoveChild(ecs::Entity parent, ecs::Entity child)
 {
@@ -949,5 +452,18 @@ void Scene::RemoveChild(ecs::Entity parent, ecs::Entity child)
 		Logger::Info("Children Removed of Id: " + std::to_string(child));
 	else
 		Logger::Warn("No Children of Id: " + std::to_string(child));
+}
+
+void Scene::AddChild(ecs::Entity parent, ecs::Entity child)
+{
+	// Create the scene graph hierarchy
+	mComponentManager->AddComponent<HierarchyComponent>(child).parent = parent;
+
+	HierarchyComponent* parentHierarchyComponent = mComponentManager->GetComponent<HierarchyComponent>(parent);
+	if (parentHierarchyComponent == nullptr)
+		parentHierarchyComponent = &mComponentManager->AddComponent<HierarchyComponent>(parent);
+
+	parentHierarchyComponent->childrens.push_back(child);
+
 }
 

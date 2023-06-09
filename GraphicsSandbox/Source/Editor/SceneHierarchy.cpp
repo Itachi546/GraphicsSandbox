@@ -164,12 +164,14 @@ void SceneHierarchy::CreateObjectTab(std::shared_ptr<ecs::ComponentManager> mgr)
 {
 	if (ImGui::BeginTabItem("Create Objects"))
 	{
+		/*
 		if (ImGui::Button(ICON_FA_CIRCLE " Sphere"))
 			mSelected = mScene->CreateSphere("Sphere");
 		if(ImGui::Button(ICON_FA_CUBE " Cube"))
 			mSelected = mScene->CreateCube("Cube");
 		if(ImGui::Button(ICON_FA_SQUARE_FULL " Plane"))
 			mSelected = mScene->CreatePlane("Plane");
+			*/
 		if (ImGui::Button(ICON_FA_LIGHTBULB " Light"))
 			mSelected = mScene->CreateLight("Light");
 		if (ImGui::Button("Mesh"))

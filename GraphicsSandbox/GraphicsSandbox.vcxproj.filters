@@ -325,9 +325,6 @@
     <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\GLTF-Mesh.cpp">
-      <Filter>SOURCE</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />

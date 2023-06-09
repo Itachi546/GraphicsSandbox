@@ -6,7 +6,6 @@
 #include "../Engine/Animation/Animation.h"
 #include "../Engine/Interpolator.h"
 #include "../Engine/GUI/ImGuiService.h"
-#include "../Engine/GLTF-Mesh.h"
 
 #include "TransformGizmo.h"
 #include <iomanip>
@@ -104,9 +103,9 @@ void EditorApplication::InitializeScene()
 	mScene.SetEnableFrustumCulling(false);
 
 	auto compMgr = mScene.GetComponentManager();
-	//ecs::Entity scene = gltfMesh::loadFile("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
-	//ecs::Entity scene = gltfMesh::loadFile("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.gltf", compMgr.get());
-	ecs::Entity scene = gltfMesh::loadFile("C:/Users/Dell/OneDrive/Desktop/fracture/vat2.glb", compMgr.get());
+	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
+	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.gltf");
+	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/cube/cube.gltf");
 }
 
 /*

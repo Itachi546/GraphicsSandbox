@@ -11,6 +11,7 @@ layout(location = 0) out vec4 colorBuffer;
 layout(location = 1) out vec4 normalBuffer;
 layout(location = 2) out vec4 pbrBuffer;
 layout(location = 3) out vec4 positionBuffer;
+layout(location = 4) out vec4 emissiveBuffer;
 
 layout(location = 0) in VS_OUT 
 {
@@ -75,4 +76,9 @@ void main()
   if(material.ambientOcclusionMap != INVALID_TEXTURE)
     ao = texture(uTextures[nonuniformEXT(material.ambientOcclusionMap)], fs_in.uv).r;
   pbrBuffer = vec4(metallic, roughness, ao, 1.0);
+
+  vec3 emissive = material.emissive;
+  if(material.emissiveMap != INVALID_TEXTURE)
+    emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb;
+  emissiveBuffer = vec4(emissive, 1.0);
 }

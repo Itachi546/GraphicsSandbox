@@ -29,9 +29,9 @@ void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
 	pipelineDesc.rasterizationState.enableDepthWrite = true;
 	pipelineDesc.rasterizationState.enableDepthClamp = true;
 
-	gfx::BlendState blendStates[4] = {};
+	gfx::BlendState blendStates[5] = {};
 	pipelineDesc.blendStates = blendStates;
-	pipelineDesc.blendStateCount = 4;
+	pipelineDesc.blendStateCount = 5;
 	pipeline = gfx::GetDevice()->CreateGraphicsPipeline(&pipelineDesc);
 
 	delete[] vertexCode;

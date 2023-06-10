@@ -94,6 +94,7 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.colorBuffer = mFrameGraphBuilder.AccessResource("gbuffer_colour")->info.texture.texture.handle;
 	mEnvironmentData.normalBuffer = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture.handle;
 	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
+	mEnvironmentData.emissiveBuffer = mFrameGraphBuilder.AccessResource("gbuffer_emissive")->info.texture.texture.handle;
 	mEnvironmentData.globalAO = 0.2f;
 }
 

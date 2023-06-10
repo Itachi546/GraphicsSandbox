@@ -82,7 +82,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS;_CRT_SECURE_NO_WARNINGS;USE_INTEGRATED_GPU</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

@@ -125,4 +125,26 @@ namespace MathUtils
 	{
 		return rand() / float(RAND_MAX);
 	}
+
+	// learnopengl.com/Advanced-Lighting/Normal-Mapping
+	inline void GenerateTangentSpaceDirection(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2,
+		                               const glm::vec2& uv0, const glm::vec2& uv1, glm::vec2& uv2, 
+		                               glm::vec3& out_tangent, glm::vec3& out_bitangent)
+	{
+		glm::vec3 e1 = p1 - p0;
+		glm::vec3 e2 = p2 - p1;
+
+		glm::vec2 duv1 = uv1 - uv0;
+		glm::vec2 duv2 = uv2 - uv1;
+
+		float f = 1.0f / (duv1.x * duv2.y - duv1.y * duv2.x);
+
+		out_tangent.x = f * (duv2.y * e1.x - duv1.y * e2.x);
+		out_tangent.y = f * (duv2.y * e1.y - duv1.y * e2.y);
+		out_tangent.z = f * (duv2.y * e1.z - duv1.y * e2.z);
+
+		out_bitangent.x = f * (-duv2.x * e1.x + duv1.x * e2.x);
+		out_bitangent.y = f * (-duv2.x * e1.y + duv1.x * e2.y);
+		out_bitangent.z = f * (-duv2.x * e1.z + duv1.x * e2.z);
+	}
 }

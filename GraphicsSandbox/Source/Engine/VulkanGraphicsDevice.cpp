@@ -1120,7 +1120,6 @@ namespace gfx {
             }
 
             if (!suitable) continue;
-
 #if USE_INTEGRATED_GPU
             if (properties2_.properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
                 return physicalDevice;
@@ -2451,7 +2450,7 @@ namespace gfx {
         VulkanBuffer* srcBuffer = buffers.AccessResource(src.handle);
         VulkanBuffer* dstBuffer = buffers.AccessResource(dst.handle);
 
-        uint32_t copySize = static_cast<uint32_t>(std::min(dstBuffer->allocation->GetSize(), srcBuffer->allocation->GetSize()));
+        uint32_t copySize = static_cast<uint32_t>(std::min(dstBuffer->desc.size, srcBuffer->desc.size));
         if (dstBuffer->mappedDataPtr && srcBuffer->mappedDataPtr)
             std::memcpy(dstBuffer->mappedDataPtr, srcBuffer->mappedDataPtr, copySize);
         else 

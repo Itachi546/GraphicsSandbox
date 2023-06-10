@@ -16,19 +16,20 @@ layout(binding = 0) readonly buffer LightBuffer {
 
 layout(push_constant) uniform PushConstants
 {
-	uint nLight;
 	uint uIrradianceMap;
 	uint uPrefilterEnvMap;
 	uint uBRDFLUT;
-
 	uint uPositionBuffer;
+
 	uint uNormalBuffer;
 	uint uPBRBuffer;
 	uint uColorBuffer;
+	uint uEmissiveBuffer;
 
 	vec3 uCameraPosition;
 	float exposure;
 	float globalAO;
+	uint nLight;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -112,7 +113,7 @@ vec3 CalculateColor(vec2 uv)
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
 	vec3 ambient = (Kd * diffuse + specular) * ao;
-	vec3 emissive = vec3(0.0);//material.emissive * albedo.rgb;
+	vec3 emissive = texture(uTextures[nonuniformEXT(uEmissiveBuffer)], uv).rgb;
 
 	//if(material.emissiveMap != INVALID_TEXTURE)
 	//emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb * material.emissive;

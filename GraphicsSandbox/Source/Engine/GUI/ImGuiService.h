@@ -11,25 +11,26 @@ namespace gfx {
 	struct CommandList;
 }
 
-struct ImGuiService {
+namespace ui {
+	struct ImGuiService {
 
-	static ImGuiService* GetInstance()
-	{
-		static ImGuiService* instance = new ImGuiService();
-		return instance;
-	}
+		static ImGuiService* GetInstance()
+		{
+			static ImGuiService* instance = new ImGuiService();
+			return instance;
+		}
 
-	void Init(Platform::WindowType window, std::shared_ptr<gfx::GraphicsDevice> device);
+		void Init(Platform::WindowType window, std::shared_ptr<gfx::GraphicsDevice> device);
 
-	void NewFrame();
+		void NewFrame();
 
-	void Render(gfx::CommandList* commandList);
+		void Render(gfx::CommandList* commandList);
 
-	bool IsAcceptingEvent();
+		bool IsAcceptingEvent();
 
-	void Shutdown();
+		void Shutdown();
 
-	std::shared_ptr<gfx::VulkanGraphicsDevice> device;
-	bool enabled = true;
-
+		std::shared_ptr<gfx::VulkanGraphicsDevice> device;
+		bool enabled = true;
+	};
 };

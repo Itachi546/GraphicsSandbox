@@ -11,7 +11,11 @@
 namespace tinygltf {
 	class Model;
 	struct Scene;
-}
+};
+
+namespace ui {
+	class SceneHierarchy;
+};
 
 class Scene
 {
@@ -111,11 +115,15 @@ private:
 		std::vector<unsigned int> indices;
 	} mStagingData;
 
+	void parseMaterial(tinygltf::Model* model, MaterialComponent* component, uint32_t matIndex);
 	ecs::Entity parseModel(tinygltf::Model* model);
 	ecs::Entity createEntity(const std::string& name = "");
-	void parseScene(tinygltf::Model* model, tinygltf::Scene* scene, ecs::Entity parent);
+	ecs::Entity parseScene(tinygltf::Model* model, tinygltf::Scene* scene);
 	void parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex);
 	void updateMeshRenderer(gfx::BufferHandle vertexBuffer, gfx::BufferHandle indexBuffer, ecs::Entity parent);
+
+	// Debug Options
+	std::shared_ptr<ui::SceneHierarchy> mUISceneHierarchy;
 
 	friend class Renderer;
 };

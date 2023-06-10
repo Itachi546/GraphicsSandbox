@@ -142,13 +142,13 @@
     <ClInclude Include="Source\Test\BloomTest.h">
       <Filter>TEST</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\SceneHierarchy.h">
+    <ClInclude Include="Source\Engine\GUI\SceneHierarchy.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
     <ClInclude Include="Source\Editor\EditorApplication.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Editor\FileDialog.h">
+    <ClInclude Include="Source\Engine\GUI\FileDialog.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
     <ClInclude Include="Source\Test\SponzaTest.h">
@@ -286,7 +286,7 @@
     <ClCompile Include="Source\Shared\MathUtils.cpp">
       <Filter>SOURCE\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Editor\SceneHierarchy.cpp">
+    <ClCompile Include="Source\Engine\GUI\SceneHierarchy.cpp">
       <Filter>EDITOR</Filter>
     </ClCompile>
     <ClCompile Include="Source\Engine\TextureCache.cpp">

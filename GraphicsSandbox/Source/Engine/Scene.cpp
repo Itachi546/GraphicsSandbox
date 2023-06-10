@@ -6,6 +6,7 @@
 #include "../Shared/MathUtils.h"
 #include "StringConstants.h"
 #include "GUI/ImGuiService.h"
+#include "GUI/SceneHierarchy.h"
 #include "GLTF-Mesh.h"
 
 #include <execution>
@@ -30,6 +31,9 @@ void Scene::Initialize()
 	mEnvMap->CalculateIrradiance();
 	mEnvMap->Prefilter();
 	mEnvMap->CalculateBRDFLUT();
+
+	// Initialize debug UI
+	mUISceneHierarchy = std::make_shared<ui::SceneHierarchy>(this);
 }
 
 void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
@@ -137,7 +141,8 @@ void Scene::Update(float dt)
 	mCamera.Update(dt);
 	UpdateTransform();
 	UpdateHierarchy();
-
+	
+	mUISceneHierarchy->Update(dt);
 	if(mShowBoundingBox)
 		DrawBoundingBox();
 
@@ -170,6 +175,7 @@ void Scene::Destroy(ecs::Entity entity)
 
 void Scene::AddUI()
 {
+	mUISceneHierarchy->AddUI();
 	LightComponent* light = mComponentManager->GetComponent<LightComponent>(mSun);
 	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(mSun);
 	if (ImGui::CollapsingHeader("Directional Light"))
@@ -262,6 +268,7 @@ void Scene::InitializeLights()
 	light.intensity = 1.0f;
 	light.type = LightType::Directional;
 
+	/*
 	for (uint32_t i = 0; i < 10; ++i)
 	{
 		ecs::Entity light = ecs::CreateEntity();
@@ -275,14 +282,68 @@ void Scene::InitializeLights()
 		lightComp.intensity = 10.0f;
 		lightComp.type = LightType::Point;
 	}
-
+	*/
 }
 
 ecs::Entity Scene::createEntity(const std::string& name) {
 	ecs::Entity entity = ecs::CreateEntity();
 	mComponentManager->AddComponent<TransformComponent>(entity);
-	mComponentManager->AddComponent<NameComponent>(entity).name = name;
+	mComponentManager->AddComponent<NameComponent>(entity).name = name.length() > 0 ? name : "unnamed";
 	return entity;
+}
+
+void Scene::parseMaterial(tinygltf::Model* model, MaterialComponent* component, uint32_t matIndex) {
+	tinygltf::Material& material = model->materials[matIndex];
+	component->alphaCutoff = (float)material.alphaCutoff;
+
+	if (material.alphaMode == "BLEND")
+		component->alphaMode = ALPHAMODE_BLEND;
+	else if (material.alphaMode == "MASK")
+		component->alphaMode = ALPHAMODE_MASK;
+
+	// Parse Material value
+	tinygltf::PbrMetallicRoughness& pbr = material.pbrMetallicRoughness;
+	std::vector<double>& baseColor = pbr.baseColorFactor;
+	component->albedo = glm::vec4((float)baseColor[0], (float)baseColor[1], (float)baseColor[2], (float)baseColor[3]);
+	component->transparency = (float)baseColor[3];
+	component->metallic = (float)pbr.metallicFactor;
+	component->roughness = (float)pbr.roughnessFactor;
+	std::vector<double>& emissiveColor = material.emissiveFactor;
+	component->emissive = glm::vec3((float)emissiveColor[0], (float)emissiveColor[1], (float)emissiveColor[2]);
+
+	// Parse Material texture
+
+	if (pbr.baseColorTexture.index >= 0)
+	{
+		tinygltf::Texture& albedoMap = model->textures[pbr.baseColorTexture.index];
+		tinygltf::Image& image = model->images[albedoMap.source];
+		component->albedoMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
+	}
+
+	if (pbr.metallicRoughnessTexture.index >= 0) {
+		tinygltf::Texture& metallicMap = model->textures[pbr.metallicRoughnessTexture.index];
+		tinygltf::Image& image = model->images[metallicMap.source];
+		component->roughnessMap = component->metallicMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
+	}
+
+	if (material.normalTexture.index >= 0) {
+		tinygltf::Texture& normalMap = model->textures[material.normalTexture.index];
+		tinygltf::Image& image = model->images[normalMap.source];
+		component->normalMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
+
+	}
+
+	if (material.occlusionTexture.index >= 0) {
+		tinygltf::Texture& aoMap = model->textures[material.occlusionTexture.index];
+		tinygltf::Image& image = model->images[aoMap.source];
+		component->ambientOcclusionMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
+	}
+
+	if (material.emissiveTexture.index >= 0) {
+		tinygltf::Texture& emissiveMap = model->textures[material.emissiveTexture.index];
+		tinygltf::Image& image = model->images[emissiveMap.source];
+		component->emissiveMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
+	}
 }
 
 void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex) {
@@ -345,7 +406,7 @@ void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int n
 			if (uvs)
 			{
 				vertex.ux = uvs[i * 2 + 0];
-				vertex.uy = uvs[i * 2 + 1];
+				vertex.uy = 1.0f - uvs[i * 2 + 1];
 			}
 			mStagingData.vertices.push_back(vertex);
 		}
@@ -355,14 +416,16 @@ void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int n
 		uint32_t indexCount = (uint32_t)indicesAccessor.count;
 		mStagingData.indices.insert(mStagingData.indices.end(), indicesPtr, indicesPtr + indexCount);
 
-		ecs::Entity child = createEntity();
+		std::string name = mesh.name.length() > 0 ? mesh.name : "unnamed";
+		ecs::Entity child = createEntity("submesh_" + name);
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
 		meshRenderer.vertexBuffer.byteOffset = vertexOffset;
 		meshRenderer.vertexBuffer.byteLength = (uint32_t)(numPosition * sizeof(Vertex));
 		meshRenderer.indexBuffer.byteOffset = indexOffset;
 		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
 
-		mComponentManager->AddComponent<MaterialComponent>(child);
+		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
+		parseMaterial(model, &material, primitive.material);
 
 		AddChild(entity, child);
 	}
@@ -374,19 +437,21 @@ void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int n
 		parseNodeHierarchy(model, entity, child);
 }
 
-void Scene::parseScene(tinygltf::Model* model,
-	tinygltf::Scene* scene, ecs::Entity parent)
+ecs::Entity Scene::parseScene(tinygltf::Model* model,
+	tinygltf::Scene* scene)
 {
 	ecs::Entity entity = createEntity(scene->name);
 	for (auto node : scene->nodes)
-		parseNodeHierarchy(model, parent, node);
+		parseNodeHierarchy(model, entity, node);
+	return entity;
 }
 
 ecs::Entity Scene::parseModel(tinygltf::Model* model)
 {
 	ecs::Entity root = createEntity();
 	for (auto& scene : model->scenes) {
-		parseScene(model, &scene, root);
+		ecs::Entity entity = parseScene(model, &scene);
+		AddChild(root, entity);
 	}
 	return root;
 }

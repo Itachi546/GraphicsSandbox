@@ -21,7 +21,6 @@ void EditorApplication::Initialize()
 	mHeight = (float)props.height;
 	mCamera = mScene.GetCamera();
 	InitializeScene();
-	mHierarchy = std::make_shared<SceneHierarchy>(&mScene, mWindow);
 }
 
 void EditorApplication::PreUpdate(float dt) {
@@ -56,7 +55,6 @@ void EditorApplication::PreUpdate(float dt) {
 	if (Input::Press(Input::Key::KEY_H))
 		mShowUI = !mShowUI;
 
-	mHierarchy->Update(dt);
 	mCurrentTime += dt;
 
 	auto compMgr = mScene.GetComponentManager();
@@ -103,8 +101,8 @@ void EditorApplication::InitializeScene()
 	mScene.SetEnableFrustumCulling(false);
 
 	auto compMgr = mScene.GetComponentManager();
-	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
-	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.gltf");
+	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
+	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
 	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/cube/cube.gltf");
 }
 

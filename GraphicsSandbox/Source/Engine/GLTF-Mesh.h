@@ -4,6 +4,7 @@
 
 #include <string>
 #define TINYGLTF_IMPLEMENTATION
+//#define TINYGLTF_NO_EXTERNAL_IMAGE
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_NOEXCEPTION
 #define JSON_NOEXCEPTION
@@ -16,7 +17,13 @@ namespace gltfMesh {
 		std::string err{};
 		std::string warn{};
 
-		bool res = loader.LoadASCIIFromFile(out, &err, &warn, filename);
+		std::string extension = filename.substr(filename.find_last_of('.') + 1, filename.length());
+		bool res = false;
+		if (extension == "gltf")
+			res = loader.LoadASCIIFromFile(out, &err, &warn, filename);
+		else
+			res = loader.LoadBinaryFromFile(out, &err, &warn, filename);
+
 		if (!warn.empty())
 			Logger::Warn(warn);
 		if (!err.empty())

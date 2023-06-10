@@ -145,7 +145,7 @@ void Renderer::Update(float dt)
 void Renderer::Render(gfx::CommandList* commandList)
 {
 	// New GUI Frame
-	ImGuiService::GetInstance()->NewFrame();
+	ui::ImGuiService::GetInstance()->NewFrame();
 	ImGui::Begin("Renderer");
 
 	mScene->AddUI();
@@ -278,7 +278,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 	// Draw GUI
 	start = Profiler::StartRangeGPU(commandList, "imgui");
-	ImGuiService::GetInstance()->Render(commandList);
+	ui::ImGuiService::GetInstance()->Render(commandList);
 
 	mDevice->EndRenderPass(commandList);
 	Profiler::EndRangeGPU(commandList, start);

@@ -39,7 +39,7 @@ void Application::initialize_()
 	mInitialized = true;
 	Logger::Debug("Intialized Application: (" + std::to_string(timer.elapsedSeconds()) + "s)");
 
-	mGuiService = ImGuiService::GetInstance();
+	mGuiService = ui::ImGuiService::GetInstance();
 	mGuiService->Init(mWindow, mDevice);
 }
 
@@ -135,7 +135,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 Application::~Application()
 {
 	// Wait for rendering to finish
-	ImGuiService::GetInstance()->Shutdown();
+	ui::ImGuiService::GetInstance()->Shutdown();
 	TextureCache::Shutdown();
 	DebugDraw::Shutdown();
 	mScene.Shutdown();

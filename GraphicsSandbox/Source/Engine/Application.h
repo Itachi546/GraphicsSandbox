@@ -14,7 +14,10 @@
 #include <memory>
 
 class Renderer;
-struct ImGuiService;
+
+namespace ui {
+	struct ImGuiService;
+};
 
 class Application
 {
@@ -58,7 +61,7 @@ protected:
 
 	Platform::WindowType mWindow = nullptr;
 	std::shared_ptr<gfx::GraphicsDevice > mDevice = nullptr;
-	ImGuiService* mGuiService = nullptr;
+	ui::ImGuiService* mGuiService = nullptr;
 
 	std::unique_ptr<Renderer> mRenderer;
 

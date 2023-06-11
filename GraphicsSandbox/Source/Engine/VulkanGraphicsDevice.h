@@ -117,9 +117,11 @@ namespace gfx
 
 		bool debugMarkerEnabled_ = false;
 
+		// Feature support flag
 		bool supportBindless = false;
 		bool supportTimelineSemaphore = false;
 		bool supportSynchronization2 = false;
+		bool supportMeshShader = false;
 
 		VkCommandPool* commandPool_ = nullptr;
 		VkCommandBuffer* commandBuffer_ = nullptr;
@@ -188,7 +190,9 @@ namespace gfx
 		VkPhysicalDevice findSuitablePhysicalDevice(const std::vector<const char*>& requiredDeviceExtensions);
 		bool createSwapchainInternal();
 		VkShaderModule createShader(VkDevice device, const char* data, uint32_t sizeInByte, VkShaderStageFlagBits shaderStage);
-		void checkExtensionSupportForPhysicalDevice(VkPhysicalDevice physicalDevice, std::vector<const char*>& requiredDeviceExtensions);
+		void checkExtensionSupportForPhysicalDevice(VkPhysicalDevice physicalDevice,
+			const std::vector<const char*>& requiredDeviceExtensions,
+			std::vector<const char*>& availableExtensions);
 
 		void destroyReleasedResources();
 

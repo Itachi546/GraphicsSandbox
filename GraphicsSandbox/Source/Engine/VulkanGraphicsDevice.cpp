@@ -1159,19 +1159,22 @@ namespace gfx {
         return shaderModule;
     }
 
-    void VulkanGraphicsDevice::checkExtensionSupportForPhysicalDevice(VkPhysicalDevice physicalDevice, std::vector<const char*>& requiredDeviceExtensions)
+    void VulkanGraphicsDevice::checkExtensionSupportForPhysicalDevice(VkPhysicalDevice physicalDevice,
+        const std::vector<const char*>& requiredDeviceExtensions,
+        std::vector<const char*>& availableExtensions)
     {
         uint32_t deviceExtensionCount = 0;
         VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, nullptr));
-        std::vector<VkExtensionProperties> availableExtension(deviceExtensionCount);
-        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, availableExtension.data()));
+        std::vector<VkExtensionProperties> deviceExtensions(deviceExtensionCount);
+        VK_CHECK(vkEnumerateDeviceExtensionProperties(physicalDevice_, nullptr, &deviceExtensionCount, deviceExtensions.data()));
         for (auto& required : requiredDeviceExtensions)
         {
             bool found = false;
-            for (auto& extension : availableExtension)
+            for (auto& extension : deviceExtensions)
             {
                 if (std::strcmp(extension.extensionName, required) == 0) {
                     Logger::Info("Extension Supported: " + std::string(extension.extensionName));
+                    availableExtensions.push_back(required);
                     found = true;
                     break;
                 }
@@ -1183,6 +1186,9 @@ namespace gfx {
 
                 if (std::strcmp(required, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0)
                     supportSynchronization2 = true;
+
+                if (std::strcmp(required, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
+                    supportMeshShader = true;
             }
             else {
                 Logger::Info("Extension not supported: " + std::string(required));
@@ -1288,7 +1294,8 @@ namespace gfx {
         std::vector<const char*> requiredDeviceExtensions = {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
-            VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
+            VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+            VK_EXT_MESH_SHADER_EXTENSION_NAME,
         };
 
         // Create physical device
@@ -1297,7 +1304,8 @@ namespace gfx {
         Logger::Debug("Selected Physical Device: " + std::string(properties2_.properties.deviceName));
 
         // Check for extension support
-        checkExtensionSupportForPhysicalDevice(physicalDevice_, requiredDeviceExtensions);
+        std::vector<const char*> availableExtensions;
+        checkExtensionSupportForPhysicalDevice(physicalDevice_, requiredDeviceExtensions, availableExtensions);
 
         // Check for bindless support
         VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT, nullptr };
@@ -1355,17 +1363,30 @@ namespace gfx {
         features2_.pNext = &features11_;
         features11_.pNext = &features12_;
 
-        VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR };
-        synchronization2Features.synchronization2 = true;
-        features12_.pNext = &synchronization2Features;
+        void* currentPNext = nullptr;
+		VkPhysicalDeviceSynchronization2FeaturesKHR synchronization2Features{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR };
+        if (supportSynchronization2) {
+            synchronization2Features.synchronization2 = true;
+            synchronization2Features.pNext = currentPNext;
+			currentPNext = &synchronization2Features;
+        }
+
+		VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures{ VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV };
+        if (supportMeshShader) {
+            meshShaderFeatures.meshShader = true;
+            meshShaderFeatures.taskShader = true;
+            meshShaderFeatures.pNext = currentPNext;
+            currentPNext = &meshShaderFeatures;
+        }
+        features12_.pNext = currentPNext;
 
         // Create logical device
         VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
         deviceCreateInfo.queueCreateInfoCount = 1;
         deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
         deviceCreateInfo.pEnabledFeatures = nullptr;
-        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(requiredDeviceExtensions.size());
-        deviceCreateInfo.ppEnabledExtensionNames = requiredDeviceExtensions.data();
+        deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(availableExtensions.size());
+        deviceCreateInfo.ppEnabledExtensionNames = availableExtensions.data();
         deviceCreateInfo.pNext = &features2_;
 
         VK_CHECK(vkCreateDevice(physicalDevice_, &deviceCreateInfo, nullptr, &device_));

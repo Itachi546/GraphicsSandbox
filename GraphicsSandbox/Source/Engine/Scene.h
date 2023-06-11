@@ -11,6 +11,7 @@
 namespace tinygltf {
 	class Model;
 	struct Scene;
+	struct Mesh;
 };
 
 namespace ui {
@@ -115,6 +116,7 @@ private:
 		std::vector<unsigned int> indices;
 	} mStagingData;
 
+	void parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity parent);
 	void parseMaterial(tinygltf::Model* model, MaterialComponent* component, uint32_t matIndex);
 	ecs::Entity parseModel(tinygltf::Model* model);
 	ecs::Entity createEntity(const std::string& name = "");

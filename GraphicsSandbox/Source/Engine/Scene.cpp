@@ -346,28 +346,13 @@ void Scene::parseMaterial(tinygltf::Model* model, MaterialComponent* component, 
 	}
 }
 
-void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex) {
-	tinygltf::Node& node = model->nodes[nodeIndex];
-
-	// Create entity and write the transforms
-	ecs::Entity entity = createEntity(node.name);
-	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-	if (node.translation.size() > 0)
-		transform->position = glm::vec3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
-	if (node.rotation.size() > 0)
-		transform->rotation = glm::fquat((float)node.rotation[3], (float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]);
-	if (node.scale.size() > 0)
-		transform->scale = glm::vec3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
-
-	// Update MeshData
-	if (node.mesh >= 0) {
-		tinygltf::Mesh& mesh = model->meshes[node.mesh];
-		for (auto& primitive : mesh.primitives)
-		{
-			// Parse position
-			const tinygltf::Accessor& positionAccessor = model->accessors[primitive.attributes["POSITION"]];
-			float* positions = (float*)gltfMesh::getBufferPtr(model, positionAccessor);
-			uint32_t numPosition = (uint32_t)positionAccessor.count;
+void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity parent) {
+	for (auto& primitive : mesh.primitives)
+	{
+		// Parse position
+		const tinygltf::Accessor& positionAccessor = model->accessors[primitive.attributes["POSITION"]];
+		float* positions = (float*)gltfMesh::getBufferPtr(model, positionAccessor);
+		uint32_t numPosition = (uint32_t)positionAccessor.count;
 
 			// Parse normals
 			float* normals = nullptr;
@@ -457,6 +442,43 @@ void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int n
 			parseMaterial(model, &material, primitive.material);
 			AddChild(entity, child);
 		}
+
+		const tinygltf::Accessor& indicesAccessor = model->accessors[primitive.indices];
+		uint16_t* indicesPtr = (uint16_t*)gltfMesh::getBufferPtr(model, indicesAccessor);
+		uint32_t indexCount = (uint32_t)indicesAccessor.count;
+		mStagingData.indices.insert(mStagingData.indices.end(), indicesPtr, indicesPtr + indexCount);
+
+		std::string name = mesh.name.length() > 0 ? mesh.name : "unnamed";
+		ecs::Entity child = createEntity("submesh_" + name);
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
+		meshRenderer.vertexBuffer.byteOffset = vertexOffset;
+		meshRenderer.vertexBuffer.byteLength = (uint32_t)(numPosition * sizeof(Vertex));
+		meshRenderer.indexBuffer.byteOffset = indexOffset;
+		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
+
+		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
+		parseMaterial(model, &material, primitive.material);
+		AddChild(parent, child);
+	}
+}
+
+void Scene::parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex) {
+	tinygltf::Node& node = model->nodes[nodeIndex];
+
+	// Create entity and write the transforms
+	ecs::Entity entity = createEntity(node.name);
+	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
+	if (node.translation.size() > 0)
+		transform->position = glm::vec3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]);
+	if (node.rotation.size() > 0)
+		transform->rotation = glm::fquat((float)node.rotation[3], (float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]);
+	if (node.scale.size() > 0)
+		transform->scale = glm::vec3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]);
+
+	// Update MeshData
+	if (node.mesh >= 0) {
+		tinygltf::Mesh& mesh = model->meshes[node.mesh];
+		parseMesh(model, mesh, entity);
 	}
 
 	// Create the scene graph hierarchy

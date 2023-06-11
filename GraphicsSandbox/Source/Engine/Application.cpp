@@ -113,7 +113,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 #if defined(USE_VULKAN)
 	gfx::ValidationMode validationMode = gfx::ValidationMode::Enabled;
-#ifdef NDEBUG
+#ifndef ENABLE_VALIDATIONS
 	validationMode = gfx::ValidationMode::Disabled;
 #endif
 	mDevice = std::make_unique<gfx::VulkanGraphicsDevice>(window, validationMode);

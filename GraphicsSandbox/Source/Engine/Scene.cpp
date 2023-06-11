@@ -354,93 +354,74 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		float* positions = (float*)gltfMesh::getBufferPtr(model, positionAccessor);
 		uint32_t numPosition = (uint32_t)positionAccessor.count;
 
-			// Parse normals
-			float* normals = nullptr;
-			auto normalAttributes = primitive.attributes.find("NORMAL");
-			if (normalAttributes != primitive.attributes.end()) {
-				const tinygltf::Accessor& normalAccessor = model->accessors[normalAttributes->second];
-				assert(numPosition == normalAccessor.count);
-				normals = (float*)gltfMesh::getBufferPtr(model, normalAccessor);
+		// Parse normals
+		float* normals = nullptr;
+		auto normalAttributes = primitive.attributes.find("NORMAL");
+		if (normalAttributes != primitive.attributes.end()) {
+			const tinygltf::Accessor& normalAccessor = model->accessors[normalAttributes->second];
+			assert(numPosition == normalAccessor.count);
+			normals = (float*)gltfMesh::getBufferPtr(model, normalAccessor);
+		}
+
+		// Parse tangents
+		float* tangents = nullptr;
+		auto tangentAttributes = primitive.attributes.find("TANGENT");
+		if (tangentAttributes != primitive.attributes.end()) {
+			const tinygltf::Accessor& tangentAccessor = model->accessors[normalAttributes->second];
+			assert(numPosition == tangentAccessor.count);
+			tangents = (float*)gltfMesh::getBufferPtr(model, tangentAccessor);
+		}
+
+		// Parse UV
+		float* uvs = nullptr;
+		auto uvAttributes = primitive.attributes.find("TEXCOORD_0");
+		if (uvAttributes != primitive.attributes.end()) {
+			const tinygltf::Accessor& uvAccessor = model->accessors[uvAttributes->second];
+			assert(numPosition == uvAccessor.count);
+			uvs = (float*)gltfMesh::getBufferPtr(model, uvAccessor);
+		}
+
+
+		uint32_t vertexOffset = (uint32_t)(mStagingData.vertices.size() * sizeof(Vertex));
+		uint32_t indexOffset = (uint32_t)(mStagingData.indices.size() * sizeof(uint32_t));
+
+		Vertex vertex = {};
+		for (uint32_t i = 0; i < numPosition; ++i) {
+			vertex.px = positions[i * 3 + 0];
+			vertex.py = positions[i * 3 + 1];
+			vertex.pz = positions[i * 3 + 2];
+
+			glm::vec3 n = glm::vec3(0.0f, 1.0f, 0.0f);
+			if (normals)
+			{
+				n = glm::vec3(normals[i * 3 + 0], normals[i * 3 + 1], normals[i * 3 + 2]);
+				vertex.nx = uint8_t(n.x * 127.0f + 127.0f);
+				vertex.ny = uint8_t(n.y * 127.0f + 127.0f);
+				vertex.nz = uint8_t(n.z * 127.0f + 127.0f);
 			}
 
-			// Parse tangents
-			float* tangents = nullptr;
-			auto tangentAttributes = primitive.attributes.find("TANGENT");
-			if (tangentAttributes != primitive.attributes.end()) {
-				const tinygltf::Accessor& tangentAccessor = model->accessors[normalAttributes->second];
-				assert(numPosition == tangentAccessor.count);
-				tangents = (float*)gltfMesh::getBufferPtr(model, tangentAccessor);
-			}
-
-			// Parse UV
-			float* uvs = nullptr;
-			auto uvAttributes = primitive.attributes.find("TEXCOORD_0");
-			if (uvAttributes != primitive.attributes.end()) {
-				const tinygltf::Accessor& uvAccessor = model->accessors[uvAttributes->second];
-				assert(numPosition == uvAccessor.count);
-				uvs = (float*)gltfMesh::getBufferPtr(model, uvAccessor);
+			if (uvs)
+			{
+				vertex.ux = uvs[i * 2 + 0];
+				vertex.uy = 1.0f - uvs[i * 2 + 1];
 			}
 
 
-			uint32_t vertexOffset = (uint32_t)(mStagingData.vertices.size() * sizeof(Vertex));
-			uint32_t indexOffset = (uint32_t)(mStagingData.indices.size() * sizeof(uint32_t));
+			if (tangents) {
+				glm::vec3 t = glm::vec3(tangents[i * 3 + 0], tangents[i * 3 + 0], tangents[i * 3 + 0]);
+				glm::vec3 bt = glm::normalize(glm::cross(n, t));
 
-			Vertex vertex = {};
-			for (uint32_t i = 0; i < numPosition; ++i) {
-				vertex.px = positions[i * 3 + 0];
-				vertex.py = positions[i * 3 + 1];
-				vertex.pz = positions[i * 3 + 2];
+				vertex.tx = uint8_t(t.x * 127.0f + 127.0f);
+				vertex.ty = uint8_t(t.y * 127.0f + 127.0f);
+				vertex.tz = uint8_t(t.z * 127.0f + 127.0f);
 
-				glm::vec3 n = glm::vec3(0.0f, 1.0f, 0.0f);
-				if (normals)
-				{
-					n = glm::vec3(normals[i * 3 + 0], normals[i * 3 + 1], normals[i * 3 + 2]);
-					vertex.nx = uint8_t(n.x * 127.0f + 127.0f);
-					vertex.ny = uint8_t(n.y * 127.0f + 127.0f);
-					vertex.nz = uint8_t(n.z * 127.0f + 127.0f);
-				}
+				vertex.bx = uint8_t(bt.x * 127.0f + 127.0f);
+				vertex.by = uint8_t(bt.y * 127.0f + 127.0f);
+				vertex.bz = uint8_t(bt.z * 127.0f + 127.0f);
 
-				if (uvs)
-				{
-					vertex.ux = uvs[i * 2 + 0];
-					vertex.uy = 1.0f - uvs[i * 2 + 1];
-				}
-
-
-				if (tangents) {
-					glm::vec3 t = glm::vec3(tangents[i * 3 + 0], tangents[i * 3 + 0], tangents[i * 3 + 0]);
-					glm::vec3 bt = glm::normalize(glm::cross(n, t));
-
-					vertex.tx = uint8_t(t.x * 127.0f + 127.0f);
-					vertex.ty = uint8_t(t.y * 127.0f + 127.0f);
-					vertex.tz = uint8_t(t.z * 127.0f + 127.0f);
-
-					vertex.bx = uint8_t(bt.x * 127.0f + 127.0f);
-					vertex.by = uint8_t(bt.y * 127.0f + 127.0f);
-					vertex.bz = uint8_t(bt.z * 127.0f + 127.0f);
-
-				}
-
-				mStagingData.vertices.push_back(vertex);
 			}
 
-			const tinygltf::Accessor& indicesAccessor = model->accessors[primitive.indices];
-			uint16_t* indicesPtr = (uint16_t*)gltfMesh::getBufferPtr(model, indicesAccessor);
-			uint32_t indexCount = (uint32_t)indicesAccessor.count;
-
-			mStagingData.indices.insert(mStagingData.indices.end(), indicesPtr, indicesPtr + indexCount);
-
-			std::string name = mesh.name.length() > 0 ? mesh.name : "unnamed";
-			ecs::Entity child = createEntity("submesh_" + name);
-			MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
-			meshRenderer.vertexBuffer.byteOffset = vertexOffset;
-			meshRenderer.vertexBuffer.byteLength = (uint32_t)(numPosition * sizeof(Vertex));
-			meshRenderer.indexBuffer.byteOffset = indexOffset;
-			meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
-
-			MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
-			parseMaterial(model, &material, primitive.material);
-			AddChild(entity, child);
+			mStagingData.vertices.push_back(vertex);
 		}
 
 		const tinygltf::Accessor& indicesAccessor = model->accessors[primitive.indices];

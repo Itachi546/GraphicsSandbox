@@ -99,6 +99,11 @@ struct IMeshRenderer
 	uint32_t flags = Renderable;
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
+
+	gfx::BufferHandle meshletBuffer;
+	gfx::BufferHandle meshletVertexBuffer;
+	gfx::BufferHandle meshletTriangleBuffer;
+
 	BoundingBox boundingBox;
 
 	void SetRenderable(bool value) {

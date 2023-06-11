@@ -436,15 +436,40 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		std::vector<uint32_t> meshletVertices(maxMeshlets * MAX_MESHLET_VERTICES);
 		std::vector<uint8_t> meshletTriangles(maxMeshlets * MAX_MESHLET_TRIANGLES * 3);
 
-		std::size_t meshletCount = meshopt_buildMeshlets(localMeshlets.data(), meshletVertices.data(), meshletTriangles.data(), indices.data(), indexCount, (float*)vertices.data(), vertices.size(), sizeof(Vertex), MAX_MESHLET_VERTICES, MAX_MESHLET_TRIANGLES, 0.0f);
+		std::size_t meshletCount = meshopt_buildMeshlets(localMeshlets.data(),
+			meshletVertices.data(),
+			meshletTriangles.data(),
+			indices.data(),
+			indexCount,
+			(float*)vertices.data(),
+			vertices.size(),
+			sizeof(Vertex),
+			MAX_MESHLET_VERTICES,
+			MAX_MESHLET_TRIANGLES,
+			0.0f);
 
+		std::string name = mesh.name.length() > 0 ? mesh.name : "unnamed";
+		ecs::Entity child = createEntity("submesh_" + name);
+
+		uint32_t meshletVertexOffset = (uint32_t)mStagingData.meshletVertices.size();
+		uint32_t meshlettriangleOffset = (uint32_t)mStagingData.meshletTriangles.size();
+		for (auto& localMeshlet : localMeshlets) {
+
+			mStagingData.meshlets.emplace_back(Meshlet{
+				child,
+				meshletVertexOffset + localMeshlet.vertex_offset,
+				localMeshlet.vertex_count,
+				meshlettriangleOffset + localMeshlet.triangle_offset,
+				localMeshlet.triangle_count
+				});
+		}
 
 		// Add to the staging data
 		mStagingData.vertices.insert(mStagingData.vertices.end(), vertices.begin(), vertices.end());
 		mStagingData.indices.insert(mStagingData.indices.end(), indices.begin(), indices.end());
+		mStagingData.meshletVertices.insert(mStagingData.meshletVertices.end(), meshletVertices.begin(), meshletVertices.end());
+		mStagingData.meshletTriangles.insert(mStagingData.meshletTriangles.end(), meshletTriangles.begin(), meshletTriangles.end());
 
-		std::string name = mesh.name.length() > 0 ? mesh.name : "unnamed";
-		ecs::Entity child = createEntity("submesh_" + name);
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
 		meshRenderer.vertexBuffer.byteOffset = vertexOffset;
 		meshRenderer.vertexBuffer.byteLength = (uint32_t)(vertices.size() * sizeof(Vertex));
@@ -502,18 +527,26 @@ ecs::Entity Scene::parseModel(tinygltf::Model* model)
 	return root;
 }
 
-void Scene::updateMeshRenderer(gfx::BufferHandle vertexBuffer, gfx::BufferHandle indexBuffer, ecs::Entity entity)
+void Scene::updateMeshRenderer(gfx::BufferHandle vertexBuffer,
+	gfx::BufferHandle indexBuffer,
+	gfx::BufferHandle meshletBuffer,
+	gfx::BufferHandle meshletVertexBuffer,
+	gfx::BufferHandle meshletTriangleBuffer,
+	ecs::Entity entity)
 {
 	auto meshRenderer = mComponentManager->GetComponent<MeshRenderer>(entity);
 	if (meshRenderer) {
 		meshRenderer->vertexBuffer.buffer = vertexBuffer;
 		meshRenderer->indexBuffer.buffer = indexBuffer;
+		meshRenderer->meshletBuffer = meshletBuffer;
+		meshRenderer->meshletVertexBuffer = meshletVertexBuffer;
+		meshRenderer->meshletTriangleBuffer = meshletTriangleBuffer;
 	}
 
 	auto hierarchyComponent = mComponentManager->GetComponent<HierarchyComponent>(entity);
 	if (hierarchyComponent) {
 		for (auto child : hierarchyComponent->childrens)
-			updateMeshRenderer(vertexBuffer, indexBuffer, child);
+			updateMeshRenderer(vertexBuffer, indexBuffer, meshletBuffer, meshletVertexBuffer, meshletTriangleBuffer, child);
 	}
 }
 
@@ -522,10 +555,6 @@ ecs::Entity Scene::CreateMesh(const std::string& filename)
 	tinygltf::Model model;
 	if (gltfMesh::loadFile(filename, &model))
 	{
-		// clear the staging data
-		mStagingData.vertices.clear();
-		mStagingData.indices.clear();
-
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		ecs::Entity entity = parseModel(&model);
 		std::string name = filename.substr(filename.find_last_of("/\\") + 1, filename.size() - 1);
@@ -538,9 +567,28 @@ ecs::Entity Scene::CreateMesh(const std::string& filename)
 		bufferDesc.usage = gfx::Usage::Default;
 		bufferDesc.size = static_cast<uint32_t>(mStagingData.vertices.size() * sizeof(Vertex));
 
+		// Vertex Buffer
 		gfx::BufferHandle vertexBuffer = device->CreateBuffer(&bufferDesc);
 		mAllocatedBuffers.push_back(vertexBuffer);
 		device->CopyToBuffer(vertexBuffer, mStagingData.vertices.data(), 0, bufferDesc.size);
+
+		// Meshlet buffer
+		bufferDesc.size = static_cast<uint32_t>(mStagingData.meshlets.size() * sizeof(Meshlet));
+		gfx::BufferHandle meshletBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(meshletBuffer);
+		device->CopyToBuffer(meshletBuffer, mStagingData.meshlets.data(), 0, bufferDesc.size);
+
+		// Meshlet vertex buffer
+		bufferDesc.size = static_cast<uint32_t>(mStagingData.meshletVertices.size() * sizeof(uint32_t));
+		gfx::BufferHandle meshletVertexBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(meshletVertexBuffer);
+		device->CopyToBuffer(meshletVertexBuffer, mStagingData.meshletVertices.data(), 0, bufferDesc.size);
+
+		// Meshlet index buffer
+		bufferDesc.size = static_cast<uint32_t>(mStagingData.meshletTriangles.size() * sizeof(uint8_t));
+		gfx::BufferHandle meshletTriangleBuffer = device->CreateBuffer(&bufferDesc);
+		mAllocatedBuffers.push_back(meshletTriangleBuffer);
+		device->CopyToBuffer(meshletTriangleBuffer, mStagingData.meshletTriangles.data(), 0, bufferDesc.size);
 
 		bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
 		bufferDesc.size = static_cast<uint32_t>(mStagingData.indices.size() * sizeof(uint32_t));
@@ -550,7 +598,10 @@ ecs::Entity Scene::CreateMesh(const std::string& filename)
 		device->CopyToBuffer(indexBuffer, mStagingData.indices.data(), 0, bufferDesc.size);
 
 		// Update all the mesh component recursively
-		updateMeshRenderer(vertexBuffer, indexBuffer, entity);
+		updateMeshRenderer(vertexBuffer, indexBuffer, meshletBuffer, meshletVertexBuffer, meshletTriangleBuffer, entity);
+
+		// clear the staging data
+		mStagingData.clear();
 	}
 	return ecs::INVALID_ENTITY;
 }

@@ -107,6 +107,22 @@ struct Mesh final
 
 };
 
+constexpr uint32_t MAX_MESHLET_TRIANGLES = 124;
+constexpr uint32_t MAX_MESHLET_VERTICES = 64;
+
+struct Meshlet {
+	uint32_t entityId;
+
+	// Offset specified in element count
+	uint32_t vertexOffset;
+	uint32_t vertexCount;
+
+	// Offset specified in element count
+	uint32_t triangleOffset;
+	uint32_t triangleCount;
+};
+
+
 struct MeshFileHeader
 {
 	// Check integrity
@@ -234,7 +250,5 @@ struct Animation
 	uint32_t channelCount;
 };
 
-constexpr uint32_t MAX_MESHLET_TRIANGLES = 124;
-constexpr uint32_t MAX_MESHLET_VERTICES = 64;
 
 static_assert(sizeof(MaterialComponent) % 16 == 0);

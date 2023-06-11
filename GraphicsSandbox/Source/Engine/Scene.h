@@ -113,7 +113,20 @@ private:
 	// Helpers for gltf mesh
 	struct StagingData {
 		std::vector<Vertex> vertices;
+		//@TODO remove indices and corresponding buffer
 		std::vector<unsigned int> indices;
+
+		std::vector<unsigned int> meshletVertices;
+		std::vector<uint8_t> meshletTriangles;
+		std::vector<Meshlet> meshlets;
+
+		void clear() {
+			vertices.clear();
+			indices.clear();
+			meshletTriangles.clear();
+			meshletVertices.clear();
+			meshlets.clear();
+		}
 	} mStagingData;
 
 	void parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity parent);
@@ -122,7 +135,12 @@ private:
 	ecs::Entity createEntity(const std::string& name = "");
 	ecs::Entity parseScene(tinygltf::Model* model, tinygltf::Scene* scene);
 	void parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex);
-	void updateMeshRenderer(gfx::BufferHandle vertexBuffer, gfx::BufferHandle indexBuffer, ecs::Entity parent);
+	void updateMeshRenderer(gfx::BufferHandle vertexBuffer,
+		gfx::BufferHandle indexBuffer,
+		gfx::BufferHandle meshletBuffer,
+		gfx::BufferHandle meshletVertexBuffer,
+		gfx::BufferHandle meshletTriangleBuffer,
+		ecs::Entity entity);
 
 	// Debug Options
 	std::shared_ptr<ui::SceneHierarchy> mUISceneHierarchy;

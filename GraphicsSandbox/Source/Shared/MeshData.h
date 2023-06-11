@@ -234,24 +234,7 @@ struct Animation
 	uint32_t channelCount;
 };
 
-struct MeshData
-{
-	std::vector<Node> nodes_;
-	std::vector<Mesh> meshes_;
-	std::vector<MaterialComponent> materials_;
-	std::vector<std::string> textures_;
-	std::vector<BoundingBox> boxes_;
-	std::vector<uint8_t> vertexData_;
-	std::vector<uint32_t> indexData_;
-
-	// Animation Data
-	std::vector<SkeletonNode> skeletonNodes_;
-	std::vector<Animation> animations_;
-	std::vector<Channel> channels_;
-	std::vector<Vector3Track> vector3Tracks_;
-	std::vector<QuaternionTrack> quaternionTracks_;
-
-
-};
+constexpr uint32_t MAX_MESHLET_TRIANGLES = 124;
+constexpr uint32_t MAX_MESHLET_VERTICES = 64;
 
 static_assert(sizeof(MaterialComponent) % 16 == 0);

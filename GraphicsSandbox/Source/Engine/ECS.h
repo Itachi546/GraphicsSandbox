@@ -15,7 +15,7 @@ namespace ecs
 	using ComponentType = std::uint8_t;
 	const uint8_t MAX_COMPONENTS = 64;
 
-	using Entity = uint32_t;
+	using Entity = std::uint32_t;
 
 	inline bool IsValid(Entity entity) {
 		return entity != INVALID_ENTITY;

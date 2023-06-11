@@ -21,7 +21,6 @@ void EditorApplication::Initialize()
 	mHeight = (float)props.height;
 	mCamera = mScene.GetCamera();
 	InitializeScene();
-	mHierarchy = std::make_shared<SceneHierarchy>(&mScene, mWindow);
 }
 
 void EditorApplication::PreUpdate(float dt) {
@@ -56,7 +55,6 @@ void EditorApplication::PreUpdate(float dt) {
 	if (Input::Press(Input::Key::KEY_H))
 		mShowUI = !mShowUI;
 
-	mHierarchy->Update(dt);
 	mCurrentTime += dt;
 
 	auto compMgr = mScene.GetComponentManager();
@@ -103,65 +101,11 @@ void EditorApplication::InitializeScene()
 	mScene.SetEnableFrustumCulling(false);
 
 	auto compMgr = mScene.GetComponentManager();
-
-	//character = mScene.CreateMesh("Assets/Models/character2.sbox");
-	/*
-	character = mScene.CreateMesh("Assets/Models/michelle.sbox");
-	compMgr->GetComponent<TransformComponent>(character)->position = glm::vec3(5.0f, 0.0f, 6.0f);
-	ecs::Entity ortiz = mScene.CreateMesh("Assets/Models/ortiz.sbox");
-	*/
-
-	ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
-
-	ecs::Entity defaultMesh = mScene.CreatePlane("plane");;
-
-	TransformComponent* defaultTransform = compMgr->GetComponent<TransformComponent>(defaultMesh);
-	defaultTransform->position.y += 1.0f;
-	defaultTransform->SetRotationFomEuler(0.0f, 0.0f, glm::pi<float>() * 0.5f);
-
-	MaterialComponent* defaultMeshMaterial = compMgr->GetComponent<MaterialComponent>(defaultMesh);
-	if (defaultMeshMaterial)
-	{
-		defaultMeshMaterial->transparency = 0.5f;
-		defaultMeshMaterial->alphaMode = ALPHAMODE_BLEND;
-		defaultMeshMaterial->albedo = glm::vec4(0.3f, 0.4f, 0.8f, 1.0f);
-	}
-	//ecs::Entity plane = mScene.CreatePlane("Plane00");
-	//compMgr->GetComponent<TransformComponent>(plane)->scale = glm::vec3(30.0f);
-	{
-		ecs::Entity helmet = mScene.CreateMesh("Assets/Models/DamagedHelmet.sbox");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
-		transform->position.y += 0.5f;
-		transform->position.x += 1.0f;
-		transform->scale *= 0.5f;
-		transform->SetRotationFomEuler(0.0f, glm::pi<float>() * 0.5f, 0.0f);
-	}
+	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
+	//ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/cube/cube.gltf");
 }
 
-void EditorApplication::InitializeCSMScene()
-{
-	mCamera->SetPosition({ 5.0f, 1.0f, 5.0f });
-	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
-	mCamera->SetNearPlane(0.1f);
-	mCamera->SetFarPlane(1000.0f);
-	mScene.SetEnableFrustumCulling(false);
-
-	auto compMgr = mScene.GetComponentManager();
-
-	const int kNumObjects = 10;
-	for (int i = 0; i < kNumObjects; ++i)
-	{
-		ecs::Entity cube = mScene.CreateCube("cube" + std::to_string(i));
-		TransformComponent* comp = compMgr->GetComponent<TransformComponent>(cube);
-		comp->position.x += ((kNumObjects * 0.5f) - i) * 4.0f;
-		comp->position.y += 2.0f;
-		comp->scale.y = 2.0f;
-	}
-
-	ecs::Entity plane = mScene.CreatePlane("Plane");
-	TransformComponent* comp = compMgr->GetComponent<TransformComponent>(plane);
-	comp->scale = glm::vec3(40.0f);
-}
 /*
 void EditorApplication::DrawPose(Skeleton& skeleton, ImDrawList* drawList, const glm::mat4& worldTransform)
 {

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../Engine/GraphicsSandbox.h"
-#include "SceneHierarchy.h"
 
 struct ImDrawList;
 
@@ -25,7 +24,6 @@ private:
 	//void UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform);
 	//void DrawSkeleton();
 	
-	std::shared_ptr<SceneHierarchy> mHierarchy;
 	ecs::Entity character;
 	bool mShowUI = false;
 	bool mShowSkeleton = true;

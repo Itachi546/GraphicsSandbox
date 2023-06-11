@@ -94,6 +94,7 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.colorBuffer = mFrameGraphBuilder.AccessResource("gbuffer_colour")->info.texture.texture.handle;
 	mEnvironmentData.normalBuffer = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture.handle;
 	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
+	mEnvironmentData.emissiveBuffer = mFrameGraphBuilder.AccessResource("gbuffer_emissive")->info.texture.texture.handle;
 	mEnvironmentData.globalAO = 0.2f;
 }
 
@@ -145,7 +146,7 @@ void Renderer::Update(float dt)
 void Renderer::Render(gfx::CommandList* commandList)
 {
 	// New GUI Frame
-	ImGuiService::GetInstance()->NewFrame();
+	ui::ImGuiService::GetInstance()->NewFrame();
 	ImGui::Begin("Renderer");
 
 	mScene->AddUI();
@@ -278,7 +279,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 	// Draw GUI
 	start = Profiler::StartRangeGPU(commandList, "imgui");
-	ImGuiService::GetInstance()->Render(commandList);
+	ui::ImGuiService::GetInstance()->Render(commandList);
 
 	mDevice->EndRenderPass(commandList);
 	Profiler::EndRangeGPU(commandList, start);
@@ -510,8 +511,8 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 	auto& ib = meshRenderer->indexBuffer;
 
 	descriptorInfos[1].buffer = vb.buffer;
-	descriptorInfos[1].offset = vb.offset;
-	descriptorInfos[1].size = vb.count * sizeof(Vertex);
+	descriptorInfos[1].offset = vb.byteOffset;
+	descriptorInfos[1].size = vb.byteLength;
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
 	descriptorInfos[2].texture = &cubemap;
@@ -521,7 +522,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 	mDevice->UpdateDescriptor(mCubemapPipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	mDevice->BindPipeline(commandList, mCubemapPipeline);
 	mDevice->BindIndexBuffer(commandList, ib.buffer);
-	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.offset / sizeof(uint32_t));
+	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
 }
 /*
 void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)
@@ -698,10 +699,10 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 
 			// Create DrawCommands
 			gfx::DrawIndirectCommand drawCommand = {};
-			drawCommand.firstIndex = drawData.indexBuffer.offset / sizeof(uint32_t);
+			drawCommand.firstIndex = drawData.indexBuffer.byteOffset / sizeof(uint32_t);
 			drawCommand.indexCount = drawData.indexCount;
 			drawCommand.instanceCount = 1;
-			drawCommand.vertexOffset = drawData.vertexBuffer.offset / drawData.elmSize;
+			drawCommand.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
 			activeBatch->drawCommands.push_back(std::move(drawCommand));
 
 			assert(activeBatch->transforms.size() == activeBatch->drawCommands.size());

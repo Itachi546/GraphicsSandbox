@@ -8,6 +8,16 @@
 #include <string_view>
 #include <vector>
 
+namespace tinygltf {
+	class Model;
+	struct Scene;
+	struct Mesh;
+};
+
+namespace ui {
+	class SceneHierarchy;
+};
+
 class Scene
 {
 public:
@@ -25,11 +35,7 @@ public:
 	}
 
 	ecs::Entity GetSun() { return mSun; }
-
-	ecs::Entity CreateCube(std::string_view name);
-	ecs::Entity CreatePlane(std::string_view name);
-	ecs::Entity CreateSphere(std::string_view name);
-	ecs::Entity CreateMesh(const char* file);
+	ecs::Entity CreateMesh(const std::string& filename);
 	ecs::Entity CreateLight(std::string_view name = "");
 
 	void Update(float dt);
@@ -98,46 +104,28 @@ private:
 
 	void UpdateChildren(ecs::Entity entity, const glm::mat4& parentTransform);
 
-	struct StagingMeshData : public MeshData
-	{
-		gfx::BufferHandle vertexBuffer;
-		gfx::BufferHandle indexBuffer;
-	};
-
-	ecs::Entity CreateMeshEntity(uint32_t nodeIndex,
-		ecs::Entity parent,
-		const StagingMeshData& stagingData);
-
-	void ParseSkeleton(const Mesh& mesh, Skeleton& skeleton, uint32_t rootBone, const std::vector<SkeletonNode>& skeletonNodes);
-	void ParseAnimation(const StagingMeshData& mesh, std::vector<AnimationClip>& animationClips);
-	void UpdateEntity(
-		ecs::Entity entity,
-		uint32_t nodeIndex,
-		const StagingMeshData& stagingMeshData
-	);
-
-	ecs::Entity TraverseNode(
-		uint32_t root,
-		ecs::Entity parent,
-		const StagingMeshData& stagingMeshData);
-
-	void InitializePrimitiveMeshes();
-	void InitializeCubeMesh(MeshRenderer& meshRenderer);
-	void InitializePlaneMesh(MeshRenderer& meshRenderer, uint32_t subdivide = 2);
-	void InitializeSphereMesh(MeshRenderer& meshRenderer);
-
 	void DrawBoundingBox();
 	void InitializeLights();
-
-	void RemoveChild(ecs::Entity parent, ecs::Entity child);
-
 	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
+	void RemoveChild(ecs::Entity parent, ecs::Entity child);
+	void AddChild(ecs::Entity parent, ecs::Entity child);
+
+	// Helpers for gltf mesh
+	struct StagingData {
+		std::vector<Vertex> vertices;
+		std::vector<unsigned int> indices;
+	} mStagingData;
+
+	void parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity parent);
+	void parseMaterial(tinygltf::Model* model, MaterialComponent* component, uint32_t matIndex);
+	ecs::Entity parseModel(tinygltf::Model* model);
+	ecs::Entity createEntity(const std::string& name = "");
+	ecs::Entity parseScene(tinygltf::Model* model, tinygltf::Scene* scene);
+	void parseNodeHierarchy(tinygltf::Model* model, ecs::Entity parent, int nodeIndex);
+	void updateMeshRenderer(gfx::BufferHandle vertexBuffer, gfx::BufferHandle indexBuffer, ecs::Entity parent);
+
+	// Debug Options
+	std::shared_ptr<ui::SceneHierarchy> mUISceneHierarchy;
 
 	friend class Renderer;
 };
-
-/*
-* Create a Buffer Of Arbitary Size
-* Push Data
-* Push Data
-*/

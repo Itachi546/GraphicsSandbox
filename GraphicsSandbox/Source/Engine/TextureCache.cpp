@@ -89,7 +89,6 @@ namespace TextureCache
 			return INVALID_TEXTURE;
 		}
 		assert(nChannel == 4);
-		//texture.name = filename;
 		gfx::TextureHandle texture = CreateTexture(pixels, width, height, nChannel, generateMipmap);
 		gAllTextureName[texture.handle] = filename;
 
@@ -98,6 +97,29 @@ namespace TextureCache
 		Utils::ImageLoader::Free(pixels);
 		return texture.handle;
 	}
+
+	uint32_t LoadTexture(const std::string& name, uint32_t width, uint32_t height, unsigned char* data,  uint32_t nChannel, bool generateMipmap)
+	{
+		auto found = gAllTextureIndex.find(name);
+		if (found != gAllTextureIndex.end())
+			return found->second.handle;
+
+		Logger::Debug("Loading Texture: " + name);
+		if (data == nullptr)
+		{
+			Logger::Warn("Failed to load texture: " + name);
+			return INVALID_TEXTURE;
+		}
+
+		//texture.name = filename;
+		gfx::TextureHandle texture = CreateTexture(data, width, height, nChannel, generateMipmap);
+		gAllTextureName[texture.handle] = name;
+
+		gAllTextures[texture.handle] = texture;
+		gAllTextureIndex[name] = texture;
+		return texture.handle;
+	}
+
 
 	std::string GetTextureName(uint32_t index)
 	{

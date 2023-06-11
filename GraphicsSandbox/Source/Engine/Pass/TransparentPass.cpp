@@ -80,7 +80,7 @@ void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
 		gfx::BufferView& vbView = batch.vb;
 		gfx::BufferView& ibView = batch.ib;
 
-		descriptorInfos[1] = { vbView.buffer, vbView.offset, vbView.count * sizeof(Vertex), gfx::DescriptorType::StorageBuffer};
+		descriptorInfos[1] = { vbView.buffer, vbView.byteOffset, vbView.byteLength, gfx::DescriptorType::StorageBuffer};
 		descriptorInfos[2] = { transformBuffer, sizeof(glm::mat4) * (batch.transformIndex + lastOffset), sizeof(glm::mat4), gfx::DescriptorType::StorageBuffer};
 		descriptorInfos[3] = { materialBuffer, matSize * (batch.materialIndex + lastOffset), matSize, gfx::DescriptorType::StorageBuffer };
 
@@ -90,7 +90,7 @@ void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
 		device->PushConstants(commandList, pipeline, ShaderStage::Fragment, &mPushConstantData, sizeof(PushConstantData), 0);
 
 		device->BindIndexBuffer(commandList, ibView.buffer);
-		device->DrawIndexed(commandList, batch.indexCount, 1, ibView.offset / sizeof(uint32_t));
+		device->DrawIndexed(commandList, batch.indexCount, 1, ibView.byteOffset / sizeof(uint32_t));
 	}
 }
 

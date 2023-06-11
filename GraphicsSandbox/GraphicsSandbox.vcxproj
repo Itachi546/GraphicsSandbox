@@ -82,7 +82,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS;_CRT_SECURE_NO_WARNINGS;ENABLE_VALIDATIONS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -110,7 +110,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;ENABLE_BINDLESS;_CRT_SECURE_NO_WARNINGS;ENABLE_VALIDATIONS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -140,7 +140,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;USE_INTEGRATED_GPU;ENABLE_BINDLESS</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions);GLFW_WINDOW;USE_VULKAN;USE_INTEGRATED_GPU;ENABLE_BINDLESS;_CRT_SECURE_NO_WARNINGS;ENABLE_VALIDATIONS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <AdditionalIncludeDirectories>$(VULKAN_SDK)/Include;$(ProjectDir)Source\External;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -166,10 +166,11 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
     <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
-    <ClInclude Include="Source\Editor\FileDialog.h" />
+    <ClInclude Include="Source\Engine\GUI\FileDialog.h" />
     <ClInclude Include="Source\Engine\Pass\TransparentPass.h" />
     <ClInclude Include="Source\External\ImGui\IconsFontAwesome5.h" />
     <ClInclude Include="Source\External\ImGui\imconfig.h" />
@@ -182,7 +183,7 @@
     <ClInclude Include="Source\External\ImGui\imstb_truetype.h" />
     <ClInclude Include="Source\External\ImPlot\implot.h" />
     <ClInclude Include="Source\External\ImPlot\implot_internal.h" />
-    <ClInclude Include="Source\Editor\SceneHierarchy.h" />
+    <ClInclude Include="Source\Engine\GUI\SceneHierarchy.h" />
     <ClInclude Include="Source\Editor\TransformGizmo.h" />
     <ClInclude Include="Source\Engine\Animation\Animation.h" />
     <ClInclude Include="Source\Engine\Camera.h" />
@@ -256,7 +257,7 @@
     <ClCompile Include="Source\External\ImPlot\implot.cpp" />
     <ClCompile Include="Source\External\ImPlot\implot_demo.cpp" />
     <ClCompile Include="Source\External\ImPlot\implot_items.cpp" />
-    <ClCompile Include="Source\Editor\SceneHierarchy.cpp" />
+    <ClCompile Include="Source\Engine\GUI\SceneHierarchy.cpp" />
     <ClCompile Include="Source\Editor\TransformGizmo.cpp" />
     <ClCompile Include="Source\Engine\Animation\Animation.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />

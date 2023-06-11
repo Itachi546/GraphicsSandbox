@@ -64,12 +64,11 @@ class SponzaTest : public Application
 		auto compMgr = mScene.GetComponentManager();
 
 		ecs::Entity scene = mScene.CreateMesh("Assets/Models/sponza.sbox");
-		ecs::Entity sphere = mScene.CreateSphere("Sphere00");
-
+		/*
 		compMgr->GetComponent<TransformComponent>(sphere)->scale = glm::vec3(0.4f);
 		compMgr->GetComponent<TransformComponent>(sphere)->position.y += 2.0f;
 		compMgr->GetComponent<MaterialComponent>(sphere)->albedo = glm::vec4(0.01f, 0.235f, 1.0f, 1.0f);
-
+		*/
 		// Set Sun
 		compMgr->GetComponent<TransformComponent>(mScene.GetSun())->rotation = glm::vec3(0.1f, 1.0f, 0.0f);
 	}

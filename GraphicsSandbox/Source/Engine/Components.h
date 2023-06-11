@@ -119,8 +119,6 @@ struct IMeshRenderer
 	bool IsDoubleSided() const { return flags & DoubleSided; }
 	bool IsSkinned() const { return flags & Skinned; }
 
-	virtual void CopyVertices(void* data, uint32_t count) = 0;
-	virtual void CopyIndices(void* data, uint32_t count) = 0;
 	virtual uint32_t GetIndexCount() const = 0;
 
 	virtual ~IMeshRenderer() = default;
@@ -128,51 +126,14 @@ struct IMeshRenderer
 
 struct MeshRenderer : public IMeshRenderer
 {
-	std::shared_ptr<std::vector<Vertex>> vertices;
-	std::shared_ptr<std::vector<uint32_t>> indices;
-
 	MeshRenderer() {
 	}
 	uint32_t GetVertexOffset() const {
 		return sizeof(Vertex);
 	}
 
-	void Copy(MeshRenderer* meshRenderer)
-	{
-		this->boundingBox = meshRenderer->boundingBox;
-		this->flags = meshRenderer->flags;
-		this->indexBuffer = meshRenderer->indexBuffer;
-		this->vertexBuffer = meshRenderer->vertexBuffer;
-
-		this->vertices = std::make_shared<std::vector<Vertex>>();
-		uint32_t vertexSize = static_cast<uint32_t>(meshRenderer->vertices->size());
-		this->vertices->resize(vertexSize);
-		std::memcpy(this->vertices->data(), meshRenderer->vertices->data(), vertexSize);
-
-		this->indices = std::make_shared<std::vector<uint32_t>>();
-		uint32_t indexSize = static_cast<uint32_t>(meshRenderer->indices->size());
-		this->indices->resize(indexSize);
-		std::memcpy(this->indices->data(), meshRenderer->indices->data(), indexSize);
-	}
-
 	uint32_t GetIndexCount() const override {
-		return static_cast<uint32_t>(indices->size());
-	}
-
-	void CopyVertices(void* data, uint32_t count) override
-	{
-		if (!vertices)
-			vertices = std::make_shared<std::vector<Vertex>>();
-		vertices->resize(count);
-		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(Vertex));
-	}
-
-	void CopyIndices(void* data, uint32_t count) override
-	{
-		if (!indices)
-			indices = std::make_shared<std::vector<uint32_t>>();
-		indices->resize(count);
-		std::memcpy(reinterpret_cast<char*>(indices->data()), reinterpret_cast<char*>(data), count * sizeof(uint32_t));
+		return indexBuffer.byteLength / sizeof(uint32_t);
 	}
 
 	virtual ~MeshRenderer() {
@@ -184,9 +145,6 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 	SkinnedMeshRenderer() {
 		SetSkinned(true);
 	}
-
-	std::shared_ptr<std::vector<AnimatedVertex>> vertices;
-	std::shared_ptr<std::vector<uint32_t>> indices;
 
 	Skeleton skeleton;
 
@@ -201,25 +159,9 @@ struct SkinnedMeshRenderer : public IMeshRenderer
 	{
 		animationClips.push_back(std::move(animationClip));
 	}
-
-	void CopyVertices(void* data, uint32_t count) override
-	{
-		if (!vertices)
-			vertices = std::make_shared<std::vector<AnimatedVertex>>();
-		vertices->resize(count);
-		std::memcpy(reinterpret_cast<char*>(vertices->data()), reinterpret_cast<char*>(data), count * sizeof(AnimatedVertex));
-	}
-
-	void CopyIndices(void* data, uint32_t count) override
-	{
-		if (!indices)
-			indices = std::make_shared<std::vector<uint32_t>>();
-		indices->resize(count);
-		std::memcpy(reinterpret_cast<char*>(indices->data()), reinterpret_cast<char*>(data), count * sizeof(uint32_t));
-	}
-
+	
 	uint32_t GetIndexCount() const override {
-		return static_cast<uint32_t>(indices->size());
+		return static_cast<uint32_t>(indexBuffer.byteLength / sizeof(uint32_t));
 	}
 
 	virtual ~SkinnedMeshRenderer() = default;

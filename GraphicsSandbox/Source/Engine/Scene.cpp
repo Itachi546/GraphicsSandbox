@@ -9,6 +9,7 @@
 #include "GUI/SceneHierarchy.h"
 #include "GLTF-Mesh.h"
 
+#include <meshoptimizer.h>
 #include <execution>
 #include <algorithm>
 #include <fstream>
@@ -385,8 +386,10 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		uint32_t vertexOffset = (uint32_t)(mStagingData.vertices.size() * sizeof(Vertex));
 		uint32_t indexOffset = (uint32_t)(mStagingData.indices.size() * sizeof(uint32_t));
 
-		Vertex vertex = {};
+		std::vector<Vertex> vertices(numPosition);
 		for (uint32_t i = 0; i < numPosition; ++i) {
+			Vertex& vertex = vertices[i];
+
 			vertex.px = positions[i * 3 + 0];
 			vertex.py = positions[i * 3 + 1];
 			vertex.pz = positions[i * 3 + 2];
@@ -418,22 +421,33 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 				vertex.bx = uint8_t(bt.x * 127.0f + 127.0f);
 				vertex.by = uint8_t(bt.y * 127.0f + 127.0f);
 				vertex.bz = uint8_t(bt.z * 127.0f + 127.0f);
-
 			}
-
-			mStagingData.vertices.push_back(vertex);
 		}
 
 		const tinygltf::Accessor& indicesAccessor = model->accessors[primitive.indices];
 		uint16_t* indicesPtr = (uint16_t*)gltfMesh::getBufferPtr(model, indicesAccessor);
 		uint32_t indexCount = (uint32_t)indicesAccessor.count;
-		mStagingData.indices.insert(mStagingData.indices.end(), indicesPtr, indicesPtr + indexCount);
+		std::vector<uint32_t> indices(indicesPtr, indicesPtr + indexCount);
+		
+		// Generate Meshlets
+		const std::size_t maxMeshlets = meshopt_buildMeshletsBound(indexCount, MAX_MESHLET_VERTICES, MAX_MESHLET_TRIANGLES);
+		std::vector<meshopt_Meshlet> localMeshlets(maxMeshlets);
+
+		std::vector<uint32_t> meshletVertices(maxMeshlets * MAX_MESHLET_VERTICES);
+		std::vector<uint8_t> meshletTriangles(maxMeshlets * MAX_MESHLET_TRIANGLES * 3);
+
+		std::size_t meshletCount = meshopt_buildMeshlets(localMeshlets.data(), meshletVertices.data(), meshletTriangles.data(), indices.data(), indexCount, (float*)vertices.data(), vertices.size(), sizeof(Vertex), MAX_MESHLET_VERTICES, MAX_MESHLET_TRIANGLES, 0.0f);
+
+
+		// Add to the staging data
+		mStagingData.vertices.insert(mStagingData.vertices.end(), vertices.begin(), vertices.end());
+		mStagingData.indices.insert(mStagingData.indices.end(), indices.begin(), indices.end());
 
 		std::string name = mesh.name.length() > 0 ? mesh.name : "unnamed";
 		ecs::Entity child = createEntity("submesh_" + name);
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
 		meshRenderer.vertexBuffer.byteOffset = vertexOffset;
-		meshRenderer.vertexBuffer.byteLength = (uint32_t)(numPosition * sizeof(Vertex));
+		meshRenderer.vertexBuffer.byteLength = (uint32_t)(vertices.size() * sizeof(Vertex));
 		meshRenderer.indexBuffer.byteOffset = indexOffset;
 		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
 

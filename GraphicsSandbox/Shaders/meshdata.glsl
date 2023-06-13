@@ -47,4 +47,17 @@ vec3 UnpackU8toFloat(uint nx, uint ny, uint nz)
 }
 
 
+struct Meshlet {
+	uint entityId;
+
+	// Offset specified in element count
+	uint vertexOffset;
+	uint vertexCount;
+
+	// Offset specified in element count
+	uint triangleOffset;
+	uint triangleCount;
+};
+
+
 #endif

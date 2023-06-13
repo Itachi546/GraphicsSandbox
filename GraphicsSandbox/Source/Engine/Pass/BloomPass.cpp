@@ -1,37 +1,57 @@
-#include "Bloom.h"
+#include "BloomPass.h"
+
+#include "../Renderer.h"
 #include "../GraphicsUtils.h"
 #include "../Profiler.h"
 #include "../StringConstants.h"
-namespace fx
+
+namespace gfx
 {
-	
-	Bloom::Bloom(gfx::GraphicsDevice* device, uint32_t width, uint32_t height, gfx::Format attachmentFormat) : 
-		mDevice(device),
+	BloomPass::BloomPass(Renderer* renderer, uint32_t width, uint32_t height) : 
+		mRenderer(renderer),
 		mWidth(width),
-		mHeight(height),
-		mFormat(attachmentFormat)
+		mHeight(height)
 	{
-		Initialize();
+		mDevice = gfx::GetDevice();
 	}
 
-	void Bloom::Generate(gfx::CommandList* commandList, gfx::TextureHandle inputTexture, float blurRadius)
+	void BloomPass::Initialize(RenderPassHandle renderPass)
 	{
+		mDownSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_UPSAMPLE_PATH, mDevice);
+		mUpSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_PATH, mDevice);
+		mCompositePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_PATH, mDevice);
+
+		gfx::GPUTextureDesc textureDesc = {};
+		gfx::SamplerInfo samplerInfo = {};
+		textureDesc.bCreateSampler = true;
+		textureDesc.width = mWidth >> 1;
+		textureDesc.height = mHeight >> 1;
+		textureDesc.mipLevels = kMaxMipLevel;
+		textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
+		textureDesc.format = gfx::Format::R8G8B8A8_UNORM;
+		textureDesc.bAddToBindless = false;
+		mDownSampleTexture = mDevice->CreateTexture(&textureDesc);
+	}
+
+	void BloomPass::Render(CommandList* commandList, Scene* scene)
+	{
+		gfx::TextureHandle inputTexture = mRenderer->mFrameGraphBuilder.AccessResource("bright_texture")->info.texture.texture;
 		RangeId bloomDownsample = Profiler::StartRangeGPU(commandList, "Bloom Downsample");
 		GenerateDownSamples(commandList, inputTexture);
 		Profiler::EndRangeGPU(commandList, bloomDownsample);
 
 		RangeId bloomUpsample = Profiler::StartRangeGPU(commandList, "Bloom Upsample");
-		GenerateUpSamples(commandList, blurRadius);
+		GenerateUpSamples(commandList, mBlurRadius);
 		Profiler::EndRangeGPU(commandList, bloomUpsample);
 	}
 
-	void Bloom::Composite(gfx::CommandList* commandList, gfx::TextureHandle hdrTexture, float bloomStrength)
+	void BloomPass::Composite(gfx::CommandList* commandList, gfx::TextureHandle inputTexture)
 	{
 		RangeId compositeId = Profiler::StartRangeGPU(commandList, "Bloom Composite Pass");
 		// Composite Pass
-		mDevice->BeginDebugMarker(commandList, "Bloom Composite Pass");
+		mDevice->BeginDebugLabel(commandList, "Bloom Composite Pass");
 		gfx::ImageBarrierInfo imageBarrierInfo[] = {
-			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, hdrTexture, 0, 0, 1, 1},
+			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, inputTexture, 0, 0, 1, 1},
 			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, 0, 0, 1, 1}
 		};
 
@@ -43,34 +63,27 @@ namespace fx
 
 		mDevice->PipelineBarrier(commandList, &barrier);
 		gfx::DescriptorInfo descriptorInfos[] = {
-			gfx::DescriptorInfo{&hdrTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&inputTexture, 0, 0, gfx::DescriptorType::Image},
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
 		};
 
 		uint32_t width = mWidth;
 		uint32_t height = mHeight;
 
-		float shaderData[] = {bloomStrength, 0.0f, 0.0f, 0.0f};
+		float shaderData[] = { mBloomStrength, 0.0f, 0.0f, 0.0f };
 		mDevice->PushConstants(commandList, mUpSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
 
 		mDevice->UpdateDescriptor(mCompositePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 		mDevice->BindPipeline(commandList, mCompositePipeline);
 		mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 32), gfx::GetWorkSize(height, 32), 1);
-		mDevice->EndDebugMarker(commandList);
+		mDevice->EndDebugLabel(commandList);
 		Profiler::EndRangeGPU(commandList, compositeId);
 	}
 
-	void Bloom::Shutdown()
+	void BloomPass::GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture)
 	{
-		mDevice->Destroy(mDownSampleTexture);
-		mDevice->Destroy(mDownSamplePipeline);
-		mDevice->Destroy(mUpSamplePipeline);
-		mDevice->Destroy(mCompositePipeline);
-	}
-
-	void Bloom::GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture)
-	{
-		mDevice->BeginDebugMarker(commandList, "Bloom Downsample");
+		gfx::GraphicsDevice* device = gfx::GetDevice();
+		device->BeginDebugLabel(commandList, "Bloom Downsample");
 
 		// Generate DownSamples
 		// Convert the textureFormat
@@ -108,23 +121,23 @@ namespace fx
 				descriptorInfos[0].mipLevel = i - 1;
 			}
 
-			mDevice->PipelineBarrier(commandList, &barrier);
+			device->PipelineBarrier(commandList, &barrier);
 
 			uint32_t width = mWidth >> (i + 1);
 			uint32_t height = mHeight >> (i + 1);
-			float shaderData[] = { (float)width, (float)height, 0.0f, 0.0f};
-			mDevice->PushConstants(commandList, mDownSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
-			mDevice->UpdateDescriptor(mDownSamplePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-			mDevice->BindPipeline(commandList, mDownSamplePipeline);
-			mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
+			float shaderData[] = { (float)width, (float)height, 0.0f, 0.0f };
+			device->PushConstants(commandList, mDownSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
+			device->UpdateDescriptor(mDownSamplePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
+			device->BindPipeline(commandList, mDownSamplePipeline);
+			device->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
 
 		}
-		mDevice->EndDebugMarker(commandList);
+		device->EndDebugLabel(commandList);
 	}
 
-	void Bloom::GenerateUpSamples(gfx::CommandList* commandList, float blurRadius)
+	void BloomPass::GenerateUpSamples(gfx::CommandList* commandList, float blurRadius)
 	{
-		mDevice->BeginDebugMarker(commandList, "Bloom Upsample");
+		mDevice->BeginDebugLabel(commandList, "Bloom Upsample");
 		gfx::DescriptorInfo descriptorInfos[] = {
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
@@ -156,24 +169,17 @@ namespace fx
 			mDevice->BindPipeline(commandList, mUpSamplePipeline);
 			mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 8), gfx::GetWorkSize(height, 8), 1);
 		}
-		mDevice->EndDebugMarker(commandList);
+		mDevice->EndDebugLabel(commandList);
 	}
 
-	void Bloom::Initialize()
+
+	void BloomPass::Shutdown()
 	{
-		mDownSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_DOWNSAMPLE_COMP_PATH, mDevice);
-		mUpSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_UPSAMPLE_COMP_PATH, mDevice);
-		mCompositePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_COMP_PATH, mDevice);
-
-		gfx::GPUTextureDesc textureDesc = {};
-		gfx::SamplerInfo samplerInfo = {};
-		textureDesc.bCreateSampler = true;
-		textureDesc.width = mWidth >> 1;
-		textureDesc.height = mHeight >> 1;
-		textureDesc.mipLevels = kMaxMipLevel;
-		textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
-		textureDesc.format = mFormat;
-		textureDesc.bAddToBindless = false;
-		mDownSampleTexture = mDevice->CreateTexture(&textureDesc);
+		gfx::GraphicsDevice* device = gfx::GetDevice();
+		device->Destroy(mDownSampleTexture);
+		device->Destroy(mDownSamplePipeline);
+		device->Destroy(mUpSamplePipeline);
+		device->Destroy(mCompositePipeline);
 	}
-};
+
+}

@@ -31,6 +31,8 @@ namespace StringConstants
 	// HDRI
 	constexpr const char* HDRI_PATH = "Assets/EnvironmentMap/sunset.hdr";
 
-
-
+	// Bloom
+	constexpr const char* BLOOM_UPSAMPLE_PATH = "Assets/SPIRV/bloom-upsample.comp.spv";
+	constexpr const char* BLOOM_DOWNSAMPLE_PATH = "Assets/SPIRV/bloom-downsample.comp.spv";
+	constexpr const char* BLOOM_COMPOSITE_PATH = "Assets/SPIRV/bloom-composite.comp.spv";
 }

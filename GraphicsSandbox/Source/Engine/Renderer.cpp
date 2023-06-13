@@ -4,7 +4,6 @@
 #include "Input.h"
 #include "Logger.h"
 #include "Profiler.h"
-#include "FX/Bloom.h"
 #include "CascadedShadowMap.h"
 #include "StringConstants.h"
 #include "DebugDraw.h"

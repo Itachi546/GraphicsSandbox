@@ -128,7 +128,7 @@
       </Command>
     </CustomBuildStep>
     <CustomBuild>
-      <Command>$(VULKAN_SDK)\Bin\glslangValidator.exe %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
+      <Command>$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
       <Outputs>$(SolutionDir)Assets/SPIRV/%(Filename).spv;%(Outputs)</Outputs>
       <AdditionalInputs>%(FullPath)</AdditionalInputs>
       <BuildInParallel>true</BuildInParallel>
@@ -167,6 +167,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
+    <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
     <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
     <ClInclude Include="Source\Editor\EditorApplication.h" />
@@ -240,9 +241,16 @@
     <CustomBuild Include="Shaders\fxaa.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\gbuffer.mesh.glsl">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
+    </CustomBuild>
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>
+    <ClCompile Include="Source\Engine\Pass\BloomPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\LightingPass.cpp" />
     <ClCompile Include="Source\Editor\EditorApplication.cpp" />

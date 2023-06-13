@@ -197,6 +197,7 @@
     <ClInclude Include="Source\Engine\Pass\TransparentPass.h" />
     <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
+    <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -325,6 +326,9 @@
     <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Pass\BloomPass.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -375,6 +379,9 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="Shaders\fxaa.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\gbuffer.mesh.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

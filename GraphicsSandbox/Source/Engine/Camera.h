@@ -1,7 +1,7 @@
 #pragma once
 
 #include "GlmIncludes.h"
-#include "../Shared/MathUtils.h"
+#include "MathUtils.h"
 
 #include <memory>
 

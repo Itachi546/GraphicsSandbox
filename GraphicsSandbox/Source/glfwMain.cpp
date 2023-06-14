@@ -1,5 +1,3 @@
-#include "Test/BloomTest.h"
-#include "Test/SponzaTest.h"
 #include "Editor/EditorApplication.h"
 #include <GLFW/glfw3.h>
 

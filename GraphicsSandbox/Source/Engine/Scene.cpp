@@ -1,9 +1,9 @@
 #include "Scene.h"
 #include "Logger.h"
-#include "../Shared/MeshData.h"
+#include "MeshData.h"
 #include "TextureCache.h"
 #include "DebugDraw.h"
-#include "../Shared/MathUtils.h"
+#include "MathUtils.h"
 #include "StringConstants.h"
 #include "GUI/ImGuiService.h"
 #include "GUI/SceneHierarchy.h"
@@ -456,11 +456,11 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		for (auto& localMeshlet : localMeshlets) {
 
 			mStagingData.meshlets.emplace_back(Meshlet{
-				child,
 				meshletVertexOffset + localMeshlet.vertex_offset,
 				localMeshlet.vertex_count,
 				meshlettriangleOffset + localMeshlet.triangle_offset,
-				localMeshlet.triangle_count
+				localMeshlet.triangle_count,
+				glm::vec4(0.0f)
 				});
 		}
 

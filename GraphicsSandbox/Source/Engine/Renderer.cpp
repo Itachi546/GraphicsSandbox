@@ -11,7 +11,7 @@
 #include "TextureCache.h"
 
 #include "GUI/ImGuiService.h"
-#include "../Shared/MeshData.h"
+#include "MeshData.h"
 #include "Pass/DepthPrePass.h"
 #include "Pass/GBufferPass.h"
 #include "Pass/LightingPass.h"

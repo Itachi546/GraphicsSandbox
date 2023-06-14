@@ -226,10 +226,8 @@
     <ClInclude Include="Source\Engine\spirv_reflect.h" />
     <ClInclude Include="Source\Engine\VulkanResources.h" />
     <ClInclude Include="Source\External\json.hpp" />
-    <ClInclude Include="Source\Shared\MathUtils.h" />
-    <ClInclude Include="Source\Shared\MeshData.h" />
-    <ClInclude Include="Source\Test\BloomTest.h" />
-    <ClInclude Include="Source\Test\SponzaTest.h" />
+    <ClInclude Include="Source\Engine\MathUtils.h" />
+    <ClInclude Include="Source\Engine\MeshData.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Shaders\fullscreen.frag.glsl">
@@ -247,6 +245,7 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
     </CustomBuild>
+    <None Include="Shaders\gbuffer.task.glsl" />
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>
@@ -292,7 +291,7 @@
     <ClCompile Include="Source\Engine\VulkanGraphicsDevice.cpp" />
     <ClCompile Include="Source\Engine\spriv_reflect.c" />
     <ClCompile Include="Source\glfwMain.cpp" />
-    <ClCompile Include="Source\Shared\MathUtils.cpp" />
+    <ClCompile Include="Source\Engine\MathUtils.cpp" />
     <CustomBuild Include="Shaders\transparent.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>

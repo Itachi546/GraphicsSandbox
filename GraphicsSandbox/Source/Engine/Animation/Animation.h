@@ -3,9 +3,36 @@
 #include <vector>
 #include <string>
 #include "../TransformComponent.h"
-#include "../../Shared/MeshData.h"
 
 struct TransformComponent;
+
+template<typename T>
+struct Track {
+	T value;
+	float time;
+};
+
+using Vector3Track = Track<glm::vec3>;
+using QuaternionTrack = Track<glm::fquat>;
+
+struct Channel
+{
+	uint32_t boneId;
+	uint32_t translationTrack;
+	uint32_t traslationCount;
+	uint32_t rotationTrack;
+	uint32_t rotationCount;
+	uint32_t scalingTrack;
+	uint32_t scalingCount;
+};
+
+struct Animation
+{
+	float framePerSecond;
+	float duration;
+	uint32_t channelStart;
+	uint32_t channelCount;
+};
 
 constexpr int MAX_BONE_COUNT = 80;
 class TransformTrack

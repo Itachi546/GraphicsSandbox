@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-#include "../Shared/MeshData.h"
+#include "MeshData.h"
 #include "TransformComponent.h"
 #include "Animation/animation.h"
 
@@ -18,7 +18,74 @@ struct PerObjectData
 	uint32_t materialIndex;
 };
 
-struct MaterialComponent;
+inline bool IsTextureValid(uint32_t texture)
+{
+	return texture != gfx::INVALID_TEXTURE_ID;
+}
+
+constexpr int ALPHAMODE_NONE = 0;
+constexpr int ALPHAMODE_BLEND = 1;
+constexpr int ALPHAMODE_MASK = 2;
+
+struct MaterialComponent {
+	glm::vec4 albedo = glm::vec4(1.0f);
+	glm::vec3 emissive = glm::vec3(0.0f);
+
+	float metallic = 0.01f;
+	float roughness = 0.9f;
+	float ao = 1.0f;
+	float transparency = 1.0f;
+	float alphaCutoff = 0.0f;
+	int alphaMode = ALPHAMODE_NONE;
+
+	union {
+		uint32_t textures[7] = {
+			gfx::INVALID_TEXTURE_ID,
+			gfx::INVALID_TEXTURE_ID,
+			gfx::INVALID_TEXTURE_ID,
+			gfx::INVALID_TEXTURE_ID,
+			gfx::INVALID_TEXTURE_ID,
+			gfx::INVALID_TEXTURE_ID,
+			gfx::INVALID_TEXTURE_ID
+		};
+		struct {
+			uint32_t albedoMap;
+			uint32_t normalMap;
+			uint32_t emissiveMap;
+			uint32_t metallicMap;
+			uint32_t roughnessMap;
+			uint32_t ambientOcclusionMap;
+			uint32_t opacityMap;
+		};
+	};
+
+	uint32_t GetTextureCount()
+	{
+		uint32_t count = 0;
+		if (albedoMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		if (normalMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		if (emissiveMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		if (metallicMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		if (roughnessMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		if (ambientOcclusionMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		if (opacityMap != gfx::INVALID_TEXTURE_ID)
+			count += 1;
+		return count;
+	}
+
+	bool IsTransparent()
+	{
+		return alphaMode != ALPHAMODE_NONE;
+	}
+};
+static_assert(sizeof(MaterialComponent) % 16 == 0);
+
 struct DrawData
 {
 	glm::mat4 worldTransform;

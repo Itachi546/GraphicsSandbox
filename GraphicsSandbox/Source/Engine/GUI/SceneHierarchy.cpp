@@ -235,7 +235,7 @@ namespace ui {
 
 			auto ShowTexture = [](uint32_t index, std::string textureType) {
 				std::string filename = "No File";
-				if (index != INVALID_TEXTURE)
+				if (index != gfx::INVALID_TEXTURE_ID)
 					filename = TextureCache::GetTextureName(index);
 				ImGui::Text("%s: %s\n", textureType.c_str(), filename.c_str());
 			};

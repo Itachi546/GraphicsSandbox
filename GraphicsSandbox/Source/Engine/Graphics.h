@@ -11,6 +11,8 @@ namespace gfx
 {
 	struct GPUResource;
 
+	constexpr const uint32_t INVALID_TEXTURE_ID = 0xFFFFFFFF;
+
 	enum class ValidationMode
 	{
 		Enabled,

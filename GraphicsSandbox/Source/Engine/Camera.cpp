@@ -1,5 +1,4 @@
 #include "Camera.h"
-#include "../Shared/MathUtils.h"
 #include "DebugDraw.h"
 
 Camera::Camera()

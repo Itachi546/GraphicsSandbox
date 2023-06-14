@@ -139,9 +139,6 @@
     <ClInclude Include="Source\External\ImGui\imstb_truetype.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Test\BloomTest.h">
-      <Filter>TEST</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\GUI\SceneHierarchy.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
@@ -151,9 +148,6 @@
     <ClInclude Include="Source\Engine\GUI\FileDialog.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
-    <ClInclude Include="Source\Test\SponzaTest.h">
-      <Filter>TEST</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Editor\TransformGizmo.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
@@ -161,12 +155,6 @@
       <Filter>SOURCE\Graphics</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Interpolator.h">
-      <Filter>SOURCE\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Shared\MathUtils.h">
-      <Filter>SOURCE\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\Shared\MeshData.h">
       <Filter>SOURCE\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Source\Engine\Profiler.h">
@@ -198,6 +186,8 @@
     <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
     <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
+    <ClInclude Include="Source\Engine\MathUtils.h" />
+    <ClInclude Include="Source\Engine\MeshData.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -284,9 +274,6 @@
     <ClCompile Include="Source\Editor\EditorApplication.cpp">
       <Filter>EDITOR</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Shared\MathUtils.cpp">
-      <Filter>SOURCE\Utils</Filter>
-    </ClCompile>
     <ClCompile Include="Source\Engine\GUI\SceneHierarchy.cpp">
       <Filter>EDITOR</Filter>
     </ClCompile>
@@ -329,6 +316,9 @@
     <ClCompile Include="Source\Engine\Pass\BloomPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\MathUtils.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -351,6 +341,7 @@
     <None Include="Shaders\material.glsl">
       <Filter>SHADERS</Filter>
     </None>
+    <None Include="Shaders\gbuffer.task.glsl" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Shaders\hdri_converter.comp.glsl" />

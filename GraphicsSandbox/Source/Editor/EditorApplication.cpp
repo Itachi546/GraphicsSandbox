@@ -1,6 +1,6 @@
 #include "EditorApplication.h"
 #include "../Engine/VulkanGraphicsDevice.h"
-#include "../Shared/MathUtils.h"
+#include "../Engine/MathUtils.h"
 #include "../Engine/DebugDraw.h"
 #include "../Engine/CascadedShadowMap.h"
 #include "../Engine/Animation/Animation.h"

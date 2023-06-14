@@ -3,7 +3,7 @@
 #include "GraphicsDevice.h"
 #include "Logger.h"
 #include "ImageLoader.h"
-#include "../Shared/MeshData.h"
+#include "MeshData.h"
 
 #include <vector>
 #include <cassert>
@@ -86,7 +86,7 @@ namespace TextureCache
 		if (pixels == nullptr)
 		{
 			Logger::Warn("Failed to load texture: " + filename);
-			return INVALID_TEXTURE;
+			return gfx::INVALID_TEXTURE_ID;
 		}
 		assert(nChannel == 4);
 		gfx::TextureHandle texture = CreateTexture(pixels, width, height, nChannel, generateMipmap);
@@ -108,7 +108,7 @@ namespace TextureCache
 		if (data == nullptr)
 		{
 			Logger::Warn("Failed to load texture: " + name);
-			return INVALID_TEXTURE;
+			return gfx::INVALID_TEXTURE_ID;
 		}
 
 		//texture.name = filename;

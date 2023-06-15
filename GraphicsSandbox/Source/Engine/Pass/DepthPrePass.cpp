@@ -38,38 +38,30 @@ void gfx::DepthPrePass::Render(CommandList* commandList, Scene* scene)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 
-	std::vector<DrawData>& drawDatas = scene->GetDrawDataOpaque();
-
 	//Bind Pipeline
-	std::vector<RenderBatch> renderBatches;
-
-	// Create Batch
-	renderer->CreateBatch(drawDatas, renderBatches);
+	const std::vector<RenderBatch>& renderBatches = renderer->mDrawBatches;
 
 	// Draw Batch
 	gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
 	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
 
-	uint32_t lastOffset = 0;
 	for (auto& batch : renderBatches)
 	{
-		if (batch.drawCommands.size() == 0) continue;
+		if (batch.count == 0) continue;
 
-		gfx::BufferView& vbView = batch.vertexBuffer;
-		gfx::BufferView& ibView = batch.indexBuffer;
+		const gfx::BufferView& vbView = batch.vertexBuffer;
+		const gfx::BufferView& ibView = batch.indexBuffer;
 
 		descriptorInfos[1] = { vbView.buffer, 0, device->GetBufferSize(vbView.buffer), gfx::DescriptorType::StorageBuffer };
 
-		descriptorInfos[2] = { transformBuffer, (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[2] = { transformBuffer, batch.offset * sizeof(glm::mat4), batch.count * sizeof(glm::mat4), gfx::DescriptorType::StorageBuffer };
 
 		device->UpdateDescriptor(pipeline, descriptorInfos, (uint32_t)std::size(descriptorInfos));
 		device->BindPipeline(commandList, pipeline);
 
 		device->BindIndexBuffer(commandList, ibView.buffer);
 
-		device->DrawIndexedIndirect(commandList, drawIndirectBuffer, lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
-
-		lastOffset += (uint32_t)batch.drawCommands.size();
+		device->DrawIndexedIndirect(commandList, drawIndirectBuffer, batch.offset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.count, sizeof(gfx::DrawIndirectCommand));
 	}
 
 }

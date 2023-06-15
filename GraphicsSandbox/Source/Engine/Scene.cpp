@@ -66,7 +66,9 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 			drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
 			drawData.worldTransform = transform->worldMatrix;
 			drawData.elmSize = meshRenderer->IsSkinned() ? sizeof(AnimatedVertex) : sizeof(Vertex);
-
+			drawData.meshletBuffer = meshRenderer->meshletBuffer;
+			drawData.meshletTriangleBuffer = meshRenderer->meshletTriangleBuffer;
+			drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
 			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
 
@@ -135,10 +137,6 @@ ecs::Entity Scene::CreateLight(std::string_view name)
 
 void Scene::Update(float dt)
 {
-	mOpaqueBatches.clear();
-	mTransparentBatches.clear();
-	mSkinnedBatches.clear();
-
 	mCamera.Update(dt);
 	UpdateTransform();
 	UpdateHierarchy();
@@ -146,9 +144,6 @@ void Scene::Update(float dt)
 	mUISceneHierarchy->Update(dt);
 	if(mShowBoundingBox)
 		DrawBoundingBox();
-
-	GenerateDrawData(mOpaqueBatches, mTransparentBatches);
-	GenerateSkinnedMeshDrawData(mSkinnedBatches, mTransparentBatches);
 }
 
 void Scene::SetSize(int width, int height)

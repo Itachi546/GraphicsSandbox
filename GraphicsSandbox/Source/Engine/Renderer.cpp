@@ -139,6 +139,19 @@ void Renderer::Update(float dt)
 	// Update Environment data
 	mEnvironmentData.cameraPosition = mScene->GetCamera()->GetPosition();
 	mEnvironmentData.nLight = (uint32_t)mScene->GetComponentManager()->GetComponentArray<LightComponent>()->components.size();
+
+	// Update Batch if needed
+	if (mUpdateBatches) {
+		std::vector<DrawData> opaque;
+		std::vector<DrawData> transparent;
+		mScene->GenerateDrawData(opaque, transparent);
+
+		uint32_t lastOffset = 0;
+		lastOffset = CreateBatch(opaque, mDrawBatches, lastOffset);
+		lastOffset = CreateBatch(transparent, mTransparentBatches, lastOffset);
+
+		mUpdateBatches = false;
+	}
 }
 
 
@@ -661,15 +674,16 @@ void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, g
 	}
 }
 */
-void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch)
+uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch, uint32_t lastOffset)
 {
-	// Clear previous batch
-	renderBatch.clear();
-
-    // Sort the DrawData according to bufferIndex
+	// Sort the DrawData according to bufferIndex
 	std::sort(drawDatas.begin(), drawDatas.end(), [](const DrawData& lhs, const DrawData& rhs) {
 		return lhs.vertexBuffer.buffer.handle < rhs.vertexBuffer.buffer.handle;
-	});
+		});
+
+	std::vector<gfx::DrawIndirectCommand> drawCommands;
+	std::vector<glm::mat4> transforms;
+	std::vector<MaterialComponent> materials;
 
 	gfx::BufferHandle lastBuffer = gfx::INVALID_BUFFER;
 	RenderBatch* activeBatch = nullptr;
@@ -677,24 +691,28 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 	{
 		for (auto& drawData : drawDatas)
 		{
-			uint32_t texInBatch = activeBatch == nullptr ? 0 : activeBatch->textureCount;
-
 			gfx::BufferHandle buffer = drawData.vertexBuffer.buffer;
 			if (buffer.handle != lastBuffer.handle || activeBatch == nullptr)
 			{
+				lastOffset += activeBatch == nullptr ? 0 : activeBatch->count;
 				renderBatch.push_back(RenderBatch{});
 				activeBatch = &renderBatch.back();
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
 				activeBatch->indexBuffer = drawData.indexBuffer;
+				activeBatch->meshletBuffer = drawData.meshletBuffer;
+				activeBatch->meshletTriangleBuffer = drawData.meshletTriangleBuffer;
+				activeBatch->meshletVertexBuffer = drawData.meshletVertexBuffer;
+				activeBatch->offset = lastOffset;
+				activeBatch->count = 0;
 				lastBuffer = buffer;
 			}
 
 			// Find texture and assign new index
 			MaterialComponent material = *drawData.material;
-			activeBatch->materials.push_back(std::move(material));
+			materials.push_back(std::move(material));
 
 			// Update transform Data
-			activeBatch->transforms.push_back(std::move(drawData.worldTransform));
+			transforms.push_back(std::move(drawData.worldTransform));
 
 			// Create DrawCommands
 			gfx::DrawIndirectCommand drawCommand = {};
@@ -702,33 +720,28 @@ void Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderB
 			drawCommand.indexCount = drawData.indexCount;
 			drawCommand.instanceCount = 1;
 			drawCommand.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
-			activeBatch->drawCommands.push_back(std::move(drawCommand));
-
-			assert(activeBatch->transforms.size() == activeBatch->drawCommands.size());
-			assert(activeBatch->transforms.size() == activeBatch->materials.size());
+			drawCommands.push_back(std::move(drawCommand));
+			activeBatch->count++;
 		}
 
 		// Copy PerObjectDrawData to the buffer
-        //PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
-		uint32_t lastOffset = 0;
+		//PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
 		const uint32_t mat4Size = sizeof(glm::mat4);
 		const uint32_t materialSize = sizeof(MaterialComponent);
 		const uint32_t dicSize = sizeof(gfx::DrawIndirectCommand);
 
-		for (auto& batch : renderBatch)
-		{
-			uint32_t transformCount = (uint32_t)batch.transforms.size();
-			mDevice->CopyToBuffer(mTransformBuffer, batch.transforms.data(), lastOffset * sizeof(glm::mat4), transformCount * mat4Size);
+		uint32_t transformCount = (uint32_t)transforms.size();
+		mDevice->CopyToBuffer(mTransformBuffer, transforms.data(), lastOffset * mat4Size, transformCount * mat4Size);
 
-			uint32_t materialCount = (uint32_t)batch.materials.size();
-			mDevice->CopyToBuffer(mMaterialBuffer, batch.materials.data(), lastOffset * sizeof(MaterialComponent), materialCount * materialSize);
+		uint32_t materialCount = (uint32_t)materials.size();
+		mDevice->CopyToBuffer(mMaterialBuffer, materials.data(), lastOffset * materialSize, materialCount * materialSize);
 
-			uint32_t drawCommandCount = (uint32_t)batch.drawCommands.size();
-			mDevice->CopyToBuffer(mDrawIndirectBuffer, batch.drawCommands.data(), lastOffset * sizeof(gfx::DrawIndirectCommand), drawCommandCount * dicSize);
+		uint32_t drawCommandCount = (uint32_t)drawCommands.size();
+		mDevice->CopyToBuffer(mDrawIndirectBuffer, drawCommands.data(), lastOffset * dicSize, drawCommandCount * dicSize);
 
-			lastOffset += (uint32_t)batch.transforms.size();
-		}
+		lastOffset += activeBatch->count;
 	}
+	return lastOffset;
 }
 
 void Renderer::onResize(uint32_t width, uint32_t height)

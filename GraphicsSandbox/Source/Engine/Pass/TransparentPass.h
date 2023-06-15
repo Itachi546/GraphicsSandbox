@@ -25,14 +25,6 @@ namespace gfx {
 		DescriptorInfo descriptorInfos[5];
 
 	private:
-		struct TransparentDrawData {
-			BufferView vb;
-			BufferView ib;
-
-			uint32_t indexCount;
-			uint32_t transformIndex;
-			uint32_t materialIndex;
-		};
 		struct PushConstantData {
 			uint32_t nLight;
 			uint32_t irradianceMap;
@@ -44,7 +36,6 @@ namespace gfx {
 			float globalAO;
 		} mPushConstantData;
 
-		void CreateBatch(Scene* scene, std::vector<DrawData>& drawData, std::vector<TransparentDrawData>& batches);
 	};
 }
 

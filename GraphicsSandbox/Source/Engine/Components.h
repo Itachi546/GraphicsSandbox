@@ -94,6 +94,10 @@ struct DrawData
 
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
+	gfx::BufferHandle meshletVertexBuffer;
+	gfx::BufferHandle meshletTriangleBuffer;
+	gfx::BufferHandle meshletBuffer;
+
 	uint32_t elmSize;
 	ecs::Entity entity;
 };

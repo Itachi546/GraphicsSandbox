@@ -16,12 +16,17 @@ class CascadedShadowMap;
 
 struct RenderBatch
 {
-	std::vector<gfx::DrawIndirectCommand> drawCommands;
-	std::vector<glm::mat4> transforms;
-	std::vector<MaterialComponent> materials;
-	uint32_t textureCount = 0;
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
+	gfx::BufferHandle meshletVertexBuffer;
+	gfx::BufferHandle meshletTriangleBuffer;
+	gfx::BufferHandle meshletBuffer;
+
+	// Offset in number terms of number of element before this
+	// Used to offset in transform/material buffer and is assumed to have one to one mapping between mesh and material
+	uint32_t offset;
+	// Count of number of transform/material/drawCommands in the batch
+	uint32_t count;
 };
 
 struct LightData
@@ -75,8 +80,6 @@ public:
 
 	void Shutdown();
 
-	void CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch);
-
 	virtual ~Renderer() = default;
 
 	gfx::BufferHandle mLightBuffer;
@@ -88,13 +91,21 @@ public:
 	gfx::FrameGraphBuilder mFrameGraphBuilder;
 	gfx::FrameGraph mFrameGraph;
 	EnvironmentData mEnvironmentData;
+
+	std::vector<RenderBatch> mDrawBatches;
+	std::vector<RenderBatch> mTransparentBatches;
+
 private:
 
 	gfx::GraphicsDevice* mDevice;
 	Scene* mScene;
+	bool mUpdateBatches = true;
 
 	std::vector<std::string> mOutputAttachments;
 	uint32_t mFinalOutput;
+
+	// Returns total number of drawElements pushed while creating batch
+	uint32_t CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch, uint32_t lastOffset = 0);
 
 	gfx::PipelineHandle mCubemapPipeline;
 	gfx::RenderPassHandle mSwapchainRP;

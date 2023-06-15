@@ -363,10 +363,7 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="Shaders\brdf_lut.comp.glsl" />
-    <CustomBuild Include="Shaders\main.frag.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
-    <CustomBuild Include="Shaders\transparent.vert.glsl">
+    <CustomBuild Include="Shaders\transparent.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="Shaders\fxaa.frag.glsl">

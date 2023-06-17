@@ -341,7 +341,6 @@
     <None Include="Shaders\material.glsl">
       <Filter>SHADERS</Filter>
     </None>
-    <None Include="Shaders\gbuffer.task.glsl" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Shaders\hdri_converter.comp.glsl" />
@@ -370,6 +369,13 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="Shaders\gbuffer.mesh.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\depth_prepass.mesh.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\gbuffer.task.glsl" />
+    <CustomBuild Include="Shaders\gbuffer_mesh.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

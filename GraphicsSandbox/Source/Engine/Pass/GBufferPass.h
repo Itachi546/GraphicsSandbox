@@ -4,6 +4,8 @@
 #include "../Graphics.h"
 
 class Renderer;
+struct RenderBatch;
+
 namespace gfx {
 	struct GBufferPass : public FrameGraphPass
 	{
@@ -18,9 +20,18 @@ namespace gfx {
 
 		void Shutdown() override;
 
-		gfx::PipelineHandle pipeline;
+		gfx::PipelineHandle indexedPipeline = gfx::INVALID_PIPELINE;
+		DescriptorInfo indexedDescriptorInfos[4];
+
+		// Mesh shader pipeline
+		gfx::PipelineHandle meshletPipeline = gfx::INVALID_PIPELINE;
+		DescriptorInfo meshletDescriptorInfos[7];
+
 		Renderer* renderer;
 
-		DescriptorInfo descriptorInfos[4];
+	private:
+		void drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches);
+		void drawMeshlet(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches);
+		bool mSupportMeshShading = false;
 	};
 }

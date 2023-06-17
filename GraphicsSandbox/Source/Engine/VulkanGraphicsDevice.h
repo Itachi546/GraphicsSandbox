@@ -80,9 +80,13 @@ namespace gfx
 		// except by destroying descriptor pool.
 		void UpdateDescriptor(PipelineHandle pipeline, DescriptorInfo* descriptorInfo, uint32_t descriptorInfoCount)    override;
 		void PushConstants(CommandList* commandList, PipelineHandle pipeline, ShaderStage shaderStages, void* value, uint32_t size, uint32_t offset = 0) override;
+
 		void Draw(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)         override;
 		void DrawIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 		void DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
+		void DrawMeshTasksIndirect(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, uint32_t count, uint32_t stride) override;
+		void DrawMeshTasks(CommandList* commandList, uint32_t count, uint32_t firstTask) override;
+
 		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;
 
 		bool IsSwapchainReady() override;
@@ -107,6 +111,9 @@ namespace gfx
 		TextureHandle GetFramebufferAttachment(FramebufferHandle, uint32_t index) override;
 
 		void Shutdown() override;
+
+		bool SupportMeshShading() override { return supportMeshShader; }
+
 		virtual ~VulkanGraphicsDevice() = default;
 	private:
 		VkInstance instance_ = VK_NULL_HANDLE;

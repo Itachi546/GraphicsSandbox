@@ -21,6 +21,7 @@ struct RenderBatch
 	gfx::BufferHandle meshletVertexBuffer;
 	gfx::BufferHandle meshletTriangleBuffer;
 	gfx::BufferHandle meshletBuffer;
+	uint32_t meshletCount;
 
 	// Offset in number terms of number of element before this
 	// Used to offset in transform/material buffer and is assumed to have one to one mapping between mesh and material

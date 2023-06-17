@@ -62,6 +62,8 @@ namespace gfx
 		virtual void DrawIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) = 0;
 		virtual void DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) = 0;
 		virtual void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ) = 0;
+		virtual void DrawMeshTasksIndirect(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, uint32_t count, uint32_t stride) = 0;
+		virtual void DrawMeshTasks(CommandList* commandList, uint32_t count, uint32_t firstTask) = 0;
 
 		virtual void PrepareSwapchainForPresent(CommandList* commandList) = 0;
 
@@ -81,6 +83,9 @@ namespace gfx
 		virtual void Destroy(FramebufferHandle framebuffer) = 0;
 		//virtual void Destroy(SemaphoreHandle semaphore) = 0;
 		virtual void Shutdown() = 0;
+
+		// Feature support flag
+		virtual bool SupportMeshShading() = 0;
 
 	protected:
 		ValidationMode mValidationMode = ValidationMode::Enabled;

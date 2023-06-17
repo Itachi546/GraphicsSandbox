@@ -4,6 +4,11 @@ namespace StringConstants
 {
 	// GBuffer Pass
 	constexpr const char* GBUFFER_FRAG_PATH = "Assets/SPIRV/gbuffer.frag.spv";
+	
+	// Mesh Shader
+	constexpr const char* GBUFER_TASK_PATH = "Assets/SPIRV/gbuffer.task.spv";
+	constexpr const char* GBUFER_MESH_PATH = "Assets/SPIRV/gbuffer.mesh.spv";
+	constexpr const char* DEPTH_PREPASS_MESH_PATH = "Assets/SPIRV/depth_prepass.mesh.spv";
 
 	// Light Pass
 	constexpr const char* LIGHTING_FRAG_PATH = "Assets/SPIRV/lighting.frag.spv";

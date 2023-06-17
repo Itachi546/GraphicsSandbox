@@ -91,7 +91,7 @@ struct DrawData
 	glm::mat4 worldTransform;
 	MaterialComponent* material;
 	uint32_t indexCount;
-
+	uint32_t meshletCount;
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
 	gfx::BufferHandle meshletVertexBuffer;
@@ -174,6 +174,7 @@ struct IMeshRenderer
 	gfx::BufferHandle meshletBuffer;
 	gfx::BufferHandle meshletVertexBuffer;
 	gfx::BufferHandle meshletTriangleBuffer;
+	uint32_t meshletCount;
 
 	BoundingBox boundingBox;
 

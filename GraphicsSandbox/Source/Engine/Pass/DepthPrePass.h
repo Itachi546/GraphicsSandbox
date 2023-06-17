@@ -4,6 +4,8 @@
 
 class Scene;
 class Renderer;
+struct RenderBatch;
+
 namespace gfx {
 
 	struct DepthPrePass : public FrameGraphPass
@@ -15,9 +17,18 @@ namespace gfx {
 
 		//void OnResize(gfx::GraphicsDevice* device, uint32_t width, uint32_t height);
 
-		PipelineHandle pipeline = INVALID_PIPELINE;
-		DescriptorInfo descriptorInfos[3];
+		PipelineHandle indexedPipeline = INVALID_PIPELINE;
+		DescriptorInfo indexedDescriptorInfos[3];
+
+		PipelineHandle meshletPipeline = INVALID_PIPELINE;
+		DescriptorInfo meshletDescriptorInfos[6];
+
 		Renderer* renderer;
+
+	private: 
+		bool mSupportMeshShading = false;
+		void drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches);
+		void drawMeshlet(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches);
 	};
 
 }

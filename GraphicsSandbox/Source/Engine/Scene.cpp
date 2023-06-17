@@ -69,6 +69,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 			drawData.meshletBuffer = meshRenderer->meshletBuffer;
 			drawData.meshletTriangleBuffer = meshRenderer->meshletTriangleBuffer;
 			drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
+			drawData.meshletCount = meshRenderer->meshletCount;
 			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
 
@@ -423,7 +424,7 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		uint16_t* indicesPtr = (uint16_t*)gltfMesh::getBufferPtr(model, indicesAccessor);
 		uint32_t indexCount = (uint32_t)indicesAccessor.count;
 		std::vector<uint32_t> indices(indicesPtr, indicesPtr + indexCount);
-		
+
 		// Generate Meshlets
 		const std::size_t maxMeshlets = meshopt_buildMeshletsBound(indexCount, MAX_MESHLET_VERTICES, MAX_MESHLET_TRIANGLES);
 		std::vector<meshopt_Meshlet> localMeshlets(maxMeshlets);
@@ -470,6 +471,7 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		meshRenderer.vertexBuffer.byteLength = (uint32_t)(vertices.size() * sizeof(Vertex));
 		meshRenderer.indexBuffer.byteOffset = indexOffset;
 		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
+		meshRenderer.meshletCount = (uint32_t)localMeshlets.size();
 
 		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
 		parseMaterial(model, &material, primitive.material);

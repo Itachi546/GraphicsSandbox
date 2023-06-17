@@ -704,6 +704,7 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 				activeBatch->meshletVertexBuffer = drawData.meshletVertexBuffer;
 				activeBatch->offset = lastOffset;
 				activeBatch->count = 0;
+				activeBatch->meshletCount = 0;
 				lastBuffer = buffer;
 			}
 
@@ -722,10 +723,10 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 			drawCommand.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
 			drawCommands.push_back(std::move(drawCommand));
 			activeBatch->count++;
+			activeBatch->meshletCount += drawData.meshletCount;
 		}
 
-		// Copy PerObjectDrawData to the buffer
-		//PerObjectData* objectDataPtr = static_cast<PerObjectData*>(mPerObjectDataBuffer->mappedDataPtr) + lastOffset;
+		// Copy data to buffer
 		const uint32_t mat4Size = sizeof(glm::mat4);
 		const uint32_t materialSize = sizeof(MaterialComponent);
 		const uint32_t dicSize = sizeof(gfx::DrawIndirectCommand);

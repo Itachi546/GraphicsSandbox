@@ -775,6 +775,10 @@ namespace gfx {
             return VK_SHADER_STAGE_COMPUTE_BIT;
         case SpvReflectShaderStageFlagBits::SPV_REFLECT_SHADER_STAGE_GEOMETRY_BIT:
             return VK_SHADER_STAGE_GEOMETRY_BIT;
+        case SpvReflectShaderStageFlagBits::SPV_REFLECT_SHADER_STAGE_MESH_BIT_NV:
+            return VK_SHADER_STAGE_MESH_BIT_NV;
+        case SpvReflectShaderStageFlagBits::SPV_REFLECT_SHADER_STAGE_TASK_BIT_NV:
+            return VK_SHADER_STAGE_TASK_BIT_NV;
         default:
             assert(!"Undefined shader stage");
             return VkShaderStageFlagBits(0);
@@ -1187,7 +1191,7 @@ namespace gfx {
                 if (std::strcmp(required, VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME) == 0)
                     supportSynchronization2 = true;
 
-                if (std::strcmp(required, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
+                if (std::strcmp(required, VK_NV_MESH_SHADER_EXTENSION_NAME) == 0)
                     supportMeshShader = true;
             }
             else {
@@ -1295,7 +1299,7 @@ namespace gfx {
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
             VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
-            VK_EXT_MESH_SHADER_EXTENSION_NAME,
+            VK_NV_MESH_SHADER_EXTENSION_NAME,
         };
 
         // Create physical device
@@ -1341,7 +1345,6 @@ namespace gfx {
         features2_.features.samplerAnisotropy = true;
         features2_.features.geometryShader = true;
         features2_.features.depthClamp = true;
-
         features11_.shaderDrawParameters = true;
 
         features12_.drawIndirectCount = true;
@@ -1351,6 +1354,7 @@ namespace gfx {
         features12_.separateDepthStencilLayouts = true;
         features12_.shaderSampledImageArrayNonUniformIndexing = true;
         features12_.timelineSemaphore = true;
+        features12_.storageBuffer8BitAccess = true;
 
         if (supportBindless)
         {
@@ -2222,6 +2226,19 @@ namespace gfx {
         auto cmd = GetCommandList(commandList);
         auto dcb = buffers.AccessResource(indirectBuffer.handle);
         vkCmdDrawIndexedIndirect(cmd->commandBuffer, dcb->buffer, offset, drawCount, stride);
+    }
+
+    void VulkanGraphicsDevice::DrawMeshTasksIndirect(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, uint32_t count, uint32_t stride)
+    {
+        auto cmd = GetCommandList(commandList);
+        auto db = buffers.AccessResource(meshDrawBuffer.handle);
+        vkCmdDrawMeshTasksIndirectNV(cmd->commandBuffer, db->buffer, offset, count, stride);
+    }
+
+    void VulkanGraphicsDevice::DrawMeshTasks(CommandList* commandList, uint32_t count, uint32_t firstTask)
+    {
+        auto cmd = GetCommandList(commandList);
+        vkCmdDrawMeshTasksNV(cmd->commandBuffer, count, firstTask);
     }
 
     void VulkanGraphicsDevice::DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)

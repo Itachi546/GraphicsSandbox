@@ -45,11 +45,11 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	mDevice->CopyToBuffer(stagingBuffer, hdriData, 0, imageDataSize);
 
 	// Copy from staging buffer to hdri texture
-	gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
+	gfx::ResourceBarrierInfo transferBarrier = gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal, gfx::INVALID_TEXTURE);
 	gfx::PipelineBarrierInfo transferBarrierInfo = {
 		&transferBarrier, 1,
-		gfx::PipelineStage::TransferBit,
-		gfx::PipelineStage::TransferBit
+		gfx::PipelineStage::Transfer,
+		gfx::PipelineStage::Transfer
 	};
 	mDevice->CopyTexture(hdriTexture, stagingBuffer, &transferBarrierInfo, 0, 0);
 	Utils::ImageLoader::Free(hdriData);
@@ -72,9 +72,9 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
 	// Layout transition for shader read/write
-	gfx::ImageBarrierInfo imageBarrier[] = { 
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, hdriTexture},
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mCubemapTexture}
+	gfx::ResourceBarrierInfo imageBarrier[] = { 
+		gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, hdriTexture),
+		gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mCubemapTexture)
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -124,8 +124,8 @@ void EnvironmentMap::CalculateIrradiance()
 	// Begin Compute Shader
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 	// Layout transition for shader read/write
-	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mIrradianceTexture},
+	gfx::ResourceBarrierInfo imageBarrier[] = {
+		gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mIrradianceTexture),
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -176,8 +176,8 @@ void EnvironmentMap::Prefilter()
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
 	// Layout transition for shader read/write
-	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mPrefilterTexture},
+	gfx::ResourceBarrierInfo imageBarrier[] = {
+		gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mPrefilterTexture),
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -234,8 +234,8 @@ void EnvironmentMap::CalculateBRDFLUT()
 	gfx::CommandList commandList = mDevice->BeginCommandList();
 
 	// Layout transition for shader read/write
-	gfx::ImageBarrierInfo imageBarrier[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mBRDFTexture},
+	gfx::ResourceBarrierInfo imageBarrier[] = {
+		gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mBRDFTexture),
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier = {
@@ -257,8 +257,8 @@ void EnvironmentMap::CalculateBRDFLUT()
 	mDevice->DispatchCompute(&commandList, gfx::GetWorkSize(mBRDFDims, 32), gfx::GetWorkSize(mBRDFDims, 32), 1);
 
 	// Layout transition for shader read/write
-	gfx::ImageBarrierInfo imageBarrier2[] = {
-		gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mBRDFTexture},
+	gfx::ResourceBarrierInfo imageBarrier2[] = {
+		gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, mBRDFTexture),
 	};
 
 	gfx::PipelineBarrierInfo computeBarrier2 = {

@@ -24,7 +24,8 @@ namespace gfx
 		virtual void CopyBuffer(BufferHandle dst, BufferHandle src, uint32_t dstOffset = 0) = 0;
 		virtual void CopyTexture(TextureHandle dst, BufferHandle src, PipelineBarrierInfo* barrier = nullptr, uint32_t arrayLevel = 0, uint32_t mipLevel = 0) = 0;
 		virtual void CopyTexture(TextureHandle dst, void* src, uint32_t sizeInByte, uint32_t arrayLevel = 0, uint32_t mipLevel = 0, bool generateMipMap = false) = 0;
-		
+		virtual void FillBuffer(CommandList* commandList, BufferHandle buffer, uint32_t offset, uint32_t size, uint32_t data = 0) = 0;
+
 		virtual void* GetMappedDataPtr(BufferHandle buffer) = 0;
 		virtual uint32_t GetBufferSize(BufferHandle handle) = 0;
 
@@ -61,6 +62,8 @@ namespace gfx
 		virtual void Draw(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount) = 0;
 		virtual void DrawIndexed(CommandList* commandList, uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex) = 0;
 		virtual void DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) = 0;
+		virtual void DrawIndexedIndirectCount(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, BufferHandle drawCountBuffer, uint32_t drawCountBufferOffset, uint32_t maxDrawCounts, uint32_t stride) = 0;
+
 		virtual void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ) = 0;
 		virtual void DrawMeshTasksIndirect(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, uint32_t count, uint32_t stride) = 0;
 		virtual void DrawMeshTasks(CommandList* commandList, uint32_t count, uint32_t firstTask) = 0;

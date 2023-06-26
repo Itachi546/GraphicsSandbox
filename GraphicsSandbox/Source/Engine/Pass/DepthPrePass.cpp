@@ -60,13 +60,16 @@ void gfx::DepthPrePass::drawIndexed(gfx::GraphicsDevice* device, gfx::CommandLis
 	// Draw Batch
 	gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
 	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
+	gfx::BufferHandle drawCommandCountBuffer = renderer->mDrawCommandCountBuffer;
 
+	uint32_t batchCount = 0;
 	for (const auto& batch : batches) {
 		if (batch.count == 0) continue;
 
 		const gfx::BufferView& vbView = batch.vertexBuffer;
 		indexedDescriptorInfos[1] = { vbView.buffer, 0, device->GetBufferSize(vbView.buffer), gfx::DescriptorType::StorageBuffer };
 		indexedDescriptorInfos[2] = { transformBuffer, (uint32_t)(batch.offset * sizeof(glm::mat4)), (uint32_t)(batch.count * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
+		indexedDescriptorInfos[3] = { drawIndirectBuffer, (uint32_t)(batch.offset * sizeof(MeshDrawIndirectCommand)), (uint32_t)(batch.count * sizeof(MeshDrawIndirectCommand)), gfx::DescriptorType::StorageBuffer };
 
 		const gfx::BufferView& ibView = batch.indexBuffer;
 
@@ -75,7 +78,14 @@ void gfx::DepthPrePass::drawIndexed(gfx::GraphicsDevice* device, gfx::CommandLis
 
 		device->BindIndexBuffer(commandList, ibView.buffer);
 
-		device->DrawIndexedIndirect(commandList, drawIndirectBuffer, batch.offset * sizeof(gfx::DrawIndirectCommand), batch.count, sizeof(gfx::DrawIndirectCommand));
+		//device->DrawIndexedIndirect(commandList, drawIndirectBuffer, batch.offset * sizeof(gfx::MeshDrawIndirectCommand), batch.count, sizeof(gfx::MeshDrawIndirectCommand));
+		device->DrawIndexedIndirectCount(commandList,
+			drawIndirectBuffer,
+			batch.offset * sizeof(gfx::MeshDrawIndirectCommand),
+			drawCommandCountBuffer,
+			batch.id * sizeof(uint32_t),
+			batch.count,
+			sizeof(MeshDrawIndirectCommand));
 	}
 }
 

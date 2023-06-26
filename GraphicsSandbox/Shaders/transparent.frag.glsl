@@ -19,11 +19,11 @@ layout(location = 0) in VS_OUT
 
 layout(location = 0) out vec4 fragColor;
 
-layout(binding = 3) readonly buffer MaterialData {
+layout(binding = 4) readonly buffer MaterialData {
   Material aMaterialData[];
 };
 
-layout(binding = 4) readonly buffer LightBuffer {
+layout(binding = 5) readonly buffer LightBuffer {
    LightData lightData[];
 } lightBuffer;
 

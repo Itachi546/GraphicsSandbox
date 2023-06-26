@@ -17,6 +17,7 @@
 #include "Pass/LightingPass.h"
 #include "Pass/TransparentPass.h"
 #include "Pass/FXAAPass.h"
+#include "Pass/DrawCullPass.h"
 
 #include <vector>
 #include <algorithm>
@@ -57,21 +58,21 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 	mFrameGraph.Parse("GraphicsSandbox/Shaders/graph.json");
 	mFrameGraph.Compile();
 
-	mFrameGraphBuilder.GetAllResourceName(mOutputAttachments);
+	mFrameGraphBuilder.GetAllTextureResourceName(mOutputAttachments);
 
-	auto RegisterRenderer = [&](const std::string name, gfx::FrameGraphPass* pass) {
+	auto RegisterPass = [&](const std::string name, gfx::FrameGraphPass* pass) {
 		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(name);
 		if (node == nullptr) return;
 		mFrameGraph.RegisterRenderer(name, pass);
 		pass->Initialize(node->renderPass);
 	};
 
-	RegisterRenderer("depth_pre_pass", new gfx::DepthPrePass(this));
-	RegisterRenderer("gbuffer_pass", new gfx::GBufferPass(this));
-	RegisterRenderer("lighting_pass", new gfx::LightingPass(this));
-	RegisterRenderer("transparent_pass", new gfx::TransparentPass(this));
-	RegisterRenderer("fxaa_pass", new gfx::FXAAPass(this, width, height));
-
+	RegisterPass("depth_pre_pass", new gfx::DepthPrePass(this));
+	RegisterPass("gbuffer_pass", new gfx::GBufferPass(this));
+	RegisterPass("lighting_pass", new gfx::LightingPass(this));
+	RegisterPass("transparent_pass", new gfx::TransparentPass(this));
+	RegisterPass("fxaa_pass", new gfx::FXAAPass(this, width, height));
+	RegisterPass("drawcull_pass", new gfx::DrawCullPass(this));
 	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
 	if (found != mOutputAttachments.end())
 		mFinalOutput = (uint32_t)std::distance(mOutputAttachments.begin(), found);
@@ -100,6 +101,8 @@ void Renderer::SetScene(Scene* scene)
 // TODO: temp width and height variable
 void Renderer::Update(float dt)
 {
+	mUpdateBatches = true;
+
 	// Update Global Uniform Data
 	auto compMgr = mScene->GetComponentManager();
 	Camera* camera = mScene->GetCamera();
@@ -142,14 +145,17 @@ void Renderer::Update(float dt)
 
 	// Update Batch if needed
 	if (mUpdateBatches) {
+		mDrawBatches.clear();
+		mTransparentBatches.clear();
+
 		std::vector<DrawData> opaque;
 		std::vector<DrawData> transparent;
 		mScene->GenerateDrawData(opaque, transparent);
+		mBatchId = 0;
 
 		uint32_t lastOffset = 0;
 		lastOffset = CreateBatch(opaque, mDrawBatches, lastOffset);
 		lastOffset = CreateBatch(transparent, mTransparentBatches, lastOffset);
-
 		mUpdateBatches = false;
 	}
 }
@@ -162,6 +168,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 	ImGui::Begin("Renderer");
 
 	mScene->AddUI();
+
 	AddUI();
 
 	for (uint32_t i = 0; i < mFrameGraph.nodeHandles.size(); ++i)
@@ -173,8 +180,8 @@ void Renderer::Render(gfx::CommandList* commandList)
 		RangeId nodeProfilerId = Profiler::StartRangeGPU(commandList, node->name.c_str());
 		mDevice->BeginDebugLabel(commandList, node->name.c_str());
 
-		std::vector<gfx::ImageBarrierInfo> colorAttachmentBarrier;
-		std::vector<gfx::ImageBarrierInfo> depthAttachmentBarrier;
+		std::vector<gfx::ResourceBarrierInfo> colorAttachmentBarrier;
+		std::vector<gfx::ResourceBarrierInfo> depthAttachmentBarrier;
 
 		// Generate the Image barrier from input and output
 		for (uint32_t i = 0; i < node->inputs.size(); ++i)
@@ -185,11 +192,17 @@ void Renderer::Render(gfx::CommandList* commandList)
 			{
 				if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
 				{
-					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+					gfx::ResourceBarrierInfo barrierInfo = gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None,
+						gfx::AccessFlag::DepthStencilWrite,
+						gfx::ImageLayout::DepthAttachmentOptimal,
+						resourceInfo.texture.texture);
 					depthAttachmentBarrier.push_back(barrierInfo);
 				}
 				else {
-					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, resourceInfo.texture.texture };
+					gfx::ResourceBarrierInfo barrierInfo = gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ColorAttachmentWrite,
+						gfx::AccessFlag::ShaderRead,
+						gfx::ImageLayout::ShaderReadOptimal,
+						resourceInfo.texture.texture );
 					colorAttachmentBarrier.push_back(barrierInfo);
 				}
 			}
@@ -222,11 +235,17 @@ void Renderer::Render(gfx::CommandList* commandList)
 			{
 				if (resourceInfo.texture.imageAspect == gfx::ImageAspect::Depth)
 				{
-					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, resourceInfo.texture.texture };
+					gfx::ResourceBarrierInfo barrierInfo = gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None,
+						gfx::AccessFlag::DepthStencilWrite,
+						gfx::ImageLayout::DepthAttachmentOptimal,
+						resourceInfo.texture.texture);
 					depthAttachmentBarrier.push_back(barrierInfo);
 				}
 				else {
-					gfx::ImageBarrierInfo barrierInfo = { gfx::AccessFlag::None, gfx::AccessFlag::ColorAttachmentWrite, gfx::ImageLayout::ColorAttachmentOptimal, resourceInfo.texture.texture };
+					gfx::ResourceBarrierInfo barrierInfo = gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None,
+						gfx::AccessFlag::ColorAttachmentWrite,
+						gfx::ImageLayout::ColorAttachmentOptimal,
+						resourceInfo.texture.texture);
 					colorAttachmentBarrier.push_back(barrierInfo);
 				}
 			}
@@ -247,9 +266,14 @@ void Renderer::Render(gfx::CommandList* commandList)
 		}
 
 		node->renderer->PreRender(commandList);
-		mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
-		node->renderer->Render(commandList, mScene);
-		mDevice->EndRenderPass(commandList);
+		if (node->compute) {
+			node->renderer->Render(commandList, mScene);
+		}
+		else {
+			mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
+			node->renderer->Render(commandList, mScene);
+			mDevice->EndRenderPass(commandList);
+		}
 		// End GPU Timer
 		Profiler::EndRangeGPU(commandList, nodeProfilerId);
 		// Draw UI
@@ -265,12 +289,12 @@ void Renderer::Render(gfx::CommandList* commandList)
 		AccessResource(mOutputAttachments[mFinalOutput])->info.
 		texture.texture;
 
-	gfx::ImageBarrierInfo imageBarrier = {
+	gfx::ResourceBarrierInfo imageBarrier = gfx::ResourceBarrierInfo::CreateImageBarrier(
 		gfx::AccessFlag::None,
 		gfx::AccessFlag::ShaderRead,
 		gfx::ImageLayout::ShaderReadOptimal,
 		outputTexture
-	};
+	);
 
 	gfx::PipelineBarrierInfo pipelineBarrier = {
 		&imageBarrier,
@@ -478,15 +502,26 @@ void Renderer::InitializeBuffers()
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	mMaterialBuffer = mDevice->CreateBuffer(&bufferDesc);
 
-	// Draw Indirect Buffer
-	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
-	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
-	mDrawIndirectBuffer = mDevice->CreateBuffer(&bufferDesc);
-
 	// Light Data Buffer
 	bufferDesc.size = sizeof(LightData) * 128;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	mLightBuffer = mDevice->CreateBuffer(&bufferDesc);
+
+	// MeshDraw Data Buffer
+	bufferDesc.size = kMaxEntity * sizeof(MeshDrawData);
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+	mMeshDrawDataBuffer = mDevice->CreateBuffer(&bufferDesc);
+
+	// Draw Indirect Buffer
+	bufferDesc.usage = gfx::Usage::Default;
+	bufferDesc.size = kMaxEntity * sizeof(gfx::MeshDrawIndirectCommand);
+	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer | gfx::BindFlag::ShaderResource;
+	mDrawIndirectBuffer = mDevice->CreateBuffer(&bufferDesc);
+
+	// DrawCommand Count Buffer
+	bufferDesc.size = sizeof(uint32_t) * kMaxBatches;
+	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::IndirectBuffer;
+	mDrawCommandCountBuffer = mDevice->CreateBuffer(&bufferDesc);
 }
 
 void Renderer::AddUI()
@@ -681,12 +716,13 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 		return lhs.vertexBuffer.buffer.handle < rhs.vertexBuffer.buffer.handle;
 		});
 
-	std::vector<gfx::DrawIndirectCommand> drawCommands;
 	std::vector<glm::mat4> transforms;
 	std::vector<MaterialComponent> materials;
+	std::vector<MeshDrawData> meshDrawDatas;
 
 	gfx::BufferHandle lastBuffer = gfx::INVALID_BUFFER;
 	RenderBatch* activeBatch = nullptr;
+	uint32_t currentOffset = 0;
 	if (drawDatas.size() > 0)
 	{
 		for (auto& drawData : drawDatas)
@@ -694,15 +730,17 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 			gfx::BufferHandle buffer = drawData.vertexBuffer.buffer;
 			if (buffer.handle != lastBuffer.handle || activeBatch == nullptr)
 			{
-				lastOffset += activeBatch == nullptr ? 0 : activeBatch->count;
+				currentOffset += activeBatch == nullptr ? 0 : activeBatch->count;
+
 				renderBatch.push_back(RenderBatch{});
 				activeBatch = &renderBatch.back();
+				activeBatch->id = mBatchId++;
 				activeBatch->vertexBuffer = drawData.vertexBuffer;
 				activeBatch->indexBuffer = drawData.indexBuffer;
 				activeBatch->meshletBuffer = drawData.meshletBuffer;
 				activeBatch->meshletTriangleBuffer = drawData.meshletTriangleBuffer;
 				activeBatch->meshletVertexBuffer = drawData.meshletVertexBuffer;
-				activeBatch->offset = lastOffset;
+				activeBatch->offset = lastOffset + currentOffset;
 				activeBatch->count = 0;
 				activeBatch->meshletCount = 0;
 				lastBuffer = buffer;
@@ -716,12 +754,14 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 			transforms.push_back(std::move(drawData.worldTransform));
 
 			// Create DrawCommands
-			gfx::DrawIndirectCommand drawCommand = {};
-			drawCommand.firstIndex = drawData.indexBuffer.byteOffset / sizeof(uint32_t);
-			drawCommand.indexCount = drawData.indexCount;
-			drawCommand.instanceCount = 1;
-			drawCommand.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
-			drawCommands.push_back(std::move(drawCommand));
+			MeshDrawData meshDrawData = {};
+			meshDrawData.indexOffset = drawData.indexBuffer.byteOffset / sizeof(uint32_t);
+			meshDrawData.indexCount = drawData.indexCount;
+			meshDrawData.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
+			meshDrawData.vertexCount = drawData.vertexBuffer.byteLength / drawData.elmSize;
+			meshDrawData.meshletCount = drawData.meshletCount;
+			meshDrawDatas.push_back(std::move(meshDrawData));
+
 			activeBatch->count++;
 			activeBatch->meshletCount += drawData.meshletCount;
 		}
@@ -729,7 +769,7 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 		// Copy data to buffer
 		const uint32_t mat4Size = sizeof(glm::mat4);
 		const uint32_t materialSize = sizeof(MaterialComponent);
-		const uint32_t dicSize = sizeof(gfx::DrawIndirectCommand);
+		const uint32_t dicSize = sizeof(MeshDrawData);
 
 		uint32_t transformCount = (uint32_t)transforms.size();
 		mDevice->CopyToBuffer(mTransformBuffer, transforms.data(), lastOffset * mat4Size, transformCount * mat4Size);
@@ -737,10 +777,10 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 		uint32_t materialCount = (uint32_t)materials.size();
 		mDevice->CopyToBuffer(mMaterialBuffer, materials.data(), lastOffset * materialSize, materialCount * materialSize);
 
-		uint32_t drawCommandCount = (uint32_t)drawCommands.size();
-		mDevice->CopyToBuffer(mDrawIndirectBuffer, drawCommands.data(), lastOffset * dicSize, drawCommandCount * dicSize);
+		uint32_t meshDrawDataCount = (uint32_t)meshDrawDatas.size();
+		mDevice->CopyToBuffer(mMeshDrawDataBuffer, meshDrawDatas.data(), lastOffset * dicSize, meshDrawDataCount * dicSize);
 
-		lastOffset += activeBatch->count;
+		lastOffset += (activeBatch ? activeBatch->count : 0) + currentOffset;
 	}
 	return lastOffset;
 }
@@ -761,7 +801,6 @@ void Renderer::Shutdown()
 	mDevice->Destroy(mDrawIndirectBuffer);
 	mDevice->Destroy(mMaterialBuffer);
 	mDevice->Destroy(mSkinnedMatrixBuffer);
-
-	//mBloomFX->Shutdown();
-	//mShadowMap->Shutdown();
+	mDevice->Destroy(mMeshDrawDataBuffer);
+	mDevice->Destroy(mDrawCommandCountBuffer);
 }

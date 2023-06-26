@@ -290,6 +290,9 @@ ecs::Entity Scene::createEntity(const std::string& name) {
 }
 
 void Scene::parseMaterial(tinygltf::Model* model, MaterialComponent* component, uint32_t matIndex) {
+	if (matIndex == -1)
+		return;
+
 	tinygltf::Material& material = model->materials[matIndex];
 	component->alphaCutoff = (float)material.alphaCutoff;
 
@@ -472,6 +475,8 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		meshRenderer.indexBuffer.byteOffset = indexOffset;
 		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
 		meshRenderer.meshletCount = (uint32_t)localMeshlets.size();
+		meshRenderer.boundingBox.min = glm::vec3(positionAccessor.minValues[0], positionAccessor.minValues[1], positionAccessor.minValues[2]);
+		meshRenderer.boundingBox.max = glm::vec3(positionAccessor.maxValues[0], positionAccessor.maxValues[1], positionAccessor.maxValues[2]);
 
 		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
 		parseMaterial(model, &material, primitive.material);

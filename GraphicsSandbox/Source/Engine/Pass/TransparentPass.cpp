@@ -52,15 +52,16 @@ void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
 
 	std::vector<RenderBatch>& renderBatches = renderer->mTransparentBatches;
 	if (renderBatches.size() == 0) return;
+	drawIndexed(device, commandList, renderBatches);
+}
 
+void gfx::TransparentPass::drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches)
+{
 	// Draw Batch
 	gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
-	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
 	gfx::BufferHandle materialBuffer = renderer->mMaterialBuffer;
-
-	uint32_t count = (uint32_t)renderBatches.size();
-
-	descriptorInfos[4] = { renderer->mLightBuffer, 0, sizeof(LightData) * 128, gfx::DescriptorType::StorageBuffer };
+	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
+	gfx::BufferHandle drawCommandCountBuffer = renderer->mDrawCommandCountBuffer;
 
 	// Update push constant data
 	mPushConstantData.brdfLUT = renderer->mEnvironmentData.brdfLUT;
@@ -70,29 +71,33 @@ void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
 	mPushConstantData.cameraPosition = renderer->mEnvironmentData.cameraPosition;
 	mPushConstantData.exposure = renderer->mEnvironmentData.exposure;
 	mPushConstantData.globalAO = renderer->mEnvironmentData.globalAO;
+	device->PushConstants(commandList, pipeline, ShaderStage::Fragment, &mPushConstantData, sizeof(mPushConstantData), 0);
 
-	uint32_t matSize = sizeof(MaterialComponent);
-	for (auto& batch : renderBatches)
-	{
+	descriptorInfos[5] = { renderer->mLightBuffer, 0, sizeof(LightData) * 128, gfx::DescriptorType::StorageBuffer };
+
+	for (const auto& batch : batches) {
 		if (batch.count == 0) continue;
 
 		const gfx::BufferView& vbView = batch.vertexBuffer;
+		descriptorInfos[1] = { vbView.buffer, 0, device->GetBufferSize(vbView.buffer), gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[2] = { transformBuffer, (uint32_t)(batch.offset * sizeof(glm::mat4)), (uint32_t)(batch.count * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[3] = { drawIndirectBuffer, (uint32_t)(batch.offset * sizeof(MeshDrawIndirectCommand)), (uint32_t)(batch.count * sizeof(MeshDrawIndirectCommand)), gfx::DescriptorType::StorageBuffer };
+		descriptorInfos[4] = { materialBuffer, (uint32_t)(batch.offset * sizeof(MaterialComponent)), (uint32_t)(batch.count * sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer };
+
 		const gfx::BufferView& ibView = batch.indexBuffer;
 
-		descriptorInfos[1] = { vbView.buffer, 0, device->GetBufferSize(vbView.buffer), gfx::DescriptorType::StorageBuffer };
-
-		descriptorInfos[2] = { transformBuffer, (uint32_t)(batch.offset * sizeof(glm::mat4)), (uint32_t)(batch.count * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
-
-		descriptorInfos[3] = { materialBuffer, (uint32_t)(batch.offset * sizeof(MaterialComponent)), (uint32_t)(batch.count * sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer };
-
 		device->UpdateDescriptor(pipeline, descriptorInfos, (uint32_t)std::size(descriptorInfos));
-		device->PushConstants(commandList, pipeline, ShaderStage::Fragment, &mPushConstantData, sizeof(mPushConstantData), 0);
 		device->BindPipeline(commandList, pipeline);
 
 		device->BindIndexBuffer(commandList, ibView.buffer);
 
-		device->DrawIndexedIndirect(commandList, drawIndirectBuffer, batch.offset * sizeof(gfx::DrawIndirectCommand), batch.count, sizeof(gfx::DrawIndirectCommand));
-
+		device->DrawIndexedIndirectCount(commandList,
+			drawIndirectBuffer,
+			batch.offset * sizeof(gfx::MeshDrawIndirectCommand),
+			drawCommandCountBuffer,
+			batch.id * sizeof(uint32_t),
+			batch.count,
+			sizeof(MeshDrawIndirectCommand));
 	}
 }
 

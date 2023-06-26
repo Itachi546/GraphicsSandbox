@@ -71,6 +71,7 @@ namespace gfx
 	struct FrameGraphNodeCreation
 	{
 		bool enabled = true;
+		bool compute = false;
 		std::string name;
 		std::vector<FrameGraphResourceCreation> inputs;
 		std::vector<FrameGraphResourceCreation> outputs;
@@ -91,7 +92,7 @@ namespace gfx
 		bool enabled;
 		std::string name;
 		int refCount;
-
+		bool compute;
 		RenderPassHandle renderPass;
 		FramebufferHandle framebuffer;
 		std::vector<FrameGraphNodeHandle> edges;
@@ -111,10 +112,12 @@ namespace gfx
 		FrameGraphResourceHandle CreateNodeInput(const FrameGraphResourceCreation& creation);
 		FrameGraphResourceHandle CreateNodeOutput(const FrameGraphResourceCreation& creation, FrameGraphNodeHandle producer);
 
-		void GetAllResourceName(std::vector<std::string>& output)
+		void GetAllTextureResourceName(std::vector<std::string>& output)
 		{
-			for (auto& [key, val] : resourceCache)
+			for (auto& [key, val] : resourceCache) {
+				if(resourcePools.AccessResource(val)->type != FrameGraphResourceType::Buffer)
 				output.push_back(key);
+			}
 		}
 		
 		FrameGraphNode* AccessNode(FrameGraphNodeHandle handle)

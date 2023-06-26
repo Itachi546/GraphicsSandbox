@@ -2,10 +2,25 @@
   "name": "gltf_graph",
   "passes": [
     {
+      "name": "drawcull_pass",
+      "type": "compute",
+      "enabled": true,
+      "outputs": [
+        {
+          "type": "buffer",
+          "name": "indirect_draw_list"
+        }
+      ]
+    },
+    {
       "inputs": [
         {
           "type": "attachment",
           "name": "depth"
+        },
+        {
+          "type": "buffer",
+          "name": "indirect_draw_list"
         }
       ],
       "name": "gbuffer_pass",
@@ -48,7 +63,12 @@
       ]
     },
     {
-      "inputs": [],
+      "inputs": [
+        {
+          "type": "buffer",
+          "name": "indirect_draw_list"
+        }
+      ],
       "name": "depth_pre_pass",
       "outputs": [
         {
@@ -102,7 +122,7 @@
         }
       ],
       "name": "transparent_pass",
-      "enabled":  true,
+      "enabled": false,
       "outputs": [
         {
           "type": "reference",
@@ -118,7 +138,7 @@
         }
       ],
       "name": "fxaa_pass",
-      "enabled":  false,
+      "enabled": false,
       "outputs": [
         {
           "type": "attachment",

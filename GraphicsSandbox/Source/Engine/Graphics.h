@@ -210,7 +210,8 @@ namespace gfx
 		ColorAttachmentRead,
 		ColorAttachmentWrite,
 		TransferWriteBit,
-		TransferReadBit
+		TransferReadBit,
+		DrawCommandRead
 	};
 
 	enum class PipelineStage
@@ -222,24 +223,72 @@ namespace gfx
 		EarlyFramentTest,
 		LateFragmentTest,
 		BottomOfPipe,
-		TransferBit,
-		ColorAttachmentOutput
+		Transfer,
+		ColorAttachmentOutput,
+		DrawIndirect
 	};
 
-	struct ImageBarrierInfo
+	enum ResourceBarrierType {
+		Texture,
+		Buffer
+	};
+
+	struct ResourceBarrierInfo
 	{
 		AccessFlag srcAccessMask;
 		AccessFlag dstAccessMask;
-		ImageLayout newLayout;
-		TextureHandle resource;
-		uint32_t baseMipLevel = 0;
-		uint32_t baseArrayLevel = 0;
-		uint32_t mipCount = ~0u;
-		uint32_t layerCount = ~0u;
+		ResourceBarrierType barrierType;
+		union {
+			struct {
+				ImageLayout newLayout;
+				TextureHandle texture;
+				uint32_t baseMipLevel;
+				uint32_t baseArrayLevel;
+				uint32_t mipCount;
+				uint32_t layerCount;
+			} texture;
+			struct {
+				BufferHandle       buffer;
+				uint32_t           offset;
+				uint32_t           size;
+			} buffer;
+		} resourceInfo;
+
+		static ResourceBarrierInfo CreateBufferBarrier(AccessFlag srcAccessMask, AccessFlag dstAccessMask, BufferHandle buffer, uint32_t offset, uint32_t size) {
+			ResourceBarrierInfo info = {};
+			info.srcAccessMask = srcAccessMask;
+			info.dstAccessMask = dstAccessMask;
+			info.resourceInfo.buffer.buffer = buffer;
+			info.resourceInfo.buffer.size = size;
+			info.resourceInfo.buffer.offset = offset;
+			info.barrierType = ResourceBarrierType::Buffer;
+			return info;
+		}
+
+		static ResourceBarrierInfo CreateImageBarrier(AccessFlag srcAccessMask, AccessFlag dstAccessMask, ImageLayout newLayout, TextureHandle texture, uint32_t baseMipLevel = 0, uint32_t baseArrayLevel = 0, uint32_t mipCount = ~0u, uint32_t layerCount = ~0u) {
+			ResourceBarrierInfo info = {};
+			info.srcAccessMask = srcAccessMask;
+			info.dstAccessMask = dstAccessMask;
+			info.resourceInfo.texture.newLayout = newLayout;
+			info.resourceInfo.texture.texture = texture;
+			info.resourceInfo.texture.baseArrayLevel = baseArrayLevel;
+			info.resourceInfo.texture.baseMipLevel = baseMipLevel;
+			info.resourceInfo.texture.mipCount = mipCount;
+			info.resourceInfo.texture.layerCount = layerCount;
+			info.barrierType = ResourceBarrierType::Texture;
+			return info;
+		}
+	};
+
+	struct BufferBarrierInfo {
+		AccessFlag         srcAccessMask;
+		AccessFlag         dstAccessMask;
+		uint32_t           srcQueueFamilyIndex;
+		uint32_t           dstQueueFamilyIndex;
 	};
 
 	struct PipelineBarrierInfo {
-		ImageBarrierInfo* barrierInfo;
+		ResourceBarrierInfo* barrierInfo;
 		uint32_t barrierInfoCount;
 		PipelineStage srcStage;
 		PipelineStage dstStage;
@@ -442,14 +491,18 @@ namespace gfx
 
 	};
 
-	struct DrawIndirectCommand
-	{
+	struct MeshDrawIndirectCommand {
 		uint32_t    indexCount;
 		uint32_t    instanceCount;
 		uint32_t    firstIndex;
+
 		int32_t     vertexOffset;
 		uint32_t    firstInstance;
+		uint32_t    taskCount;
+		uint32_t    firstTask;
+		uint32_t    drawId;
 	};
+	static_assert(sizeof(MeshDrawIndirectCommand) % 16 == 0);
 
 	enum class QueryType
 	{

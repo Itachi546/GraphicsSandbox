@@ -108,7 +108,14 @@ public:
 	bool Intersect(const BoundingBox& aabb);
 	std::array<Plane, 6> planes;
 
-	enum Plane
+	void GetPlanes(std::array<glm::vec4, 6>& outPlanes) {
+		for (uint32_t i = 0; i < 6; ++i) {
+			const Plane& plane = planes[i];
+			outPlanes[i] = glm::vec4(plane.normal, plane.distance);
+		}
+	}
+
+	enum PLANE
 	{
 		Left = 0, 
 		Right,

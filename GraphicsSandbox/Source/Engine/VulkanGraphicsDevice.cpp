@@ -151,10 +151,12 @@ namespace gfx {
             return VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
         case PipelineStage::BottomOfPipe:
             return VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-        case PipelineStage::TransferBit:
+        case PipelineStage::Transfer:
             return VK_PIPELINE_STAGE_TRANSFER_BIT;
         case PipelineStage::ColorAttachmentOutput:
-                return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			return VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        case PipelineStage::DrawIndirect:
+            return VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT;
         default:
             assert(!"Undefined pipeline stage flag");
             return VK_PIPELINE_STAGE_NONE;
@@ -207,6 +209,8 @@ namespace gfx {
             return VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
         case AccessFlag::ColorAttachmentWrite:
             return VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        case AccessFlag::DrawCommandRead:
+            return VK_ACCESS_INDIRECT_COMMAND_READ_BIT;
         default:
             assert(!"Undefined Access Flags");
             return VK_ACCESS_NONE;
@@ -698,6 +702,16 @@ namespace gfx {
         result.subresourceRange.baseArrayLayer = arrLayer;
         result.subresourceRange.levelCount = mipCount;
         result.subresourceRange.layerCount = layerCount;
+        return result;
+    }
+
+    VkBufferMemoryBarrier CreateBufferMemoryBarrier(VkAccessFlags srcAccessMask, VkAccessFlags dstAccessMask, VkBuffer buffer, uint32_t offset, uint32_t size) {
+        VkBufferMemoryBarrier result = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+        result.srcAccessMask = srcAccessMask;
+        result.dstAccessMask = dstAccessMask;
+        result.buffer = buffer;
+        result.offset = offset;
+        result.size = size;
         return result;
     }
 
@@ -1198,6 +1212,7 @@ namespace gfx {
                 Logger::Info("Extension not supported: " + std::string(required));
             }
         }
+		supportMeshShader = false;
     }
 
     VkPipelineLayout VulkanGraphicsDevice::createPipelineLayout(VkDescriptorSetLayout* setLayout, uint32_t setLayoutCount, const std::vector<VkPushConstantRange>& ranges)
@@ -1725,7 +1740,6 @@ namespace gfx {
     void VulkanGraphicsDevice::ResolveQuery(QueryPool* pool, uint32_t index, uint32_t count, uint64_t* result)
     {
         auto queryPool = std::static_pointer_cast<VulkanQueryPool>(pool->internalState)->queryPool;
-
 		VK_CHECK(vkGetQueryPoolResults(device_, queryPool, index, count, sizeof(uint64_t) * count, result, sizeof(uint64_t), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WAIT_BIT));
     }
 
@@ -2228,6 +2242,14 @@ namespace gfx {
         vkCmdDrawIndexedIndirect(cmd->commandBuffer, dcb->buffer, offset, drawCount, stride);
     }
 
+    void VulkanGraphicsDevice::DrawIndexedIndirectCount(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, BufferHandle drawCountBuffer, uint32_t drawCountBufferOffset, uint32_t maxDrawCount, uint32_t stride)
+    {
+        auto cmd = GetCommandList(commandList);
+        auto dcb = buffers.AccessResource(indirectBuffer.handle);
+        auto dccb = buffers.AccessResource(drawCountBuffer.handle);
+        vkCmdDrawIndexedIndirectCount(cmd->commandBuffer, dcb->buffer, offset, dccb->buffer, drawCountBufferOffset, maxDrawCount, stride);
+    }
+
     void VulkanGraphicsDevice::DrawMeshTasksIndirect(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, uint32_t count, uint32_t stride)
     {
         auto cmd = GetCommandList(commandList);
@@ -2544,16 +2566,17 @@ namespace gfx {
         if (barriers)
         {
             assert(barriers->barrierInfoCount == 1);
+            gfx::ResourceBarrierInfo* barrierInfo = barriers->barrierInfo;
             VkImageMemoryBarrier barrier = CreateImageBarrier(to->image,
 				to->imageAspect,
-                _ConvertAccessFlags(barriers->barrierInfo->srcAccessMask),
-                _ConvertAccessFlags(barriers->barrierInfo->dstAccessMask),
+                _ConvertAccessFlags(barrierInfo->srcAccessMask),
+                _ConvertAccessFlags(barrierInfo->dstAccessMask),
                 to->layout,
-                _ConvertLayout(barriers->barrierInfo->newLayout),
-                barriers->barrierInfo->baseMipLevel,
-                barriers->barrierInfo->baseArrayLevel,
-                barriers->barrierInfo->mipCount,
-                barriers->barrierInfo->layerCount);
+                _ConvertLayout(barrierInfo->resourceInfo.texture.newLayout),
+                barriers->barrierInfo->resourceInfo.texture.baseMipLevel,
+                barriers->barrierInfo->resourceInfo.texture.baseArrayLevel,
+                barriers->barrierInfo->resourceInfo.texture.mipCount,
+                barriers->barrierInfo->resourceInfo.texture.layerCount);
 
             vkCmdPipelineBarrier(stagingCmdBuffer_,
                 _ConvertPipelineStageFlags(barriers->srcStage),
@@ -2588,11 +2611,11 @@ namespace gfx {
         std::memcpy(buffer->mappedDataPtr, src, sizeInByte);
 
         // Copy from staging buffer to GPUTexture
-        gfx::ImageBarrierInfo transferBarrier{ gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal };
+        gfx::ResourceBarrierInfo transferBarrier = gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::TransferWriteBit,gfx::ImageLayout::TransferDstOptimal, gfx::INVALID_TEXTURE);
         gfx::PipelineBarrierInfo transferBarrierInfo = {
             &transferBarrier, 1,
-            gfx::PipelineStage::TransferBit,
-            gfx::PipelineStage::TransferBit
+            gfx::PipelineStage::Transfer,
+            gfx::PipelineStage::Transfer
         };
         CopyTexture(dst, stagingBuffer, &transferBarrierInfo, 0, 0);
         // If miplevels is greater than  1 the mip are generated
@@ -2600,6 +2623,13 @@ namespace gfx {
         if(generateMipMap)
 			GenerateMipmap(dst, dstTexture->mipLevels);
         Destroy(stagingBuffer);
+    }
+
+    void VulkanGraphicsDevice::FillBuffer(CommandList* commandList, BufferHandle buffer, uint32_t offset, uint32_t size, uint32_t data)
+    {
+        auto cmd = GetCommandList(commandList);
+        VulkanBuffer* vkBuffer = buffers.AccessResource(buffer.handle);
+        vkCmdFillBuffer(cmd->commandBuffer, vkBuffer->buffer, offset, size, data);
     }
 
     void VulkanGraphicsDevice::GenerateMipmap(TextureHandle src, uint32_t mipCount)
@@ -2692,42 +2722,56 @@ namespace gfx {
     void VulkanGraphicsDevice::PipelineBarrier(CommandList* commandList, PipelineBarrierInfo* barriers)
     {
         std::vector<VkImageMemoryBarrier> imageBarriers;
+        std::vector<VkBufferMemoryBarrier> bufferBarriers;
         for (uint32_t i = 0; i < barriers->barrierInfoCount; ++i)
         {
-            ImageBarrierInfo& barrierInfo = barriers->barrierInfo[i];
+            ResourceBarrierInfo& barrierInfo = barriers->barrierInfo[i];
 
-            VkImageLayout newLayout = _ConvertLayout(barrierInfo.newLayout);
-            VulkanTexture* texture = textures.AccessResource(barrierInfo.resource.handle);
+            // Create Image Barrier
+            if (barrierInfo.barrierType == gfx::ResourceBarrierType::Texture) {
+                VkImageLayout newLayout = _ConvertLayout(barrierInfo.resourceInfo.texture.newLayout);
+                VulkanTexture* texture = textures.AccessResource(barrierInfo.resourceInfo.texture.texture.handle);
 
-            // @NOTE: for now we don't care about access mask
-			//if (texture->layout == newLayout)
-            //    continue;
+                // @NOTE: for now we don't care about access mask
+                //if (texture->layout == newLayout)
+                //    continue;
 
-            imageBarriers.push_back(CreateImageBarrier(texture->image,
-                texture->imageAspect,
-                _ConvertAccessFlags(barrierInfo.srcAccessMask), 
-                _ConvertAccessFlags(barrierInfo.dstAccessMask),
-                texture->layout,
-                newLayout,
-                barrierInfo.baseMipLevel,
-                barrierInfo.baseArrayLevel,
-                barrierInfo.mipCount,
-                barrierInfo.layerCount
-               ));
-            texture->layout = newLayout;
+                imageBarriers.push_back(CreateImageBarrier(texture->image,
+                    texture->imageAspect,
+                    _ConvertAccessFlags(barrierInfo.srcAccessMask),
+                    _ConvertAccessFlags(barrierInfo.dstAccessMask),
+                    texture->layout,
+                    newLayout,
+                    barrierInfo.resourceInfo.texture.baseMipLevel,
+                    barrierInfo.resourceInfo.texture.baseArrayLevel,
+                    barrierInfo.resourceInfo.texture.mipCount,
+                    barrierInfo.resourceInfo.texture.layerCount
+                ));
+                texture->layout = newLayout;
+            }
+            else {
+                VulkanBuffer* buffer = buffers.AccessResource(barrierInfo.resourceInfo.buffer.buffer.handle);
+                bufferBarriers.push_back(CreateBufferMemoryBarrier(
+                    _ConvertAccessFlags(barrierInfo.srcAccessMask),
+                    _ConvertAccessFlags(barrierInfo.dstAccessMask),
+                    buffer->buffer,
+                    barrierInfo.resourceInfo.buffer.offset,
+                    barrierInfo.resourceInfo.buffer.size));
+            }
         }
         
-        uint32_t barrierCount = (uint32_t)imageBarriers.size();
-        if (barrierCount == 0)
+        uint32_t imageBarrierCount = (uint32_t)imageBarriers.size();
+        uint32_t bufferBarrierCount = (uint32_t)bufferBarriers.size();
+        if (imageBarrierCount == 0 && bufferBarrierCount == 0)
             return;
         
 		auto cmdList = GetCommandList(commandList);
         vkCmdPipelineBarrier(cmdList->commandBuffer,
             _ConvertPipelineStageFlags(barriers->srcStage),
             _ConvertPipelineStageFlags(barriers->dstStage),
-            VK_DEPENDENCY_BY_REGION_BIT,
-            0,0, 0, 0,
-			barrierCount, imageBarriers.data());
+            VK_DEPENDENCY_BY_REGION_BIT, 0, 0,
+            bufferBarrierCount, bufferBarriers.data(),
+            imageBarrierCount, imageBarriers.data());
     }
 
     void* VulkanGraphicsDevice::GetMappedDataPtr(BufferHandle buffer)

@@ -3,22 +3,22 @@
 void Frustum::CreateFromPoints(glm::vec3* points)
 {
 	// Left
-	planes[Plane::Left].CreateFromPoints(points[3], points[7], points[0]);
+	planes[PLANE::Left].CreateFromPoints(points[3], points[7], points[0]);
 
 	// Right
-	planes[Plane::Right].CreateFromPoints(points[1], points[6], points[2]);
+	planes[PLANE::Right].CreateFromPoints(points[1], points[6], points[2]);
 
 	//Top
-	planes[Plane::Top].CreateFromPoints(points[0], points[4], points[1]);
+	planes[PLANE::Top].CreateFromPoints(points[0], points[4], points[1]);
 
 	// Bottom
-	planes[Plane::Bottom].CreateFromPoints(points[3], points[2], points[7]);
+	planes[PLANE::Bottom].CreateFromPoints(points[3], points[2], points[7]);
 
 	// Near
-	planes[Plane::Near].CreateFromPoints(points[3], points[0], points[2]);
+	planes[PLANE::Near].CreateFromPoints(points[3], points[0], points[2]);
 
 	//Far
-	planes[Plane::Far].CreateFromPoints(points[7], points[6], points[4]);
+	planes[PLANE::Far].CreateFromPoints(points[7], points[6], points[4]);
 }
 
 bool Frustum::Intersect(const BoundingBox& aabb)

@@ -60,4 +60,30 @@ struct Meshlet {
 };
 
 
+struct MeshDrawData {
+	vec4 boudingSphere;
+
+    uint vertexOffset;
+	uint vertexCount;
+	uint indexOffset;
+	uint indexCount;
+
+	uint meshletOffset;
+	uint meshletCount;
+	uint meshletTriangleOffset;
+	uint meshletTriangleCount;
+};
+
+struct MeshDrawCommand {
+   uint indexCount;
+   uint instanceCount;
+   uint firstIndex;
+
+   uint vertexOffset;
+   uint firstInstance;
+   uint taskCount;
+   uint firstTask;
+   uint drawId;
+};
+
 #endif

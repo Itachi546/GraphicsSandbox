@@ -59,6 +59,7 @@ namespace gfx {
 		node->outputs.resize(creation.outputs.size());
 		node->framebuffer = INVALID_FRAMEBUFFER;
 		node->renderPass = INVALID_RENDERPASS;
+		node->compute = creation.compute;
 
 		nodeCache.insert(std::make_pair(node->name, nodeHandle.index));
 		
@@ -196,8 +197,9 @@ namespace gfx {
 			FrameGraphNodeCreation nodeCreation;
 			nodeCreation.name = pass.value("name", "");
 			bool enabled = pass.value("enabled", true);
-			if (!enabled) continue;
+			nodeCreation.compute = pass.value("type", "") == "compute" ? true : false;
 
+			if (!enabled) continue;
 			nodeCreation.enabled = enabled;
 
 			json inputs = pass["inputs"];
@@ -242,7 +244,7 @@ namespace gfx {
 					break;
 				}
 				case FrameGraphResourceType::Buffer:
-					assert(0);
+					resource.info.buffer.buffer = gfx::INVALID_BUFFER;
 					break;
 				}
 			}
@@ -294,7 +296,8 @@ namespace gfx {
 			{
 				FrameGraphResource* input = builder->AccessResource(node->inputs[j]);
 				FrameGraphResource* resource = builder->AccessResource(input->name);
-				resource->refCount++;
+				if(resource)
+					resource->refCount++;
 			}
 		}
 
@@ -341,7 +344,7 @@ namespace gfx {
 		for (uint32_t i = 0; i < nodeHandles.size(); ++i)
 		{
 			FrameGraphNode* node = builder->AccessNode(nodeHandles[i]);
-			if (!node->enabled)
+			if (!node->enabled || node->compute)
 				continue;
 
 			if (node->renderPass.handle = K_INVALID_RESOURCE_HANDLE && node->enabled)

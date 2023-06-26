@@ -103,7 +103,6 @@ void Application::render_()
 
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 	mDevice->Present(&commandList);
-
 	Profiler::EndRangeCPU(cpuRenderTime);
 }
 

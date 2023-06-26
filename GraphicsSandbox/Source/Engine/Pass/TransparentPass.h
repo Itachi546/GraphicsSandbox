@@ -8,6 +8,7 @@
 class Scene;
 class Renderer;
 struct DrawData;
+struct RenderBatch;
 
 namespace gfx {
 	struct TransparentPass : public FrameGraphPass
@@ -22,7 +23,7 @@ namespace gfx {
 
 		PipelineHandle pipeline;
 		Renderer* renderer;
-		DescriptorInfo descriptorInfos[5];
+		DescriptorInfo descriptorInfos[6];
 
 	private:
 		struct PushConstantData {
@@ -35,6 +36,8 @@ namespace gfx {
 			float exposure;
 			float globalAO;
 		} mPushConstantData;
+
+		void drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches);
 
 	};
 }

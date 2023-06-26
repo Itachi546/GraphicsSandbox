@@ -188,6 +188,7 @@
     <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
     <ClInclude Include="Source\Engine\MathUtils.h" />
     <ClInclude Include="Source\Engine\MeshData.h" />
+    <ClInclude Include="Source\Engine\Pass\DrawCullPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -319,6 +320,9 @@
     <ClCompile Include="Source\Engine\MathUtils.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Pass\DrawCullPass.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -376,6 +380,9 @@
     </CustomBuild>
     <CustomBuild Include="Shaders\gbuffer.task.glsl" />
     <CustomBuild Include="Shaders\gbuffer_mesh.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\drawcull.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
   </ItemGroup>

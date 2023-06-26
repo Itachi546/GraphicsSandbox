@@ -28,6 +28,9 @@ struct RenderBatch
 	uint32_t offset;
 	// Count of number of transform/material/drawCommands in the batch
 	uint32_t count;
+
+	// Id in increasing order and may be unique every frame
+	uint32_t id;
 };
 
 struct LightData
@@ -89,6 +92,9 @@ public:
 	gfx::BufferHandle mDrawIndirectBuffer;
 	gfx::BufferHandle mMaterialBuffer;
 	gfx::BufferHandle mSkinnedMatrixBuffer;
+	gfx::BufferHandle mMeshDrawDataBuffer;
+	gfx::BufferHandle mDrawCommandCountBuffer;
+
 	gfx::FrameGraphBuilder mFrameGraphBuilder;
 	gfx::FrameGraph mFrameGraph;
 	EnvironmentData mEnvironmentData;
@@ -113,6 +119,8 @@ private:
 	gfx::PipelineHandle mFullScreenPipeline;
 
 	const int kMaxEntity = 10'000;
+	const int kMaxBatches = 25;
+	uint32_t mBatchId = 0;
 	GlobalUniformData mGlobalUniformData;
 
 	void InitializeBuffers();

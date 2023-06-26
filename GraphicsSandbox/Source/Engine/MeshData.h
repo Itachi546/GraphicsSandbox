@@ -89,3 +89,18 @@ struct Meshlet {
 
 static_assert(sizeof(Meshlet) % 16 == 0);
 
+struct MeshDrawData {
+	glm::vec4 boudingSphere;
+
+	uint32_t vertexOffset;
+	uint32_t vertexCount;
+	uint32_t indexOffset;
+	uint32_t indexCount;
+
+	uint32_t meshletOffset;
+	uint32_t meshletCount;
+	uint32_t meshletTriangleOffset;
+	uint32_t meshletTriangleCount;
+};
+
+static_assert(sizeof(MeshDrawData) % 16 == 0);

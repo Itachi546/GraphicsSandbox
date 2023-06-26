@@ -2,6 +2,9 @@
 
 namespace StringConstants
 {
+	// Compute Cull Pass
+	constexpr const char* DRAWCULL_COMPUTE_PATH = "Assets/SPIRV/drawcull.comp.spv";
+
 	// GBuffer Pass
 	constexpr const char* GBUFFER_FRAG_PATH = "Assets/SPIRV/gbuffer.frag.spv";
 	

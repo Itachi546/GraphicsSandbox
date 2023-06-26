@@ -39,8 +39,7 @@ void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
 		shaders[1] = { fragmentCode, size };
 
 		pipelineDesc.shaderCount = 2;
-		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
-
+		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Back;
 		meshletPipeline = device->CreateGraphicsPipeline(&pipelineDesc);
 
 		//delete[] taskCode;
@@ -87,6 +86,7 @@ void gfx::GBufferPass::drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList
 	gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
 	gfx::BufferHandle materialBuffer = renderer->mMaterialBuffer;
 	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
+	gfx::BufferHandle drawCommandCountBuffer = renderer->mDrawCommandCountBuffer;
 
 	for (const auto& batch : batches) {
 		if (batch.count == 0) continue;
@@ -94,7 +94,8 @@ void gfx::GBufferPass::drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList
 		const gfx::BufferView& vbView = batch.vertexBuffer;
 		indexedDescriptorInfos[1] = { vbView.buffer, 0, device->GetBufferSize(vbView.buffer), gfx::DescriptorType::StorageBuffer };
 		indexedDescriptorInfos[2] = { transformBuffer, (uint32_t)(batch.offset * sizeof(glm::mat4)), (uint32_t)(batch.count * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
-		indexedDescriptorInfos[3] = { materialBuffer, (uint32_t)(batch.offset * sizeof(MaterialComponent)), (uint32_t)(batch.count * sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer };
+		indexedDescriptorInfos[3] = { drawIndirectBuffer, (uint32_t)(batch.offset * sizeof(MeshDrawIndirectCommand)), (uint32_t)(batch.count * sizeof(MeshDrawIndirectCommand)), gfx::DescriptorType::StorageBuffer };
+		indexedDescriptorInfos[4] = { materialBuffer, (uint32_t)(batch.offset * sizeof(MaterialComponent)), (uint32_t)(batch.count * sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer };
 
 		const gfx::BufferView& ibView = batch.indexBuffer;
 
@@ -103,7 +104,14 @@ void gfx::GBufferPass::drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList
 
 		device->BindIndexBuffer(commandList, ibView.buffer);
 
-		device->DrawIndexedIndirect(commandList, drawIndirectBuffer, batch.offset * sizeof(gfx::DrawIndirectCommand), batch.count, sizeof(gfx::DrawIndirectCommand));
+		//device->DrawIndexedIndirect(commandList, drawIndirectBuffer, batch.offset * sizeof(gfx::DrawIndirectCommand), batch.count, sizeof(gfx::DrawIndirectCommand));
+		device->DrawIndexedIndirectCount(commandList,
+			drawIndirectBuffer,
+			batch.offset * sizeof(gfx::MeshDrawIndirectCommand),
+			drawCommandCountBuffer,
+			batch.id * sizeof(uint32_t),
+			batch.count,
+			sizeof(MeshDrawIndirectCommand));
 	}
 }
 
@@ -112,7 +120,7 @@ void gfx::GBufferPass::drawMeshlet(gfx::GraphicsDevice* device, gfx::CommandList
 	// Draw Batch
 	gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
 	gfx::BufferHandle materialBuffer = renderer->mMaterialBuffer;
-	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
+	//gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
 
 	for (const auto& batch : batches) {
 		const gfx::BufferView& vbView = batch.vertexBuffer;

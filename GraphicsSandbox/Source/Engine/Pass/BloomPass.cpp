@@ -50,9 +50,9 @@ namespace gfx
 		RangeId compositeId = Profiler::StartRangeGPU(commandList, "Bloom Composite Pass");
 		// Composite Pass
 		mDevice->BeginDebugLabel(commandList, "Bloom Composite Pass");
-		gfx::ImageBarrierInfo imageBarrierInfo[] = {
-			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, inputTexture, 0, 0, 1, 1},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, 0, 0, 1, 1}
+		gfx::ResourceBarrierInfo imageBarrierInfo[] = {
+			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, inputTexture, 0, 0, 1, 1),
+			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, 0, 0, 1, 1)
 		};
 
 		gfx::PipelineBarrierInfo barrier = {
@@ -87,9 +87,9 @@ namespace gfx
 
 		// Generate DownSamples
 		// Convert the textureFormat
-		gfx::ImageBarrierInfo imageBarrierInfo[] = {
-			gfx::ImageBarrierInfo{gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, brightTexture},
-			gfx::ImageBarrierInfo{gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mDownSampleTexture}
+		gfx::ResourceBarrierInfo imageBarrierInfo[] = {
+			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ColorAttachmentWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::ShaderReadOptimal, brightTexture),
+			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::None, gfx::AccessFlag::ShaderWrite, gfx::ImageLayout::General, mDownSampleTexture)
 		};
 
 		gfx::PipelineBarrierInfo barrier = {
@@ -111,9 +111,9 @@ namespace gfx
 			if (i > 0)
 			{
 				imageBarrierInfo[0] = { gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead };
-				imageBarrierInfo[0].baseMipLevel = i - 1;
-				imageBarrierInfo[0].resource = mDownSampleTexture;
-				imageBarrierInfo[1].baseMipLevel = i;
+				imageBarrierInfo[0].resourceInfo.texture.baseMipLevel = i - 1;
+				imageBarrierInfo[0].resourceInfo.texture.texture = mDownSampleTexture;
+				imageBarrierInfo[1].resourceInfo.texture.baseMipLevel = i;
 
 				barrier.srcStage = gfx::PipelineStage::ComputeShader;
 
@@ -146,9 +146,9 @@ namespace gfx
 		for (uint32_t i = kMaxMipLevel - 1; i > 0; i--)
 		{
 			// Generate Upsamples
-			gfx::ImageBarrierInfo imageBarrierInfo[] = {
-				gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, i, 0, 1, 1},
-				gfx::ImageBarrierInfo{gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, mDownSampleTexture, i - 1, 0, 1, 1}
+			gfx::ResourceBarrierInfo imageBarrierInfo[] = {
+				gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, i, 0, 1, 1),
+				gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, mDownSampleTexture, i - 1, 0, 1, 1)
 			};
 
 			gfx::PipelineBarrierInfo barrier = {

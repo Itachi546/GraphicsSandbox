@@ -25,7 +25,7 @@ layout(location = 0) in VS_OUT
    flat uint matId;
 } fs_in;
 
-layout(binding = 3) readonly buffer MaterialData
+layout(binding = 4) readonly buffer MaterialData
 {
     Material aMaterialData[];
 };

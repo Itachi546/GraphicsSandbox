@@ -34,12 +34,19 @@ layout(binding = 2) readonly buffer TransformData
    mat4 aTransformData[];
 };
 
+layout(binding = 3) readonly buffer DrawCommands {
+   MeshDrawCommand drawCommands[];
+};
+
 void main()
 {
+   MeshDrawCommand drawCommand = drawCommands[gl_DrawIDARB];
+   uint drawId = drawCommand.drawId;
+
    Vertex vertex = aVertices[gl_VertexIndex]; 
 
    vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
-   mat4 worldMatrix = aTransformData[gl_DrawIDARB];
+   mat4 worldMatrix = aTransformData[drawId];
 
    vec4 wP = worldMatrix * vec4(position, 1.0);
    gl_Position = globalData.VP * wP;
@@ -56,5 +63,5 @@ void main()
    vs_out.lsPos     = vec3(globalData.V * wP);
 
    vs_out.viewDir   = globalData.cameraPosition - wP.xyz;
-   vs_out.matId     = gl_DrawIDARB;
+   vs_out.matId     = drawId;
 }

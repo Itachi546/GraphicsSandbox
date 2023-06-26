@@ -89,17 +89,17 @@ void Camera::CalculateFrustumFast()
 	glm::vec4 col3 = glm::row(mFreezeVP, 3);
 
 	// Left
-	mFrustum->planes[Frustum::Plane::Left] = Plane(col3 + col0);
+	mFrustum->planes[Frustum::PLANE::Left] = Plane(col3 + col0);
 	// Right
-	mFrustum->planes[Frustum::Plane::Right] = Plane(col3 - col0);
+	mFrustum->planes[Frustum::PLANE::Right] = Plane(col3 - col0);
     // Bottom
-	mFrustum->planes[Frustum::Plane::Bottom] = Plane(col3 + col1);
+	mFrustum->planes[Frustum::PLANE::Bottom] = Plane(col3 + col1);
 	// Top
-	mFrustum->planes[Frustum::Plane::Top] = Plane(col3 - col1);
+	mFrustum->planes[Frustum::PLANE::Top] = Plane(col3 - col1);
 	// Near
-	mFrustum->planes[Frustum::Plane::Near] = Plane(col3 + col2);
+	mFrustum->planes[Frustum::PLANE::Near] = Plane(col3 + col2);
 	// Far
-	mFrustum->planes[Frustum::Plane::Far] = Plane(col3 - col2);
+	mFrustum->planes[Frustum::PLANE::Far] = Plane(col3 - col2);
 }
 
 void Camera::CalculateFrustumPoints()

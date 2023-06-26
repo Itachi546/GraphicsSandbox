@@ -21,7 +21,7 @@ namespace gfx {
 		void Shutdown() override;
 
 		gfx::PipelineHandle indexedPipeline = gfx::INVALID_PIPELINE;
-		DescriptorInfo indexedDescriptorInfos[4];
+		DescriptorInfo indexedDescriptorInfos[5];
 
 		// Mesh shader pipeline
 		gfx::PipelineHandle meshletPipeline = gfx::INVALID_PIPELINE;

@@ -101,9 +101,9 @@ void EditorApplication::InitializeScene()
 	mScene.SetEnableFrustumCulling(false);
 
 	auto compMgr = mScene.GetComponentManager();
-	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
-	//ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
-	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/kitten/kitten.gltf");
+	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");
+	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+	ecs::Entity scene2 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/kitten/kitten.gltf");
 }
 
 /*

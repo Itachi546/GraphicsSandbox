@@ -779,8 +779,9 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 
 		uint32_t meshDrawDataCount = (uint32_t)meshDrawDatas.size();
 		mDevice->CopyToBuffer(mMeshDrawDataBuffer, meshDrawDatas.data(), lastOffset * dicSize, meshDrawDataCount * dicSize);
-
-		lastOffset += (activeBatch ? activeBatch->count : 0) + currentOffset;
+		
+		currentOffset += (activeBatch ? activeBatch->count : 0);
+		lastOffset += currentOffset;
 	}
 	return lastOffset;
 }

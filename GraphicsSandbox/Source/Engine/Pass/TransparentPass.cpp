@@ -98,6 +98,7 @@ void gfx::TransparentPass::drawIndexed(gfx::GraphicsDevice* device, gfx::Command
 			batch.id * sizeof(uint32_t),
 			batch.count,
 			sizeof(MeshDrawIndirectCommand));
+
 	}
 }
 

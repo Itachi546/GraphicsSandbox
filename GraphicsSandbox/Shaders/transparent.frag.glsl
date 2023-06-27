@@ -85,6 +85,7 @@ vec4 CalculateColor(vec2 uv)
     Material material = aMaterialData[fs_in.matId];
   
     vec4 albedo = material.albedo;
+
     if(material.albedoMap != INVALID_TEXTURE)
        albedo *= texture(uTextures[nonuniformEXT(material.albedoMap)], uv);
 

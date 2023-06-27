@@ -70,7 +70,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 			drawData.meshletTriangleBuffer = meshRenderer->meshletTriangleBuffer;
 			drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
 			drawData.meshletCount = meshRenderer->meshletCount;
-			auto material = mComponentManager->GetComponent<MaterialComponent>(entity);
+			MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
 
 			if (material->IsTransparent())

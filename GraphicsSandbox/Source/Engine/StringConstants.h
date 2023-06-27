@@ -18,7 +18,7 @@ namespace StringConstants
 
 	// Shaders
 	constexpr const char* MAIN_VERT_PATH = "Assets/SPIRV/main.vert.spv";
-	constexpr const char* TRANSPARENT_FRAG_PATH = "Assets/SPIRV/main.frag.spv";
+	constexpr const char* TRANSPARENT_FRAG_PATH = "Assets/SPIRV/transparent.frag.spv";
 
 	constexpr const char* CUBEMAP_VERT_PATH = "Assets/SPIRV/cubemap.vert.spv";
 	constexpr const char* CUBEMAP_FRAG_PATH = "Assets/SPIRV/cubemap.frag.spv";

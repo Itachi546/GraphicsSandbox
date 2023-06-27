@@ -119,10 +119,14 @@
         {
           "type": "attachment",
           "name": "depth"
+        },
+        {
+          "type": "buffer",
+          "name": "indirect_draw_list"
         }
       ],
       "name": "transparent_pass",
-      "enabled": false,
+      "enabled": true,
       "outputs": [
         {
           "type": "reference",

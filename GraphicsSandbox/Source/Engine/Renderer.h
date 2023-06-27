@@ -118,7 +118,7 @@ private:
 	gfx::RenderPassHandle mSwapchainRP;
 	gfx::PipelineHandle mFullScreenPipeline;
 
-	const int kMaxEntity = 10'000;
+	const int kMaxEntity = 1'000;
 	const int kMaxBatches = 25;
 	uint32_t mBatchId = 0;
 	GlobalUniformData mGlobalUniformData;

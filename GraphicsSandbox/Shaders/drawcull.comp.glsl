@@ -9,6 +9,7 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 layout(push_constant) uniform Frustum {
    vec4 planes[6];
    uint nMesh;
+   uint enableFrustumCulling;
 };
 
 layout(binding = 0) readonly buffer TransformBuffer {
@@ -43,13 +44,15 @@ void main() {
 	  vec3 center = vec3(transform * vec4(mesh.boundingSphere.xyz, 1.0f));
 	  float radius = mesh.boundingSphere.w;
 	  bool visible = true;
-	  for(int i = 0; i < 6; ++i) {
-	     vec4 plane = planes[i];
-		 if((dot(plane.xyz, center) + plane.w) < -radius)
-		 {
-		   visible = false;
-		   break;
-		 }
+	  if(enableFrustumCulling > 0.5) {
+	    for(int i = 0; i < 6; ++i) {
+    		vec4 plane = planes[i];
+			if((dot(plane.xyz, center) + plane.w) <	-radius)
+			{
+    			visible	= false;
+				break;
+			}
+		}
 	  }
 
 	  if(visible) {

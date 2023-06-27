@@ -47,39 +47,29 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 		BoundingBox aabb = meshRenderer->boundingBox;
 		aabb.Transform(transform->worldMatrix);
 
-		bool isVisible = true;
-		if (mEnableFrustumCulling)
-		{
-			if (!mCamera.mFrustum->Intersect(aabb))
-				isVisible = false;
-		}
+		DrawData drawData = {};
+		const gfx::BufferView vertexBuffer = meshRenderer->vertexBuffer;
+		const gfx::BufferView indexBuffer = meshRenderer->indexBuffer;
 
-		if (isVisible)
-		{
-			DrawData drawData = {};
-			const gfx::BufferView vertexBuffer = meshRenderer->vertexBuffer;
-			const gfx::BufferView indexBuffer = meshRenderer->indexBuffer;
+		drawData.vertexBuffer = vertexBuffer;
+		drawData.indexBuffer = indexBuffer;
+		drawData.entity = entity;
+		drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
+		drawData.worldTransform = transform->worldMatrix;
+		drawData.elmSize = meshRenderer->IsSkinned() ? sizeof(AnimatedVertex) : sizeof(Vertex);
+		drawData.meshletBuffer = meshRenderer->meshletBuffer;
+		drawData.meshletTriangleBuffer = meshRenderer->meshletTriangleBuffer;
+		drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
+		drawData.meshletCount = meshRenderer->meshletCount;
+		drawData.boundingSphere = meshRenderer->boundingSphere;
 
-			drawData.vertexBuffer = vertexBuffer;
-			drawData.indexBuffer = indexBuffer;
-			drawData.entity = entity;
-			drawData.indexCount = static_cast<uint32_t>(meshRenderer->GetIndexCount());
-			drawData.worldTransform = transform->worldMatrix;
-			drawData.elmSize = meshRenderer->IsSkinned() ? sizeof(AnimatedVertex) : sizeof(Vertex);
-			drawData.meshletBuffer = meshRenderer->meshletBuffer;
-			drawData.meshletTriangleBuffer = meshRenderer->meshletTriangleBuffer;
-			drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
-			drawData.meshletCount = meshRenderer->meshletCount;
-			drawData.boundingSphere = meshRenderer->boundingSphere;
+		MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
+		drawData.material = material;
 
-			MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
-			drawData.material = material;
-
-			if (material->IsTransparent())
-				transparent.push_back(std::move(drawData));
-			else
-				opaque.push_back(std::move(drawData));
-		}
+		if (material->IsTransparent())
+			transparent.push_back(std::move(drawData));
+		else
+			opaque.push_back(std::move(drawData));
 	}
 }
 

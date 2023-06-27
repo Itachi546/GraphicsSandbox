@@ -42,10 +42,6 @@ public:
 
 	void SetSize(int width, int height);
 
-	void SetShowBoundingBox(bool state) { mShowBoundingBox = state; }
-	bool GetShowBoundingBox() { return mShowBoundingBox; }
-	void SetEnableFrustumCulling(bool state) { mEnableFrustumCulling = state; }
-
 	void Destroy(ecs::Entity entity);
 
 	void AddUI();
@@ -72,7 +68,6 @@ private:
 
 	Camera mCamera;
 	bool mShowBoundingBox = false;
-	bool mEnableFrustumCulling = true;
 
 	std::shared_ptr<ecs::ComponentManager> mComponentManager;
 	std::unique_ptr<EnvironmentMap> mEnvMap;

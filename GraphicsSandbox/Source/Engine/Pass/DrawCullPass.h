@@ -27,6 +27,7 @@ namespace gfx {
 	private:
 		uint32_t totalVisibleMesh = 0;
 		uint32_t totalMesh = 0;
+		bool enableFrustumCulling = true;
 		bool mSupportMeshShading = false;
 		BufferHandle visibleMeshCountBuffer;
 	};

@@ -98,7 +98,6 @@ void EditorApplication::InitializeScene()
 	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
 	mCamera->SetNearPlane(0.1f);
 	mCamera->SetFarPlane(1000.0f);
-	mScene.SetEnableFrustumCulling(false);
 
 	auto compMgr = mScene.GetComponentManager();
 	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/Sponza/Sponza.gltf");

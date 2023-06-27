@@ -95,7 +95,9 @@ namespace gfx {
 			descriptorInfos[3] = { drawCommandCountBuffer, batch.id * sizeof(uint32_t), sizeof(uint32_t), gfx::DescriptorType::StorageBuffer};
 
 			device->UpdateDescriptor(pipeline, descriptorInfos, (uint32_t)std::size(descriptorInfos));
-			device->PushConstants(commandList, pipeline, gfx::ShaderStage::Compute, (void*) &batch.count, sizeof(uint32_t), sizeof(glm::vec4) * 6);
+
+			uint32_t extraPushConstants[] = { batch.count, enableFrustumCulling ? 1u : 0u };
+			device->PushConstants(commandList, pipeline, gfx::ShaderStage::Compute, (void*) &extraPushConstants, sizeof(uint32_t) * 2, sizeof(glm::vec4) * 6);
 			device->BindPipeline(commandList, pipeline);
 			device->DispatchCompute(commandList, uint32_t((batch.count + 31) / 32), 1, 1);
 
@@ -128,6 +130,7 @@ namespace gfx {
 
 	void DrawCullPass::AddUI()
 	{
+		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
 		ImGui::Text("Total Mesh: %d", totalMesh);
 		ImGui::Text("Visible Mesh Last Frame: %d", totalVisibleMesh);
 	}

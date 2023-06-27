@@ -760,6 +760,7 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 			meshDrawData.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
 			meshDrawData.vertexCount = drawData.vertexBuffer.byteLength / drawData.elmSize;
 			meshDrawData.meshletCount = drawData.meshletCount;
+			meshDrawData.boudingSphere = drawData.boundingSphere;
 			meshDrawDatas.push_back(std::move(meshDrawData));
 
 			activeBatch->count++;

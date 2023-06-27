@@ -4,6 +4,7 @@
 #include "../Scene.h"
 #include "../Utils.h"
 #include "../StringConstants.h"
+#include "../GUI/ImGuiService.h"
 #include <cassert>
 
 namespace gfx {
@@ -25,7 +26,14 @@ namespace gfx {
 		shaderDesc.sizeInByte = sizeInBytes;
 		desc.shaderDesc = &shaderDesc;
 
-		pipeline = gfx::GetDevice()->CreateComputePipeline(&desc);
+		gfx::GraphicsDevice* device = gfx::GetDevice();
+		pipeline = device->CreateComputePipeline(&desc);
+
+		gfx::GPUBufferDesc bufferDesc = {};
+		bufferDesc.size = sizeof(uint32_t);
+		bufferDesc.usage = gfx::Usage::Upload;
+		bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
+		visibleMeshCountBuffer = device->CreateBuffer(&bufferDesc);
 
 		delete[] code;
 	}
@@ -69,6 +77,13 @@ namespace gfx {
 		uint32_t sumDIBufferSize = 0;
 		uint32_t sumDICBufferSize = 0;
 
+		// Reset the totalVisibleCount buffer
+		// Instead of using fence we assume that the data filled during the last frame is valid and available
+		uint32_t* ptr = static_cast<uint32_t*>(device->GetMappedDataPtr(visibleMeshCountBuffer));
+		totalVisibleMesh = ptr[0];
+		std::memset(ptr, 0, sizeof(uint32_t));
+		totalMesh = 0;
+		descriptorInfos[4] = { visibleMeshCountBuffer, 0, sizeof(uint32_t), gfx::DescriptorType::StorageBuffer };
 		for (auto& batch : renderBatches) {
 			if (batch.count == 0) continue;
 
@@ -86,6 +101,7 @@ namespace gfx {
 
 			sumDIBufferSize += diBufferSize;
 			sumDICBufferSize += sizeof(uint32_t);
+			totalMesh += batch.count;
 		}
 
 		// Add pipeline barrier
@@ -107,5 +123,12 @@ namespace gfx {
 	{
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 		device->Destroy(pipeline);
+		device->Destroy(visibleMeshCountBuffer);
+	}
+
+	void DrawCullPass::AddUI()
+	{
+		ImGui::Text("Total Mesh: %d", totalMesh);
+		ImGui::Text("Visible Mesh Last Frame: %d", totalVisibleMesh);
 	}
 }

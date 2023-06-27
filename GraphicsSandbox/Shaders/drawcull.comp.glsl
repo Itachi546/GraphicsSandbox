@@ -27,6 +27,10 @@ layout(binding = 3) writeonly buffer DrawCommandCount {
   uint drawCommandCount;
 };
 
+layout(binding = 4) writeonly buffer TotalVisibleCount {
+  uint visibleMeshCount;
+};
+
 void main() {
    //uint ti = gl_LocalInvocationID.x;
    //uint gi = gl_WorkGroupID.x;
@@ -35,14 +39,30 @@ void main() {
    if(di < nMesh) {
       MeshDrawData mesh = meshData[di];
 	  mat4 transform = transforms[di];
-	  uint dci = atomicAdd(drawCommandCount, 1);
-	  drawCommands[dci].drawId = di;
-	  drawCommands[dci].indexCount = mesh.indexCount;
-	  drawCommands[dci].instanceCount =	1;
-	  drawCommands[dci].firstIndex = mesh.indexOffset;
-	  drawCommands[dci].vertexOffset = mesh.vertexOffset;
-	  drawCommands[dci].firstInstance =	0;
-	  drawCommands[dci].taskCount =	(mesh.meshletCount + 31) / 32;
-	  drawCommands[dci].firstTask =	0;
+
+	  vec3 center = vec3(transform * vec4(mesh.boundingSphere.xyz, 1.0f));
+	  float radius = mesh.boundingSphere.w;
+	  bool visible = true;
+	  for(int i = 0; i < 6; ++i) {
+	     vec4 plane = planes[i];
+		 if((dot(plane.xyz, center) + plane.w) < -radius)
+		 {
+		   visible = false;
+		   break;
+		 }
+	  }
+
+	  if(visible) {
+        atomicAdd(visibleMeshCount, 1);
+        uint dci = atomicAdd(drawCommandCount, 1);
+        drawCommands[dci].drawId = di;
+		drawCommands[dci].indexCount = mesh.indexCount;
+		drawCommands[dci].instanceCount	=	1;
+		drawCommands[dci].firstIndex = mesh.indexOffset;
+		drawCommands[dci].vertexOffset = mesh.vertexOffset;
+		drawCommands[dci].firstInstance	=	0;
+		drawCommands[dci].taskCount	=	(mesh.meshletCount + 31) / 32;
+		drawCommands[dci].firstTask	=	0;
+	  }
    }
 }

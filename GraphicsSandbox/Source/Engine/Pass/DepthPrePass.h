@@ -23,7 +23,6 @@ namespace gfx {
 
 		PipelineHandle meshletPipeline = INVALID_PIPELINE;
 		DescriptorInfo meshletDescriptorInfos[6];
-
 		Renderer* renderer;
 
 	private: 

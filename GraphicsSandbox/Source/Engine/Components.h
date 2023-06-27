@@ -98,6 +98,8 @@ struct DrawData
 	gfx::BufferHandle meshletTriangleBuffer;
 	gfx::BufferHandle meshletBuffer;
 
+	glm::vec4 boundingSphere;
+
 	uint32_t elmSize;
 	ecs::Entity entity;
 };
@@ -177,6 +179,7 @@ struct IMeshRenderer
 	uint32_t meshletCount;
 
 	BoundingBox boundingBox;
+	glm::vec4 boundingSphere;
 
 	void SetRenderable(bool value) {
 		if (value) flags |= Renderable; else flags &= ~Renderable;

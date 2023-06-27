@@ -18,12 +18,16 @@ namespace gfx {
 
 		void Shutdown() override;
 
+		void AddUI() override;
+
 		Renderer* renderer;
 
 		PipelineHandle pipeline;
-		DescriptorInfo descriptorInfos[4];
+		DescriptorInfo descriptorInfos[5];
 	private:
+		uint32_t totalVisibleMesh = 0;
+		uint32_t totalMesh = 0;
 		bool mSupportMeshShading = false;
-
+		BufferHandle visibleMeshCountBuffer;
 	};
 }

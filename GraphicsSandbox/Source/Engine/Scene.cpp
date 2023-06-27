@@ -70,6 +70,8 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 			drawData.meshletTriangleBuffer = meshRenderer->meshletTriangleBuffer;
 			drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
 			drawData.meshletCount = meshRenderer->meshletCount;
+			drawData.boundingSphere = meshRenderer->boundingSphere;
+
 			MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
 			drawData.material = material;
 
@@ -475,8 +477,15 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		meshRenderer.indexBuffer.byteOffset = indexOffset;
 		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
 		meshRenderer.meshletCount = (uint32_t)localMeshlets.size();
-		meshRenderer.boundingBox.min = glm::vec3(positionAccessor.minValues[0], positionAccessor.minValues[1], positionAccessor.minValues[2]);
-		meshRenderer.boundingBox.max = glm::vec3(positionAccessor.maxValues[0], positionAccessor.maxValues[1], positionAccessor.maxValues[2]);
+
+		glm::vec3 minExtent = glm::vec3(positionAccessor.minValues[0], positionAccessor.minValues[1], positionAccessor.minValues[2]);
+		glm::vec3 maxExtent = glm::vec3(positionAccessor.maxValues[0], positionAccessor.maxValues[1], positionAccessor.maxValues[2]);
+
+		meshRenderer.boundingBox.min = minExtent;
+		meshRenderer.boundingBox.max = maxExtent;
+		
+		glm::vec3 halfExtent = (maxExtent - minExtent) * 0.5f;
+		meshRenderer.boundingSphere = glm::vec4(minExtent + halfExtent, glm::compMax(halfExtent));
 
 		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
 		parseMaterial(model, &material, primitive.material);

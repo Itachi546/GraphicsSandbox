@@ -61,7 +61,7 @@ struct Meshlet {
 
 
 struct MeshDrawData {
-	vec4 boudingSphere;
+	vec4 boundingSphere;
 
     uint vertexOffset;
 	uint vertexCount;

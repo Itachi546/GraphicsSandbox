@@ -85,10 +85,11 @@ namespace gfx
 		void Draw(CommandList* commandList, uint32_t vertexCount, uint32_t firstVertex, uint32_t instanceCount)         override;
 		void DrawIndexed(CommandList* commandList, uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex)  override;
 		void DrawIndexedIndirect(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, uint32_t drawCount, uint32_t stride) override;
-		void DrawIndexedIndirectCount(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, BufferHandle drawCountBuffer, uint32_t drawCountBufferOffset, uint32_t maxDrawCounts, uint32_t stride) override;
+		void DrawIndexedIndirectCount(CommandList* commandList, BufferHandle indirectBuffer, uint32_t offset, BufferHandle drawCountBuffer, uint32_t drawCountBufferOffset, uint32_t maxDrawCount, uint32_t stride) override;
 
 		void DrawMeshTasksIndirect(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, uint32_t count, uint32_t stride) override;
 		void DrawMeshTasks(CommandList* commandList, uint32_t count, uint32_t firstTask) override;
+		void DrawMeshTasksIndirectCount(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, BufferHandle drawCountBuffer, uint32_t drawCountBufferOffset, uint32_t maxDrawCount, uint32_t stride) override;
 
 		void DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t workGroupZ)         override;
 		bool IsSwapchainReady() override;

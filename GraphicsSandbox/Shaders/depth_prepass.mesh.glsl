@@ -4,6 +4,7 @@
 #extension GL_EXT_shader_8bit_storage : require
 #extension GL_NV_mesh_shader: require
 #extension GL_GOOGLE_include_directive: require
+#extension GL_ARB_shader_draw_parameters: require
 
 #include "meshdata.glsl"
 #include "globaldata.glsl"
@@ -24,19 +25,26 @@ layout(binding = 2) readonly buffer TransformData
    mat4 aTransformData[];
 };
 
-layout(binding = 3) readonly buffer MeshletData {
+layout(binding = 3) readonly buffer DrawCommands {
+  MeshDrawCommand drawCommands[];
+};
+
+layout(binding = 4) readonly buffer MeshletData {
   Meshlet meshlets[];
 };
 
-layout(binding = 4) readonly buffer MeshletVerticesData {
+layout(binding = 5) readonly buffer MeshletVerticesData {
   uint meshletVertices[];
 };
 
-layout(binding = 5) readonly buffer MeshletTrianglesData {
+layout(binding = 6) readonly buffer MeshletTrianglesData {
   uint8_t meshletTriangles[];
 };
 
 void main() {
+    MeshDrawCommand drawCommand = drawCommands[gl_DrawIDARB];
+    uint drawId = drawCommand.drawId;
+
     uint ti = gl_LocalInvocationID.x;
     uint mi = gl_WorkGroupID.x;
 
@@ -53,7 +61,7 @@ void main() {
         Vertex vertex = aVertices[vi];
 
         vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
-        vec4 wP =  vec4(position, 1.0);
+        vec4 wP =  aTransformData[drawId] * vec4(position, 1.0);
         gl_MeshVerticesNV[i].gl_Position = globalData.VP * wP;
     }
 

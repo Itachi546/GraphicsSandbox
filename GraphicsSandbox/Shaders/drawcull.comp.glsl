@@ -64,8 +64,8 @@ void main() {
 		drawCommands[dci].firstIndex = mesh.indexOffset;
 		drawCommands[dci].vertexOffset = mesh.vertexOffset;
 		drawCommands[dci].firstInstance	=	0;
-		drawCommands[dci].taskCount	=	(mesh.meshletCount + 31) / 32;
-		drawCommands[dci].firstTask	=	0;
+		drawCommands[dci].taskCount	= mesh.meshletCount;
+		drawCommands[dci].firstTask	= mesh.meshletOffset;
 	  }
    }
 }

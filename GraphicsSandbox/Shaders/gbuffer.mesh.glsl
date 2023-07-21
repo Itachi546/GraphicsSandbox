@@ -4,12 +4,15 @@
 #extension GL_EXT_shader_8bit_storage : require
 #extension GL_NV_mesh_shader: require
 #extension GL_GOOGLE_include_directive: require
+#extension GL_ARB_shader_draw_parameters: require
 
 #include "meshdata.glsl"
 #include "globaldata.glsl"
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+const uint LOCAL_SIZE = 32;
+layout(local_size_x = LOCAL_SIZE) in;
 layout(triangles, max_vertices = 64, max_primitives = 126) out;
+
 
 layout(binding = 0) uniform readonly Globals {
     GlobalData globalData;
@@ -24,15 +27,19 @@ layout(binding = 2) readonly buffer TransformData
    mat4 aTransformData[];
 };
 
-layout(binding = 3) readonly buffer MeshletData {
+layout(binding = 3) readonly buffer DrawCommands {
+   MeshDrawCommand drawCommands[];
+};
+
+layout(binding = 5) readonly buffer MeshletData {
   Meshlet meshlets[];
 };
 
-layout(binding = 4) readonly buffer MeshletVerticesData {
+layout(binding = 6) readonly buffer MeshletVerticesData {
   uint meshletVertices[];
 };
 
-layout(binding = 5) readonly buffer MeshletTrianglesData {
+layout(binding = 7) readonly buffer MeshletTrianglesData {
   uint8_t meshletTriangles[];
 };
 
@@ -63,6 +70,9 @@ void main() {
     uint ti = gl_LocalInvocationID.x;
     uint mi = gl_WorkGroupID.x;
 
+    MeshDrawCommand drawCommand = drawCommands[gl_DrawIDARB];
+    uint drawId = drawCommand.drawId;
+
     uint vertexCount = meshlets[mi].vertexCount;
     uint triangleCount = meshlets[mi].triangleCount;
     uint vertexOffset = meshlets[mi].vertexOffset;
@@ -71,30 +81,33 @@ void main() {
     uint indexCount = triangleCount * 3;
     uint mhash = hash(mi);
     vec3 mColor = vec3(float(mhash & 255), float((mhash >> 8) & 255), float((mhash >> 16) & 255)) / 255.0;
+    uint globalVBOffset = drawCommand.vertexOffset;
 
-    for(uint i = ti; i < vertexCount; i+= 32)
+    mat4 modelMatrix = aTransformData[drawId];
+    for(uint i = ti; i < vertexCount; i+= LOCAL_SIZE)
     {
         uint vi = meshletVertices[vertexOffset + i];
-        Vertex vertex = aVertices[vi];
+        Vertex vertex = aVertices[vi + globalVBOffset];
 
         vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
-        vec4 wP =  vec4(position, 1.0);
+        vec4 wP =  modelMatrix *  vec4(position, 1.0);
         gl_MeshVerticesNV[i].gl_Position = globalData.VP * wP;
 
         mat3 normalTransform = mat3(1.0);
 		vs_out[i].normal	 = normalTransform * UnpackU8toFloat(vertex.nx,	vertex.ny, vertex.nz);
 		vs_out[i].tangent	 = normalTransform * UnpackU8toFloat(vertex.tx,	vertex.ty, vertex.tz);
-		//vs_out[i].bitangent  = normalTransform * UnpackU8toFloat(vertex.bx,	vertex.by, vertex.bz);
-        vs_out[i].bitangent  = mColor;
+		vs_out[i].bitangent  = normalTransform * UnpackU8toFloat(vertex.bx,	vertex.by, vertex.bz);
+        vs_out[i].uv = vec2(vertex.tu, vertex.tv);
+        //vs_out[i].bitangent  = mColor;
 		vs_out[i].lsPos	     = vec3(globalData.V * wP);
 		vs_out[i].viewDir	 = globalData.cameraPosition - wP.xyz;
-		vs_out[i].matId	     = mi;
+		vs_out[i].matId	     = drawId;
 		vs_out[i].worldPos   = wP.xyz;
     }
 
-    for(uint i = ti; i < indexCount; i+= 32)
+    for(uint i = ti; i < indexCount; i+= LOCAL_SIZE)
     {
-        gl_PrimitiveIndicesNV[i] = meshletTriangles[triangleOffset + i];
+        gl_PrimitiveIndicesNV[i] = uint(meshletTriangles[triangleOffset + i]);
     }
 
     if(ti == 0)

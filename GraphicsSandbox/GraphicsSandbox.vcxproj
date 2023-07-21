@@ -246,16 +246,16 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
       <Command Condition="'$(Configuration)|$(Platform)'=='ReleaseIntel|x64'">$(VULKAN_SDK)\Bin\glslangValidator.exe --target-env vulkan1.2 %(FullPath) -V -o  $(SolutionDir)Assets/SPIRV/%(Filename).spv</Command>
     </CustomBuild>
-    <CustomBuild Include="Shaders\depth_prepass.mesh.glsl">
-      <FileType>Document</FileType>
-    </CustomBuild>
     <CustomBuild Include="Shaders\gbuffer.task.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\gbuffer_mesh.frag.glsl">
+    <CustomBuild Include="Shaders\drawcull.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
-    <CustomBuild Include="Shaders\drawcull.comp.glsl">
+    <CustomBuild Include="Shaders\depth_prepass.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\depth_prepass.mesh.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="Shaders\globaldata.glsl">

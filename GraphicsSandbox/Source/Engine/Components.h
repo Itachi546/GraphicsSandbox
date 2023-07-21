@@ -92,6 +92,7 @@ struct DrawData
 	MaterialComponent* material;
 	uint32_t indexCount;
 	uint32_t meshletCount;
+	uint32_t meshletOffset;
 	gfx::BufferView vertexBuffer;
 	gfx::BufferView indexBuffer;
 	gfx::BufferHandle meshletVertexBuffer;
@@ -176,6 +177,8 @@ struct IMeshRenderer
 	gfx::BufferHandle meshletBuffer;
 	gfx::BufferHandle meshletVertexBuffer;
 	gfx::BufferHandle meshletTriangleBuffer;
+
+	uint32_t meshletOffset;
 	uint32_t meshletCount;
 
 	BoundingBox boundingBox;

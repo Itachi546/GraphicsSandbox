@@ -375,15 +375,13 @@
     <CustomBuild Include="Shaders\gbuffer.mesh.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
-    <CustomBuild Include="Shaders\depth_prepass.mesh.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
     <CustomBuild Include="Shaders\gbuffer.task.glsl" />
-    <CustomBuild Include="Shaders\gbuffer_mesh.frag.glsl">
-      <Filter>SHADERS</Filter>
-    </CustomBuild>
     <CustomBuild Include="Shaders\drawcull.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="Shaders\depth_prepass.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\depth_prepass.mesh.glsl" />
   </ItemGroup>
 </Project>

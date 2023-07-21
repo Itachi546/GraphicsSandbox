@@ -25,7 +25,7 @@ namespace gfx {
 
 		// Mesh shader pipeline
 		gfx::PipelineHandle meshletPipeline = gfx::INVALID_PIPELINE;
-		DescriptorInfo meshletDescriptorInfos[7];
+		DescriptorInfo meshletDescriptorInfos[8];
 
 		Renderer* renderer;
 

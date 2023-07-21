@@ -126,7 +126,7 @@
         }
       ],
       "name": "transparent_pass",
-      "enabled": true,
+      "enabled": false,
       "outputs": [
         {
           "type": "reference",

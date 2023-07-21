@@ -1212,7 +1212,7 @@ namespace gfx {
                 Logger::Info("Extension not supported: " + std::string(required));
             }
         }
-		supportMeshShader = false;
+		//supportMeshShader = false;
     }
 
     VkPipelineLayout VulkanGraphicsDevice::createPipelineLayout(VkDescriptorSetLayout* setLayout, uint32_t setLayoutCount, const std::vector<VkPushConstantRange>& ranges)
@@ -2261,6 +2261,14 @@ namespace gfx {
     {
         auto cmd = GetCommandList(commandList);
         vkCmdDrawMeshTasksNV(cmd->commandBuffer, count, firstTask);
+    }
+
+    void VulkanGraphicsDevice::DrawMeshTasksIndirectCount(CommandList* commandList, BufferHandle meshDrawBuffer, uint32_t offset, BufferHandle drawCountBuffer, uint32_t drawCountBufferOffset, uint32_t maxDrawCount, uint32_t stride)
+    {
+        auto cmd = GetCommandList(commandList);
+        auto db = buffers.AccessResource(meshDrawBuffer.handle);
+        auto dcb = buffers.AccessResource(drawCountBuffer.handle);
+        vkCmdDrawMeshTasksIndirectCountNV(cmd->commandBuffer, db->buffer, offset, dcb->buffer, drawCountBufferOffset, maxDrawCount, stride);
     }
 
     void VulkanGraphicsDevice::DispatchCompute(CommandList* commandList, uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ)

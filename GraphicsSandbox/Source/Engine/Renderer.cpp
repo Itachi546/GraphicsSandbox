@@ -85,7 +85,7 @@ void Renderer::SetScene(Scene* scene)
 {
 	mScene = scene;
 	// Update Environment data
-	mEnvironmentData.exposure = 1.0f;
+	mEnvironmentData.exposure = 2.0f;
 	auto& env = mScene->GetEnvironmentMap();
 	mEnvironmentData.brdfLUT = env->GetBRDFLUT().handle;
 	mEnvironmentData.irradianceMap = env->GetIrradianceMap().handle;
@@ -761,6 +761,7 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 			meshDrawData.vertexCount = drawData.vertexBuffer.byteLength / drawData.elmSize;
 			meshDrawData.meshletCount = drawData.meshletCount;
 			meshDrawData.boudingSphere = drawData.boundingSphere;
+			meshDrawData.meshletOffset = drawData.meshletOffset;
 			meshDrawDatas.push_back(std::move(meshDrawData));
 
 			activeBatch->count++;

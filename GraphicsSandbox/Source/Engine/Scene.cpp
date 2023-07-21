@@ -62,6 +62,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 		drawData.meshletVertexBuffer = meshRenderer->meshletVertexBuffer;
 		drawData.meshletCount = meshRenderer->meshletCount;
 		drawData.boundingSphere = meshRenderer->boundingSphere;
+		drawData.meshletOffset = meshRenderer->meshletOffset;
 
 		MaterialComponent* material = mComponentManager->GetComponent<MaterialComponent>(entity);
 		drawData.material = material;
@@ -443,14 +444,15 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		ecs::Entity child = createEntity("submesh_" + name);
 
 		uint32_t meshletVertexOffset = (uint32_t)mStagingData.meshletVertices.size();
-		uint32_t meshlettriangleOffset = (uint32_t)mStagingData.meshletTriangles.size();
-		for (auto& localMeshlet : localMeshlets) {
+		uint32_t meshletTriangleOffset = (uint32_t)mStagingData.meshletTriangles.size();
+		uint32_t meshletOffset = (uint32_t)mStagingData.meshlets.size();
+		for (uint32_t i = 0; i < meshletCount; ++i) {
 
 			mStagingData.meshlets.emplace_back(Meshlet{
-				meshletVertexOffset + localMeshlet.vertex_offset,
-				localMeshlet.vertex_count,
-				meshlettriangleOffset + localMeshlet.triangle_offset,
-				localMeshlet.triangle_count,
+				meshletVertexOffset + localMeshlets[i].vertex_offset,
+				localMeshlets[i].vertex_count,
+				meshletTriangleOffset + localMeshlets[i].triangle_offset,
+				localMeshlets[i].triangle_count,
 				glm::vec4(0.0f)
 				});
 		}
@@ -458,6 +460,7 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		// Add to the staging data
 		mStagingData.vertices.insert(mStagingData.vertices.end(), vertices.begin(), vertices.end());
 		mStagingData.indices.insert(mStagingData.indices.end(), indices.begin(), indices.end());
+
 		mStagingData.meshletVertices.insert(mStagingData.meshletVertices.end(), meshletVertices.begin(), meshletVertices.end());
 		mStagingData.meshletTriangles.insert(mStagingData.meshletTriangles.end(), meshletTriangles.begin(), meshletTriangles.end());
 
@@ -466,7 +469,8 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		meshRenderer.vertexBuffer.byteLength = (uint32_t)(vertices.size() * sizeof(Vertex));
 		meshRenderer.indexBuffer.byteOffset = indexOffset;
 		meshRenderer.indexBuffer.byteLength = (uint32_t)(indexCount * sizeof(uint32_t));
-		meshRenderer.meshletCount = (uint32_t)localMeshlets.size();
+		meshRenderer.meshletCount = (uint32_t)meshletCount;
+		meshRenderer.meshletOffset = meshletOffset;
 
 		glm::vec3 minExtent = glm::vec3(positionAccessor.minValues[0], positionAccessor.minValues[1], positionAccessor.minValues[2]);
 		glm::vec3 maxExtent = glm::vec3(positionAccessor.maxValues[0], positionAccessor.maxValues[1], positionAccessor.maxValues[2]);

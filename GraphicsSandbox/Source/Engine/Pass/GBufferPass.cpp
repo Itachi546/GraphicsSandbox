@@ -39,7 +39,7 @@ void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
 		shaders[1] = { fragmentCode, size };
 
 		pipelineDesc.shaderCount = 2;
-		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
+		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Back;
 		meshletPipeline = device->CreateGraphicsPipeline(&pipelineDesc);
 
 		//delete[] taskCode;

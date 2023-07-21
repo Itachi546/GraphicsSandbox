@@ -461,8 +461,10 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 		mStagingData.vertices.insert(mStagingData.vertices.end(), vertices.begin(), vertices.end());
 		mStagingData.indices.insert(mStagingData.indices.end(), indices.begin(), indices.end());
 
-		mStagingData.meshletVertices.insert(mStagingData.meshletVertices.end(), meshletVertices.begin(), meshletVertices.end());
-		mStagingData.meshletTriangles.insert(mStagingData.meshletTriangles.end(), meshletTriangles.begin(), meshletTriangles.end());
+		std::size_t meshletVertexCount = MAX_MESHLET_VERTICES * meshletCount;
+		std::size_t meshletTriangleCount = MAX_MESHLET_TRIANGLES * meshletCount * 3;
+		mStagingData.meshletVertices.insert(mStagingData.meshletVertices.end(), meshletVertices.begin(), meshletVertices.begin() + meshletVertexCount);
+		mStagingData.meshletTriangles.insert(mStagingData.meshletTriangles.end(), meshletTriangles.begin(), meshletTriangles.begin() + meshletTriangleCount);
 
 		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(child);
 		meshRenderer.vertexBuffer.byteOffset = vertexOffset;

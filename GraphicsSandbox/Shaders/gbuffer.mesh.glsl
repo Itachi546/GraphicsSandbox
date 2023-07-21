@@ -97,8 +97,8 @@ void main() {
 		vs_out[i].normal	 = normalTransform * UnpackU8toFloat(vertex.nx,	vertex.ny, vertex.nz);
 		vs_out[i].tangent	 = normalTransform * UnpackU8toFloat(vertex.tx,	vertex.ty, vertex.tz);
 		vs_out[i].bitangent  = normalTransform * UnpackU8toFloat(vertex.bx,	vertex.by, vertex.bz);
-        vs_out[i].uv = vec2(vertex.tu, vertex.tv);
         //vs_out[i].bitangent  = mColor;
+        vs_out[i].uv = vec2(vertex.tu, vertex.tv);
 		vs_out[i].lsPos	     = vec3(globalData.V * wP);
 		vs_out[i].viewDir	 = globalData.cameraPosition - wP.xyz;
 		vs_out[i].matId	     = drawId;

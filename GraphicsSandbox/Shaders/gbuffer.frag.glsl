@@ -42,6 +42,7 @@ void main()
   if(material.albedoMap != INVALID_TEXTURE)
     albedo *= texture(uTextures[nonuniformEXT(material.albedoMap)], fs_in.uv);
   colorBuffer =	albedo;
+  //colorBuffer =	vec4(fs_in.bitangent, 1.0);
 
   // Export normals
   vec3 n = fs_in.normal;

@@ -137,16 +137,12 @@ void gfx::GBufferPass::drawMeshlet(gfx::GraphicsDevice* device, gfx::CommandList
 		device->UpdateDescriptor(meshletPipeline, meshletDescriptorInfos, (uint32_t)std::size(meshletDescriptorInfos));
 		device->BindPipeline(commandList, meshletPipeline);
 
-		// @TODO dispatch count maybe incorrect
 		uint32_t stride = sizeof(MeshDrawIndirectCommand);
 		uint32_t offset = batch.offset * sizeof(gfx::MeshDrawIndirectCommand) + offsetof(gfx::MeshDrawIndirectCommand, taskCount);
 
 		device->DrawMeshTasksIndirectCount(commandList, dib, offset, dcb, batch.id * sizeof(uint32_t),
 			batch.count,
 			stride);
-		//uint32_t count = (batch.meshletCount + 31) / 32;
-		//device->DrawMeshTasksIndirect(commandList, dib, offset, count, stride);
-		//device->DrawMeshTasks(commandList, batch.meshletCount, 0);
 	}
 }
 

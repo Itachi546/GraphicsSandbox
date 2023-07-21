@@ -9,7 +9,8 @@
 #include "meshdata.glsl"
 #include "globaldata.glsl"
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+const uint LOCAL_SIZE = 32;
+layout(local_size_x = LOCAL_SIZE, local_size_y = 1, local_size_z = 1) in;
 layout(triangles, max_vertices = 64, max_primitives = 126) out;
 
 layout(binding = 0) uniform readonly Globals {
@@ -42,11 +43,12 @@ layout(binding = 6) readonly buffer MeshletTrianglesData {
 };
 
 void main() {
-    MeshDrawCommand drawCommand = drawCommands[gl_DrawIDARB];
-    uint drawId = drawCommand.drawId;
 
     uint ti = gl_LocalInvocationID.x;
     uint mi = gl_WorkGroupID.x;
+
+    MeshDrawCommand drawCommand = drawCommands[gl_DrawIDARB];
+    uint drawId = drawCommand.drawId;
 
     uint vertexCount = meshlets[mi].vertexCount;
     uint triangleCount = meshlets[mi].triangleCount;
@@ -54,20 +56,22 @@ void main() {
     uint triangleOffset = meshlets[mi].triangleOffset;
 
     uint indexCount = triangleCount * 3;
+    uint globalVBOffset = drawCommand.vertexOffset;
 
-    for(uint i = ti; i < vertexCount; i+= 32)
+    mat4 modelMatrix = aTransformData[drawId];
+    for(uint i = ti; i < vertexCount; i+= LOCAL_SIZE)
     {
         uint vi = meshletVertices[vertexOffset + i];
-        Vertex vertex = aVertices[vi];
+        Vertex vertex = aVertices[vi + globalVBOffset];
 
         vec3 position = vec3(vertex.px, vertex.py, vertex.pz);
-        vec4 wP =  aTransformData[drawId] * vec4(position, 1.0);
+        vec4 wP =  modelMatrix *  vec4(position, 1.0);
         gl_MeshVerticesNV[i].gl_Position = globalData.VP * wP;
     }
 
-    for(uint i = ti; i < indexCount; i+= 32)
+    for(uint i = ti; i < indexCount; i+= LOCAL_SIZE)
     {
-        gl_PrimitiveIndicesNV[i] = meshletTriangles[triangleOffset + i];
+        gl_PrimitiveIndicesNV[i] = uint(meshletTriangles[triangleOffset + i]);
     }
 
     if(ti == 0)

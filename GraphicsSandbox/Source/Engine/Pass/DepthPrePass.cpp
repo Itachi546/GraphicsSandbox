@@ -12,7 +12,7 @@ gfx::DepthPrePass::DepthPrePass(Renderer* renderer_) : renderer(renderer_)
 void gfx::DepthPrePass::Initialize(RenderPassHandle renderPass)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
-	mSupportMeshShading = false;// device->SupportMeshShading();
+	mSupportMeshShading = device->SupportMeshShading();
 
 	PipelineDesc pipelineDesc = {};
 	pipelineDesc.renderPass = renderPass;
@@ -93,13 +93,14 @@ void gfx::DepthPrePass::drawMeshlet(gfx::GraphicsDevice* device, gfx::CommandLis
 {
 	// Draw Batch
 	gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
-	gfx::BufferHandle drawIndirectBuffer = renderer->mDrawIndirectBuffer;
+	gfx::BufferHandle dib = renderer->mDrawIndirectBuffer;
+	gfx::BufferHandle dcb = renderer->mDrawCommandCountBuffer;
 
 	for (const auto& batch : batches) {
 		const gfx::BufferView& vbView = batch.vertexBuffer;
 		meshletDescriptorInfos[1] = { vbView.buffer, 0, device->GetBufferSize(vbView.buffer), gfx::DescriptorType::StorageBuffer };
 		meshletDescriptorInfos[2] = { transformBuffer, (uint32_t)(batch.offset * sizeof(glm::mat4)), (uint32_t)(batch.count * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer };
-		meshletDescriptorInfos[3] = { drawIndirectBuffer, (uint32_t)(batch.offset * sizeof(MeshDrawIndirectCommand)), (uint32_t)(batch.count * sizeof(MeshDrawIndirectCommand)), gfx::DescriptorType::StorageBuffer };
+		meshletDescriptorInfos[3] = { dib, (uint32_t)(batch.offset * sizeof(MeshDrawIndirectCommand)), (uint32_t)(batch.count * sizeof(MeshDrawIndirectCommand)), gfx::DescriptorType::StorageBuffer };
 		meshletDescriptorInfos[4] = { batch.meshletBuffer, 0, device->GetBufferSize(batch.meshletBuffer), gfx::DescriptorType::StorageBuffer };
 		meshletDescriptorInfos[5] = { batch.meshletVertexBuffer, 0, device->GetBufferSize(batch.meshletVertexBuffer), gfx::DescriptorType::StorageBuffer };
 		meshletDescriptorInfos[6] = { batch.meshletTriangleBuffer, 0, device->GetBufferSize(batch.meshletTriangleBuffer), gfx::DescriptorType::StorageBuffer };
@@ -107,7 +108,11 @@ void gfx::DepthPrePass::drawMeshlet(gfx::GraphicsDevice* device, gfx::CommandLis
 		device->UpdateDescriptor(meshletPipeline, meshletDescriptorInfos, (uint32_t)std::size(meshletDescriptorInfos));
 		device->BindPipeline(commandList, meshletPipeline);
 
-		device->DrawMeshTasks(commandList, batch.meshletCount, 0);
+		uint32_t stride = sizeof(MeshDrawIndirectCommand);
+		uint32_t offset = batch.offset * sizeof(gfx::MeshDrawIndirectCommand) + offsetof(gfx::MeshDrawIndirectCommand, taskCount);
+		device->DrawMeshTasksIndirectCount(commandList, dib, offset, dcb, batch.id * sizeof(uint32_t),
+			batch.count,
+			stride);
 	}
 }
 

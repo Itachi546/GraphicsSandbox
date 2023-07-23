@@ -305,38 +305,28 @@ void Scene::parseMaterial(tinygltf::Model* model, MaterialComponent* component, 
 	component->emissive = glm::vec3((float)emissiveColor[0], (float)emissiveColor[1], (float)emissiveColor[2]);
 
 	// Parse Material texture
+	auto loadTexture = [&](uint32_t index) {
+		tinygltf::Texture& texture = model->textures[index];
+		tinygltf::Image& image = model->images[texture.source];
+		const std::string& name = image.uri.length() == 0 ? image.name : image.uri;
+		return TextureCache::LoadTexture(name, image.width, image.height, image.image.data(), image.component, true);
+	};
+	
 
 	if (pbr.baseColorTexture.index >= 0)
-	{
-		tinygltf::Texture& albedoMap = model->textures[pbr.baseColorTexture.index];
-		tinygltf::Image& image = model->images[albedoMap.source];
-		component->albedoMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
-	}
+		component->albedoMap = loadTexture(pbr.baseColorTexture.index);
 
-	if (pbr.metallicRoughnessTexture.index >= 0) {
-		tinygltf::Texture& metallicMap = model->textures[pbr.metallicRoughnessTexture.index];
-		tinygltf::Image& image = model->images[metallicMap.source];
-		component->roughnessMap = component->metallicMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
-	}
+	if (pbr.metallicRoughnessTexture.index >= 0) 
+		component->metallicMap = component->roughnessMap = loadTexture(pbr.metallicRoughnessTexture.index);
 
-	if (material.normalTexture.index >= 0) {
-		tinygltf::Texture& normalMap = model->textures[material.normalTexture.index];
-		tinygltf::Image& image = model->images[normalMap.source];
-		component->normalMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
+	if (material.normalTexture.index >= 0)
+		component->normalMap = loadTexture(material.normalTexture.index);
 
-	}
+	if (material.occlusionTexture.index >= 0)
+		component->ambientOcclusionMap = loadTexture(material.occlusionTexture.index);
 
-	if (material.occlusionTexture.index >= 0) {
-		tinygltf::Texture& aoMap = model->textures[material.occlusionTexture.index];
-		tinygltf::Image& image = model->images[aoMap.source];
-		component->ambientOcclusionMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
-	}
-
-	if (material.emissiveTexture.index >= 0) {
-		tinygltf::Texture& emissiveMap = model->textures[material.emissiveTexture.index];
-		tinygltf::Image& image = model->images[emissiveMap.source];
-		component->emissiveMap = TextureCache::LoadTexture(image.uri, image.width, image.height, image.image.data(), image.component, true);
-	}
+	if (material.emissiveTexture.index >= 0)
+		component->emissiveMap = loadTexture(material.emissiveTexture.index);
 }
 
 void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity parent) {

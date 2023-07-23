@@ -98,6 +98,7 @@ public:
 	gfx::FrameGraphBuilder mFrameGraphBuilder;
 	gfx::FrameGraph mFrameGraph;
 	EnvironmentData mEnvironmentData;
+	bool mUseMeshShading = false;
 
 	std::vector<RenderBatch> mDrawBatches;
 	std::vector<RenderBatch> mTransparentBatches;
@@ -107,6 +108,7 @@ private:
 	gfx::GraphicsDevice* mDevice;
 	Scene* mScene;
 	bool mUpdateBatches = true;
+
 
 	std::vector<std::string> mOutputAttachments;
 	uint32_t mFinalOutput;
@@ -126,6 +128,7 @@ private:
 	void InitializeBuffers();
 	void AddUI();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
+	void UpdateLights();
 
 	/*
 	gfx::PipelineHandle loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);

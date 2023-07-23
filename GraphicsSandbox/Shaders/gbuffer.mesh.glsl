@@ -93,7 +93,7 @@ void main() {
         vec4 wP =  modelMatrix *  vec4(position, 1.0);
         gl_MeshVerticesNV[i].gl_Position = globalData.VP * wP;
 
-        mat3 normalTransform = mat3(1.0);
+        mat3 normalTransform = mat3(transpose(inverse(modelMatrix)));
 		vs_out[i].normal	 = normalTransform * UnpackU8toFloat(vertex.nx,	vertex.ny, vertex.nz);
 		vs_out[i].tangent	 = normalTransform * UnpackU8toFloat(vertex.tx,	vertex.ty, vertex.tz);
 		vs_out[i].bitangent  = normalTransform * UnpackU8toFloat(vertex.bx,	vertex.by, vertex.bz);

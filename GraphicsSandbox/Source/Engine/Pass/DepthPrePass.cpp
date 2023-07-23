@@ -30,16 +30,15 @@ void gfx::DepthPrePass::Initialize(RenderPassHandle renderPass)
 		meshletDescriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 		delete[] code;
 	}
-	else {
-		uint32_t size = 0;
-		char* code = Utils::ReadFile(StringConstants::DEPTH_PREPASS_PATH, &size);
-		ShaderDescription shader = { code, size };
-		pipelineDesc.shaderCount = 1;
-		pipelineDesc.shaderDesc = &shader;
-		indexedPipeline = device->CreateGraphicsPipeline(&pipelineDesc);
-		indexedDescriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
-		delete[] code;
-	}
+	
+	uint32_t size = 0;
+	char* code = Utils::ReadFile(StringConstants::DEPTH_PREPASS_PATH, &size);
+	ShaderDescription shader = { code, size };
+	pipelineDesc.shaderCount = 1;
+	pipelineDesc.shaderDesc = &shader;
+	indexedPipeline = device->CreateGraphicsPipeline(&pipelineDesc);
+	indexedDescriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+	delete[] code;
 }
 
 void gfx::DepthPrePass::Render(CommandList* commandList, Scene* scene)
@@ -49,7 +48,7 @@ void gfx::DepthPrePass::Render(CommandList* commandList, Scene* scene)
 	//Bind Pipeline
 	const std::vector<RenderBatch>& renderBatches = renderer->mDrawBatches;
 
-	if (mSupportMeshShading)
+	if (mSupportMeshShading && renderer->mUseMeshShading)
 		drawMeshlet(device, commandList, renderBatches);
 	else
 		drawIndexed(device, commandList, renderBatches);

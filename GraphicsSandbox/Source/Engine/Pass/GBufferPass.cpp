@@ -47,21 +47,21 @@ void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
 		delete[] fragmentCode;
 		meshletDescriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 	}
-	else {
-		uint32_t size = 0;
-		char* vertexCode = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);
-		shaders[0] = { vertexCode, size };
 
-		char* fragmentCode = Utils::ReadFile(StringConstants::GBUFFER_FRAG_PATH, &size);
-		shaders[1] = { fragmentCode, size };
+	uint32_t size = 0;
+	char* vertexCode = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);
+	shaders[0] = { vertexCode, size };
 
-		pipelineDesc.shaderCount = 2;
-		indexedPipeline = device->CreateGraphicsPipeline(&pipelineDesc);
+	char* fragmentCode = Utils::ReadFile(StringConstants::GBUFFER_FRAG_PATH, &size);
+	shaders[1] = { fragmentCode, size };
 
-		delete[] vertexCode;
-		delete[] fragmentCode;
-		indexedDescriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
-	}
+	pipelineDesc.shaderCount = 2;
+	indexedPipeline = device->CreateGraphicsPipeline(&pipelineDesc);
+
+	delete[] vertexCode;
+	delete[] fragmentCode;
+	indexedDescriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+
 }
 
 void gfx::GBufferPass::Render(CommandList* commandList, Scene* scene)
@@ -72,7 +72,7 @@ void gfx::GBufferPass::Render(CommandList* commandList, Scene* scene)
 	const std::vector<RenderBatch>& renderBatches = renderer->mDrawBatches;
 	if (renderBatches.size() == 0) return;
 
-	if (mSupportMeshShading)
+	if (mSupportMeshShading && renderer->mUseMeshShading)
 		drawMeshlet(device, commandList, renderBatches);
 	else
 		drawIndexed(device, commandList, renderBatches);

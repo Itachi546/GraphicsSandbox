@@ -94,7 +94,7 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	mCamera->SetPosition({ 5.0f, 1.0f, 5.0f });
+	mCamera->SetPosition({ 5.0f, 1.0f, 0.0f });
 	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
 	mCamera->SetNearPlane(0.1f);
 	mCamera->SetFarPlane(1000.0f);

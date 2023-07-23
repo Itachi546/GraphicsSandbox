@@ -85,7 +85,7 @@ void Renderer::SetScene(Scene* scene)
 {
 	mScene = scene;
 	// Update Environment data
-	mEnvironmentData.exposure = 2.0f;
+	mEnvironmentData.exposure = 1.0f;
 	auto& env = mScene->GetEnvironmentMap();
 	mEnvironmentData.brdfLUT = env->GetBRDFLUT().handle;
 	mEnvironmentData.irradianceMap = env->GetIrradianceMap().handle;
@@ -115,29 +115,7 @@ void Renderer::Update(float dt)
 	mGlobalUniformData.dt += dt;
 	mDevice->CopyToBuffer(mGlobalUniformBuffer, &mGlobalUniformData, 0, sizeof(GlobalUniformData));
 
-	// Update Light Uniform Data
-	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
-	std::vector<LightComponent>& lights = lightArrComponent->components;
-	std::vector<ecs::Entity>& entities = lightArrComponent->entities;
-
-	std::vector<LightData> lightData;
-	for (int i = 0; i < lights.size(); ++i)
-	{
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
-		glm::vec3 position = glm::vec3(0.0f);
-
-		if (lights[i].type == LightType::Directional)
-			position = normalize(transform->GetRotationMatrix() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
-		else if (lights[i].type == LightType::Point)
-			position = transform->worldMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		else {
-			assert(!"Undefined Light Type");
-		}
-		lightData.emplace_back(LightData{ position, lights[i].radius, lights[i].color* lights[i].intensity, (float)lights[i].type });
-	}
-
-	uint32_t nLights = static_cast<uint32_t>(lights.size());
-	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
+	UpdateLights();
 
 	// Update Environment data
 	mEnvironmentData.cameraPosition = mScene->GetCamera()->GetPosition();
@@ -540,7 +518,11 @@ void Renderer::AddUI()
 		}
 		ImGui::EndCombo();
 	}
+
+	if (mDevice->SupportMeshShading())
+		ImGui::Checkbox("Mesh Shading", &mUseMeshShading);
 	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
+	ImGui::SliderFloat("exposure", &mEnvironmentData.exposure, 0.0f, 4.0f);
 }
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
@@ -570,6 +552,36 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 	mDevice->BindPipeline(commandList, mCubemapPipeline);
 	mDevice->BindIndexBuffer(commandList, ib.buffer);
 	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
+}
+
+void Renderer::UpdateLights()
+{
+	// Update Light Uniform Data
+	auto compMgr = mScene->GetComponentManager();
+	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
+	std::vector<LightComponent>& lights = lightArrComponent->components;
+	std::vector<ecs::Entity>& entities = lightArrComponent->entities;
+
+	Camera* camera = mScene->GetCamera();
+
+	std::vector<LightData> lightData;
+	for (int i = 0; i < lights.size(); ++i)
+	{
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
+		glm::vec3 position = glm::vec3(0.0f);
+
+		if (lights[i].type == LightType::Directional)
+			position = normalize(transform->GetRotationMatrix() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
+		else if (lights[i].type == LightType::Point)
+			position = transform->worldMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		else {
+			assert(!"Undefined Light Type");
+		}
+		lightData.emplace_back(LightData{ position, lights[i].radius, lights[i].color * lights[i].intensity, (float)lights[i].type });
+	}
+
+	uint32_t nLights = static_cast<uint32_t>(lights.size());
+	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
 }
 /*
 void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)

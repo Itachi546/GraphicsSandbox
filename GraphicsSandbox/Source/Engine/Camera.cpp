@@ -47,6 +47,11 @@ glm::vec4 Camera::ComputeNDCCoordinate(const glm::vec3& p)
 	return ndc;
 }
 
+glm::vec4 Camera::ComputeViewSpaceCoordinate(const glm::vec3& p)
+{
+	return mView * glm::vec4(p, 1.0f);
+}
+
 void Camera::CalculateProjection()
 {
 	mProjection = glm::perspective(mFov, mAspect, mNearPlane, mFarPlane);

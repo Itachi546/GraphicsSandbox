@@ -142,6 +142,7 @@ struct LightComponent
 	float intensity = 1.0f;
 	float radius = 1;
 	LightType type = LightType::Point;
+	bool enabled = true;
 };
 
 struct HierarchyComponent

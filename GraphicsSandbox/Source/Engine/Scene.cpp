@@ -258,21 +258,6 @@ void Scene::InitializeLights()
 	light.intensity = 1.0f;
 	light.type = LightType::Directional;
 
-	/*
-	for (uint32_t i = 0; i < 10; ++i)
-	{
-		ecs::Entity light = ecs::CreateEntity();
-		mComponentManager->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
-		TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(light);
-		transform.position = glm::vec3(MathUtils::Rand01() * 5 - 2.5, MathUtils::Rand01() * 5, MathUtils::Rand01() * 5 - 2.5);
-		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
-		//transform.rotation = glm::vec3(0.0f, 0.021f, 0.375f);
-		LightComponent& lightComp = mComponentManager->AddComponent<LightComponent>(light);
-		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
-		lightComp.intensity = 10.0f;
-		lightComp.type = LightType::Point;
-	}
-	*/
 }
 
 ecs::Entity Scene::createEntity(const std::string& name) {

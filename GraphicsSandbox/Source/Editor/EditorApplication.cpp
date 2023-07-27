@@ -2,7 +2,6 @@
 #include "../Engine/VulkanGraphicsDevice.h"
 #include "../Engine/MathUtils.h"
 #include "../Engine/DebugDraw.h"
-#include "../Engine/CascadedShadowMap.h"
 #include "../Engine/Animation/Animation.h"
 #include "../Engine/Interpolator.h"
 #include "../Engine/GUI/ImGuiService.h"
@@ -102,6 +101,20 @@ void EditorApplication::InitializeScene()
 	auto compMgr = mScene.GetComponentManager();
 	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/sponza/sponza.gltf");
 	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+
+	for (uint32_t i = 0; i < 100; ++i)
+	{
+		ecs::Entity light = ecs::CreateEntity();
+		compMgr->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
+		TransformComponent& transform = compMgr->AddComponent<TransformComponent>(light);
+		transform.position = glm::vec3(MathUtils::Rand01() * 20.0f - 10.0f, MathUtils::Rand01() * 10, MathUtils::Rand01() * 10.0f - 5.0f);
+		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
+
+		LightComponent& lightComp = compMgr->AddComponent<LightComponent>(light);
+		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
+		lightComp.intensity = 0.1f;
+		lightComp.type = LightType::Point;
+	}
 }
 
 /*

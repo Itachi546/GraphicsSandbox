@@ -4,7 +4,6 @@
 #include "Input.h"
 #include "Logger.h"
 #include "Profiler.h"
-#include "CascadedShadowMap.h"
 #include "StringConstants.h"
 #include "DebugDraw.h"
 #include "TransformComponent.h"
@@ -567,6 +566,8 @@ void Renderer::UpdateLights()
 	std::vector<LightData> lightData;
 	for (int i = 0; i < lights.size(); ++i)
 	{
+		if (!lights[i].enabled) continue;
+
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
 		glm::vec3 position = glm::vec3(0.0f);
 
@@ -580,7 +581,7 @@ void Renderer::UpdateLights()
 		lightData.emplace_back(LightData{ position, lights[i].radius, lights[i].color * lights[i].intensity, (float)lights[i].type });
 	}
 
-	uint32_t nLights = static_cast<uint32_t>(lights.size());
+	uint32_t nLights = static_cast<uint32_t>(lightData.size());
 	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
 }
 /*

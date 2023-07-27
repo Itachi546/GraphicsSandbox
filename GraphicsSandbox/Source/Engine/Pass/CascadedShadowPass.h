@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Graphics.h"
-#include "GlmIncludes.h"
+#include "../Graphics.h"
+#include "../GlmIncludes.h"
 
 #include <memory>
 

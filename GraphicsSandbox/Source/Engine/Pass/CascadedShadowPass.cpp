@@ -1,9 +1,9 @@
-#include "CascadedShadowMap.h"
-#include "Utils.h"
-#include "GraphicsDevice.h"
-#include "StringConstants.h"
-#include "Camera.h"
-#include "DebugDraw.h"
+#include "CascadedShadowPass.h"
+#include "../Utils.h"
+#include "../GraphicsDevice.h"
+#include "../StringConstants.h"
+#include "../Camera.h"
+#include "../DebugDraw.h"
 
 #include <limits>
 

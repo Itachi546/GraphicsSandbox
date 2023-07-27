@@ -255,6 +255,7 @@ namespace ui {
 	{
 		if (ImGui::CollapsingHeader("Light Component", ImGuiTreeNodeFlags_DefaultOpen))
 		{
+			ImGui::Checkbox("Enable", &light->enabled);
 			ImGui::ColorPicker3("LightColor", &light->color[0]);
 			ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 100.0f);
 

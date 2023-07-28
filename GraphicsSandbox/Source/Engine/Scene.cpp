@@ -165,6 +165,8 @@ void Scene::Destroy(ecs::Entity entity)
 
 void Scene::AddUI()
 {
+	ImGui::Checkbox("Show AABB", &mShowBoundingBox);
+
 	mUISceneHierarchy->AddUI();
 	LightComponent* light = mComponentManager->GetComponent<LightComponent>(mSun);
 	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(mSun);

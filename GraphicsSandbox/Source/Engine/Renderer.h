@@ -124,6 +124,7 @@ private:
 	const int kMaxBatches = 25;
 	uint32_t mBatchId = 0;
 	GlobalUniformData mGlobalUniformData;
+	bool mEnableDebugDraw = false;
 
 	void InitializeBuffers();
 	void AddUI();

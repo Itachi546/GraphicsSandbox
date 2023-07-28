@@ -136,7 +136,6 @@ Application::~Application()
 	// Wait for rendering to finish
 	ui::ImGuiService::GetInstance()->Shutdown();
 	TextureCache::Shutdown();
-	DebugDraw::Shutdown();
 	mScene.Shutdown();
 	mRenderer->Shutdown();
 	mDevice->Shutdown();

@@ -258,6 +258,7 @@ namespace ui {
 			ImGui::Checkbox("Enable", &light->enabled);
 			ImGui::ColorPicker3("LightColor", &light->color[0]);
 			ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 100.0f);
+			ImGui::SliderFloat("Radius", &light->radius, 0.0f, 10.0f);
 
 			const char* lightTypes[] = {
 				"Directional",

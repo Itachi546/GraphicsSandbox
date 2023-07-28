@@ -239,9 +239,6 @@
     <ClCompile Include="Source\Engine\Camera.cpp">
       <Filter>SOURCE\ECS</Filter>
     </ClCompile>
-    <ClCompile Include="Source\Engine\DebugDraw.cpp">
-      <Filter>SOURCE\Graphics</Filter>
-    </ClCompile>
     <ClCompile Include="Source\External\ImGui\imgui.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
@@ -323,6 +320,9 @@
     <ClCompile Include="Source\Engine\Pass\DrawCullPass.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\DebugDraw.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -383,5 +383,7 @@
       <Filter>SHADERS</Filter>
     </CustomBuild>
     <CustomBuild Include="Shaders\depth_prepass.mesh.glsl" />
+    <CustomBuild Include="Shaders\debug.frag.glsl" />
+    <CustomBuild Include="Shaders\debug.vert.glsl" />
   </ItemGroup>
 </Project>

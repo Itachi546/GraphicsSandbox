@@ -98,22 +98,32 @@ void EditorApplication::InitializeScene()
 	mCamera->SetNearPlane(0.1f);
 	mCamera->SetFarPlane(1000.0f);
 
+	mRenderer->mEnvironmentData.globalAO = 0.01f;
+
 	auto compMgr = mScene.GetComponentManager();
 	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/sponza/sponza.gltf");
 	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+	
+	ecs::Entity sun = mScene.GetSun();
+	compMgr->GetComponent<LightComponent>(sun)->enabled = false;
 
-	for (uint32_t i = 0; i < 100; ++i)
+	const int nLight = 10;
+	const float lightStep = 20.0f / nLight;
+
+	for (uint32_t i = 0; i < nLight; ++i)
 	{
 		ecs::Entity light = ecs::CreateEntity();
 		compMgr->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
 		TransformComponent& transform = compMgr->AddComponent<TransformComponent>(light);
-		transform.position = glm::vec3(MathUtils::Rand01() * 20.0f - 10.0f, MathUtils::Rand01() * 10, MathUtils::Rand01() * 10.0f - 5.0f);
+		//transform.position = glm::vec3(MathUtils::Rand01() * 16.0f - 8.0f, 3.0f, 0.0f);
+		transform.position = glm::vec3(-10.0f + i * lightStep, 2.0f, 0.0f);
 		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 
 		LightComponent& lightComp = compMgr->AddComponent<LightComponent>(light);
 		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
-		lightComp.intensity = 0.1f;
+		lightComp.intensity = 1.0f;
 		lightComp.type = LightType::Point;
+		lightComp.radius = 5.0f;
 	}
 }
 

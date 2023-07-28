@@ -65,6 +65,7 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 		mFrameGraph.RegisterRenderer(name, pass);
 		pass->Initialize(node->renderPass);
 	};
+	DebugDraw::Initialize(mSwapchainRP);
 
 	RegisterPass("depth_pre_pass", new gfx::DepthPrePass(this));
 	RegisterPass("gbuffer_pass", new gfx::GBufferPass(this));
@@ -144,9 +145,8 @@ void Renderer::Render(gfx::CommandList* commandList)
 	ui::ImGuiService::GetInstance()->NewFrame();
 	ImGui::Begin("Renderer");
 
-	mScene->AddUI();
-
 	AddUI();
+	mScene->AddUI();
 
 	for (uint32_t i = 0; i < mFrameGraph.nodeHandles.size(); ++i)
 	{
@@ -249,6 +249,11 @@ void Renderer::Render(gfx::CommandList* commandList)
 		else {
 			mDevice->BeginRenderPass(commandList, node->renderPass, node->framebuffer);
 			node->renderer->Render(commandList, mScene);
+
+			if (node->name == "transparent_pass") {
+				DebugDraw::Draw(commandList, mGlobalUniformData.VP);
+			}
+
 			mDevice->EndRenderPass(commandList);
 		}
 		// End GPU Timer
@@ -287,7 +292,6 @@ void Renderer::Render(gfx::CommandList* commandList)
 	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
 	mDevice->BindPipeline(commandList, mFullScreenPipeline);
 	mDevice->Draw(commandList, 6, 0, 1);
-
 	Profiler::EndRangeGPU(commandList, start);
 
 	// Draw GUI
@@ -503,6 +507,13 @@ void Renderer::InitializeBuffers()
 
 void Renderer::AddUI()
 {
+	if (ImGui::Checkbox("DebugDraw", &mEnableDebugDraw))
+		DebugDraw::SetEnable(mEnableDebugDraw);
+	if (mDevice->SupportMeshShading())
+		ImGui::Checkbox("Mesh Shading", &mUseMeshShading);
+	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
+	ImGui::SliderFloat("exposure", &mEnvironmentData.exposure, 0.0f, 4.0f);
+
 	if (ImGui::BeginCombo("Final Output", mOutputAttachments[mFinalOutput].c_str()))
 	{
 		for (uint32_t i = 0; i < mOutputAttachments.size(); ++i)
@@ -517,11 +528,6 @@ void Renderer::AddUI()
 		}
 		ImGui::EndCombo();
 	}
-
-	if (mDevice->SupportMeshShading())
-		ImGui::Checkbox("Mesh Shading", &mUseMeshShading);
-	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
-	ImGui::SliderFloat("exposure", &mEnvironmentData.exposure, 0.0f, 4.0f);
 }
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
@@ -808,6 +814,7 @@ void Renderer::onResize(uint32_t width, uint32_t height)
 
 void Renderer::Shutdown()
 {
+	DebugDraw::Shutdown();
 	mFrameGraph.Shutdown();
 	mFrameGraphBuilder.Shutdown();
 	mDevice->Destroy(mFullScreenPipeline);

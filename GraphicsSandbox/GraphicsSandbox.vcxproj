@@ -258,9 +258,16 @@
     <CustomBuild Include="Shaders\depth_prepass.mesh.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\debug.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\debug.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>
+    <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\Pass\BloomPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\DrawCullPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp" />
@@ -281,7 +288,6 @@
     <ClCompile Include="Source\Editor\TransformGizmo.cpp" />
     <ClCompile Include="Source\Engine\Animation\Animation.cpp" />
     <ClCompile Include="Source\Engine\Camera.cpp" />
-    <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\FrameGraph.cpp" />
     <ClCompile Include="Source\Engine\GUI\ImGuiService.cpp" />
     <ClCompile Include="Source\Engine\Pass\DepthPrePass.cpp" />

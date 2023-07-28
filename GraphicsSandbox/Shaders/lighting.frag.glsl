@@ -42,6 +42,12 @@ vec3 ACESFilm(vec3 x)
    return clamp((x*(a*x+b))/(x*(c*x+d)+e), vec3(0.0f), vec3(1.0f));
 }
 
+float AttenuationSquareFallOff(float lightDistSqr, float invRadius) {
+   const float factor = lightDistSqr * invRadius * invRadius;
+   const float smoothFactor = max(1.0f - factor * factor, 0.0f);
+   return smoothFactor * smoothFactor / max(lightDistSqr, 1e-4);
+}
+
 vec3 CalculateColor(vec2 uv)
 {
 	vec4 albedo = texture(uTextures[nonuniformEXT(uColorBuffer)], uv);
@@ -75,10 +81,10 @@ vec3 CalculateColor(vec2 uv)
 		float shadow = 1.0f;
 		if(light.type > 0.2f)
 		{
-            vec3 l = light.position - worldPos;
-		    float dist = length(l);
-			attenuation	= 1.0f / (dist * dist);
-     		l /= dist;
+            vec3 lightDir = light.position - worldPos;
+		    float dist = length(lightDir);
+			attenuation	= AttenuationSquareFallOff(dist * dist, 1.0f / light.radius);
+			l = lightDir / dist;
         }
 		else 
 		{
@@ -96,7 +102,7 @@ vec3 CalculateColor(vec2 uv)
 		float V	= V_SmithGGX(NoV, NoL, roughness);
 
 		vec3  Ks = F;
-		vec3  Kd = (1.0f - Ks) * (1.0f - metallic);
+		vec3  Kd = vec3(1.0f - Ks) * (1.0f - metallic);
 		vec3 specular =	(V * F * D) / (4.0f * NoV * NoL + 0.0001f);
 
 		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation * shadow;

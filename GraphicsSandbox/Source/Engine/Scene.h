@@ -83,7 +83,7 @@ private:
 
 	void DrawBoundingBox();
 	void InitializeLights();
-	void GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
+	void GenerateMeshData(ecs::Entity entity, IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent);
 	void RemoveChild(ecs::Entity parent, ecs::Entity child);
 	void AddChild(ecs::Entity parent, ecs::Entity child);
 

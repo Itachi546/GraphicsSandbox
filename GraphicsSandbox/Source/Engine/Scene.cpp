@@ -37,7 +37,7 @@ void Scene::Initialize()
 	mUISceneHierarchy = std::make_shared<ui::SceneHierarchy>(this);
 }
 
-void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
+void Scene::GenerateMeshData(ecs::Entity entity, IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
 {
 	if (meshRenderer->IsRenderable())
 	{
@@ -46,6 +46,13 @@ void Scene::GenerateMeshData(ecs::Entity entity, const IMeshRenderer* meshRender
 
 		BoundingBox aabb = meshRenderer->boundingBox;
 		aabb.Transform(transform->worldMatrix);
+
+		auto& [min, max] = aabb;
+		const glm::vec3 halfExtent = (max - min) * 0.5f;
+		glm::vec3 center = min + halfExtent;
+
+		float radius = glm::compMax(glm::abs(halfExtent));
+		meshRenderer->boundingSphere = glm::vec4(center.x, center.y, center.z, radius);
 
 		DrawData drawData = {};
 		const gfx::BufferView vertexBuffer = meshRenderer->vertexBuffer;
@@ -81,7 +88,7 @@ void Scene::GenerateDrawData(std::vector<DrawData>& opaque, std::vector<DrawData
 
 	for (int i = 0; i < meshRendererComponents->GetCount(); ++i)
 	{
-		const MeshRenderer& meshRenderer = meshRendererComponents->components[i];
+		MeshRenderer& meshRenderer = meshRendererComponents->components[i];
 		const ecs::Entity entity = meshRendererComponents->entities[i];
 		GenerateMeshData(entity, &meshRenderer, opaque, transparent);
 	}
@@ -93,7 +100,7 @@ void Scene::GenerateSkinnedMeshDrawData(std::vector<DrawData>& opaque, std::vect
 	auto skinnedMeshRendererComponents = mComponentManager->GetComponentArray<SkinnedMeshRenderer>();
 	for (int i = 0; i < skinnedMeshRendererComponents->GetCount(); ++i)
 	{
-		const SkinnedMeshRenderer& meshRenderer = skinnedMeshRendererComponents->components[i];
+		SkinnedMeshRenderer& meshRenderer = skinnedMeshRendererComponents->components[i];
 		const ecs::Entity entity = skinnedMeshRendererComponents->entities[i];
 		GenerateMeshData(entity, &meshRenderer, opaque, transparent);
 	}
@@ -109,12 +116,9 @@ void Scene::DrawBoundingBox()
 
 		if (meshRenderer.IsRenderable())
 		{
-			TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(entity);
-			BoundingBox aabb = meshRenderer.boundingBox;
-
-			aabb.Transform(transform->worldMatrix);
-			DebugDraw::AddAABB(aabb.min, aabb.max);
-
+			glm::vec3 center = meshRenderer.boundingSphere;
+			float radius = meshRenderer.boundingSphere.w;
+			DebugDraw::AddSphere(center, meshRenderer.boundingSphere.w);
 		}
 	}
 }
@@ -456,9 +460,6 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 
 		meshRenderer.boundingBox.min = minExtent;
 		meshRenderer.boundingBox.max = maxExtent;
-		
-		glm::vec3 halfExtent = (maxExtent - minExtent) * 0.5f;
-		meshRenderer.boundingSphere = glm::vec4(minExtent + halfExtent, glm::compMax(halfExtent));
 
 		MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(child);
 		parseMaterial(model, &material, primitive.material);

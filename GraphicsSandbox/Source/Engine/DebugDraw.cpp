@@ -7,7 +7,7 @@ bool gEnableDebugDraw = true;
 gfx::PipelineHandle gPipeline = gfx::INVALID_PIPELINE;
 gfx::BufferHandle gBuffer = gfx::INVALID_BUFFER;
 uint32_t gDataOffset = 0;
-const uint32_t kMaxDebugData = 10'000;
+const uint32_t kMaxDebugData = 1000'000;
 struct DebugData
 {
 	glm::vec3 position;
@@ -95,6 +95,28 @@ void DebugDraw::AddAABB(const glm::vec3& min, const glm::vec3& max, uint32_t col
 	AddLine(glm::vec3(min.x, min.y, max.z), glm::vec3(min.x, max.y, max.z), color);
 	AddLine(glm::vec3(max.x, min.y, max.z), glm::vec3(max.x, max.y, max.z), color);
 	AddLine(glm::vec3(max.x, min.y, min.z), glm::vec3(max.x, max.y, min.z), color);
+}
+
+void DebugDraw::AddSphere(const glm::vec3& p, float radius, uint32_t color)
+{
+	// Create a circle and rotate it 
+	glm::mat3 rotate = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+	uint32_t nPoint = 40;
+	float dTheta = (glm::pi<float>() * 2.0f) / float(nPoint);
+
+	float theta = 0.0f;
+	glm::vec3 lastPosition = radius * glm::vec3(cos(theta), sin(theta), 0.0f);
+	for (uint32_t i = 1; i <= nPoint; ++i) {
+		theta += dTheta;
+		glm::vec3 currentPosition = radius * glm::vec3(cos(theta), sin(theta), 0.0f);
+		AddLine(lastPosition + p, currentPosition + p, color);
+		AddLine(rotate * lastPosition + p, rotate * currentPosition + p, color);
+		AddLine(glm::vec3(lastPosition.x + p.x, lastPosition.z + p.y, lastPosition.y + p.z),
+			glm::vec3(currentPosition.x + p.x, currentPosition.z + p.y, currentPosition.y + p.z), color);
+
+		lastPosition = currentPosition;
+	}
 }
 
 void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t color)

@@ -15,6 +15,7 @@ namespace DebugDraw
 
 	void AddLine(const glm::vec3& start, const glm::vec3& end, uint32_t color = 0xffffff);
 	void AddAABB(const glm::vec3& min, const glm::vec3& max, uint32_t color = 0xff0000);
+	void AddSphere(const glm::vec3& p, float radius, uint32_t color = 0xff0000);
 
 	/*
 	* Points should be in given order

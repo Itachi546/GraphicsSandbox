@@ -30,7 +30,9 @@ namespace ui {
 		if (lightComp && lightComp->type == LightType::Point)
 		{
 			glm::vec3 position = componentManager->GetComponent<TransformComponent>(mSelected)->position;
-			DebugDraw::AddAABB(position + glm::vec3(-0.1f), position + glm::vec3(0.1f));
+			//DebugDraw::AddAABB(position + glm::vec3(-0.1f), position + glm::vec3(0.1f));
+			uint32_t color = ConvertFloat3ToU32Color(lightComp->color);
+			DebugDraw::AddSphere(position, lightComp->radius, color);
 		}
 	}
 

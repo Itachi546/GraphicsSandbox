@@ -41,7 +41,7 @@ void main() {
       MeshDrawData mesh = meshData[di];
 	  mat4 transform = transforms[di];
 
-	  vec3 center = vec3(transform * vec4(mesh.boundingSphere.xyz, 1.0f));
+	  vec3 center = mesh.boundingSphere.xyz;
 	  float radius = mesh.boundingSphere.w;
 	  bool visible = true;
 	  if(enableFrustumCulling > 0.5) {

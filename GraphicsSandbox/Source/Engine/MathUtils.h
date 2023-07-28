@@ -3,6 +3,13 @@
 #include "../Engine/GlmIncludes.h"
 #include <array>
 
+inline uint32_t ConvertFloat3ToU32Color(const glm::vec3& color) {
+	uint32_t r = glm::clamp(static_cast<uint32_t>(color.x * 255), 0u, 255u);
+	uint32_t g = glm::clamp(static_cast<uint32_t>(color.y * 255), 0u, 255u);
+	uint32_t b = glm::clamp(static_cast<uint32_t>(color.z * 255), 0u, 255u);
+	return (b | g << 8 | r << 16);
+}
+
 struct BoundingBox
 {
 	glm::vec3 min;

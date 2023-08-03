@@ -120,8 +120,13 @@ private:
 	gfx::RenderPassHandle mSwapchainRP;
 	gfx::PipelineHandle mFullScreenPipeline;
 
-	const int kMaxEntity = 1'000;
-	const int kMaxBatches = 25;
+	const uint32_t kMaxEntity = 1'000;
+	const uint32_t kMaxBatches = 25;
+	static const uint32_t kMaxLightBins = 16;
+	const uint32_t kMaxLights = 256;
+
+	std::array<uint32_t, kMaxLightBins> mLightLUT;
+
 	uint32_t mBatchId = 0;
 	GlobalUniformData mGlobalUniformData;
 	bool mEnableDebugDraw = false;

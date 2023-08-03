@@ -21,6 +21,13 @@
 #include <vector>
 #include <algorithm>
 
+struct SortedLight {
+	uint32_t id;
+	float projectedZ;
+	float projectedZMin;
+	float projectedZMax;
+};
+
 
 Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 {
@@ -484,7 +491,7 @@ void Renderer::InitializeBuffers()
 	mMaterialBuffer = mDevice->CreateBuffer(&bufferDesc);
 
 	// Light Data Buffer
-	bufferDesc.size = sizeof(LightData) * 128;
+	bufferDesc.size = sizeof(LightData) * kMaxLights;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 	mLightBuffer = mDevice->CreateBuffer(&bufferDesc);
 
@@ -566,29 +573,88 @@ void Renderer::UpdateLights()
 	auto lightArrComponent = compMgr->GetComponentArray<LightComponent>();
 	std::vector<LightComponent>& lights = lightArrComponent->components;
 	std::vector<ecs::Entity>& entities = lightArrComponent->entities;
-
 	Camera* camera = mScene->GetCamera();
 
+	std::vector<SortedLight> sortedLights;
 	std::vector<LightData> lightData;
-	for (int i = 0; i < lights.size(); ++i)
-	{
-		if (!lights[i].enabled) continue;
 
+	const float nearPlane = camera->GetNearPlane();
+	const float farPlane = camera->GetFarPlane();
+	const float invPlaneDistance = 1.0f / (farPlane - nearPlane);
+
+	// Compute the distance of the light min, max and center position in 
+	// the cameraSpace and convert it between 0 and 1
+	for (uint32_t i = 0; i < lights.size(); ++i) {
+		LightComponent& light = lights[i];
+
+		// Update the lightData that is sent to buffer
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
 		glm::vec3 position = glm::vec3(0.0f);
-
 		if (lights[i].type == LightType::Directional)
 			position = normalize(transform->GetRotationMatrix() * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f));
 		else if (lights[i].type == LightType::Point)
-			position = transform->worldMatrix * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		else {
-			assert(!"Undefined Light Type");
-		}
+			position = transform->position;
+		else assert(!"Undefined Light Type");
 		lightData.emplace_back(LightData{ position, lights[i].radius, lights[i].color * lights[i].intensity, (float)lights[i].type });
+
+		if (!light.enabled || light.type == LightType::Directional) continue;
+		float radius = light.radius;
+
+		glm::vec3 projectedPosition = camera->ComputeViewSpaceCoordinate(position);
+		glm::vec3 projectedMinPosition = projectedPosition + glm::vec3(0.0f, 0.0f, -radius);
+		glm::vec3 projectedMaxPosition = projectedPosition + glm::vec3(0.0f, 0.0f,  radius);
+
+		float z = (projectedPosition.z - nearPlane) * invPlaneDistance;
+		float zMin = (projectedMinPosition.z - nearPlane) * invPlaneDistance;
+		float zMax = (projectedMaxPosition.z - nearPlane) * invPlaneDistance;
+
+		SortedLight sortedLight = {
+			i, z, zMin, zMax
+		};
+		sortedLights.emplace_back(SortedLight{ (uint32_t)i, z, zMin, zMax });
+
 	}
 
+	// Sort the light by projectedZ value
+	std::qsort(sortedLights.data(), sortedLights.size(), sizeof(SortedLight), [](const void* a, const void* b) {
+		const SortedLight* la = (const SortedLight*)a;
+		const SortedLight* lb = (const SortedLight*)b;
+
+		if (la->projectedZ < lb->projectedZ) return -1;
+		else if (la->projectedZ > lb->projectedZ) return 1;
+		return 0;
+		});
+
+	// Upload LightData to GPU
 	uint32_t nLights = static_cast<uint32_t>(lightData.size());
+	assert(nLights <= kMaxLights);
 	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
+
+	// Calculate light LUT, we use uniform distribution to sort the light into bins
+	const float binSize = 1.0f / kMaxLightBins;
+	for (uint16_t bin = 0; bin < kMaxLightBins; ++bin) {
+		uint16_t minLightId = kMaxLights + 1;
+		uint16_t maxLightId = 0;
+
+		const float binMin = binSize * bin;
+		const float binMax = binMin + binSize;
+
+		for (uint32_t i = 0; i < sortedLights.size(); ++i) {
+			SortedLight& light = sortedLights[i];
+
+			if ((light.projectedZ >= binMin && light.projectedZ <= binMax) ||
+				(light.projectedZMin >= binMin && light.projectedZMin <= binMax) || 
+				(light.projectedZMax >= binMin && light.projectedZMax <= binMax)) {
+				if (i < minLightId)
+					minLightId = i;
+
+				if (i > maxLightId)
+					maxLightId = i;
+			}
+		}
+		mLightLUT[bin] = (maxLightId << 16) | minLightId;
+	}
+
 }
 /*
 void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)

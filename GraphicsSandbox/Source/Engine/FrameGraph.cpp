@@ -241,6 +241,7 @@ namespace gfx {
 					resource.info.texture.depth = 1;
 					GetTextureFormatAndAspect(passOutput["format"], resource.info.texture.format, resource.info.texture.imageAspect);
 					resource.info.texture.op = GetTextureLoadOp(passOutput["op"]);
+					resource.info.texture.layerCount = passOutput.value("layers", 1);
 					break;
 				}
 				case FrameGraphResourceType::Buffer:
@@ -323,16 +324,20 @@ namespace gfx {
 						textureDesc.height = resource->info.texture.height;
 						textureDesc.depth = resource->info.texture.depth;
 						textureDesc.imageAspect = resource->info.texture.imageAspect;
+
 						if(textureDesc.imageAspect == ImageAspect::Depth)
 							textureDesc.bindFlag = BindFlag::DepthStencil | BindFlag::ShaderResource;
 						else
 							textureDesc.bindFlag = BindFlag::RenderTarget | BindFlag::ShaderResource;
 
 						textureDesc.imageType = ImageType::I2D;
+						if (resource->info.texture.layerCount > 1)
+							textureDesc.imageViewType = gfx::ImageViewType::IV2DArray;
+
 						textureDesc.bCreateSampler = true;
 						textureDesc.bAddToBindless = true;
 						textureDesc.mipLevels = 1;
-						textureDesc.arrayLayers = 1;
+						textureDesc.arrayLayers = resource->info.texture.layerCount;
 
 						TextureHandle handle = builder->device->CreateTexture(&textureDesc);
 						resource->info.texture.texture = handle;
@@ -518,6 +523,8 @@ namespace gfx {
 
 			if (height == 0) height = info.texture.height;
 			else assert(height = info.texture.height);
+
+			desc.layers = info.texture.layerCount;
 
 			if (info.texture.imageAspect == ImageAspect::Depth)
 			{

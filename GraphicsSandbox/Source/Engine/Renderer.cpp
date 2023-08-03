@@ -17,6 +17,7 @@
 #include "Pass/TransparentPass.h"
 #include "Pass/FXAAPass.h"
 #include "Pass/DrawCullPass.h"
+#include "Pass/CascadedShadowPass.h"
 
 #include <vector>
 #include <algorithm>
@@ -66,6 +67,11 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 
 	mFrameGraphBuilder.GetAllTextureResourceName(mOutputAttachments);
 
+	// Remove layered texture
+	mOutputAttachments.erase(std::remove_if(mOutputAttachments.begin(), mOutputAttachments.end(), [&](const std::string& attachment) {
+		return mFrameGraphBuilder.AccessResource(attachment)->info.texture.layerCount > 1;
+		}), mOutputAttachments.end());
+
 	auto RegisterPass = [&](const std::string name, gfx::FrameGraphPass* pass) {
 		gfx::FrameGraphNode* node = mFrameGraphBuilder.AccessNode(name);
 		if (node == nullptr) return;
@@ -80,6 +86,7 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 	RegisterPass("transparent_pass", new gfx::TransparentPass(this));
 	RegisterPass("fxaa_pass", new gfx::FXAAPass(this, width, height));
 	RegisterPass("drawcull_pass", new gfx::DrawCullPass(this));
+	RegisterPass("cascaded_shadow_pass", new gfx::CascadedShadowPass(this));
 	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
 	if (found != mOutputAttachments.end())
 		mFinalOutput = (uint32_t)std::distance(mOutputAttachments.begin(), found);
@@ -506,6 +513,9 @@ void Renderer::InitializeBuffers()
 	bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer | gfx::BindFlag::ShaderResource;
 	mDrawIndirectBuffer = mDevice->CreateBuffer(&bufferDesc);
 
+	bufferDesc.size = kMaxEntity * sizeof(gfx::DrawIndirectCommand);
+	mIndexedIndirectCommandBuffer = mDevice->CreateBuffer(&bufferDesc);
+
 	// DrawCommand Count Buffer
 	bufferDesc.size = sizeof(uint32_t) * kMaxBatches;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::IndirectBuffer;
@@ -526,6 +536,7 @@ void Renderer::AddUI()
 		for (uint32_t i = 0; i < mOutputAttachments.size(); ++i)
 		{
 			const bool isSelected = (i == mFinalOutput);
+
 			if (ImGui::Selectable(mOutputAttachments[i].c_str(), isSelected))
 				mFinalOutput = i;
 
@@ -586,6 +597,7 @@ void Renderer::UpdateLights()
 	// the cameraSpace and convert it between 0 and 1
 	for (uint32_t i = 0; i < lights.size(); ++i) {
 		LightComponent& light = lights[i];
+		if (!light.enabled) continue;
 
 		// Update the lightData that is sent to buffer
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
@@ -595,9 +607,10 @@ void Renderer::UpdateLights()
 		else if (lights[i].type == LightType::Point)
 			position = transform->position;
 		else assert(!"Undefined Light Type");
+
 		lightData.emplace_back(LightData{ position, lights[i].radius, lights[i].color * lights[i].intensity, (float)lights[i].type });
 
-		if (!light.enabled || light.type == LightType::Directional) continue;
+		if (light.type == LightType::Directional) continue;
 		float radius = light.radius;
 
 		glm::vec3 projectedPosition = camera->ComputeViewSpaceCoordinate(position);
@@ -804,6 +817,8 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 	std::vector<glm::mat4> transforms;
 	std::vector<MaterialComponent> materials;
 	std::vector<MeshDrawData> meshDrawDatas;
+	// @TODO temp
+	std::vector<gfx::DrawIndirectCommand> drawIndexedCommand;
 
 	gfx::BufferHandle lastBuffer = gfx::INVALID_BUFFER;
 	RenderBatch* activeBatch = nullptr;
@@ -849,6 +864,14 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 			meshDrawData.meshletOffset = drawData.meshletOffset;
 			meshDrawDatas.push_back(std::move(meshDrawData));
 
+			gfx::DrawIndirectCommand indirectCommand;
+			indirectCommand.firstInstance = 0;
+			indirectCommand.instanceCount = 1;
+			indirectCommand.indexCount = drawData.indexCount;
+			indirectCommand.firstIndex = drawData.indexBuffer.byteOffset / sizeof(uint32_t);
+			indirectCommand.vertexOffset = drawData.vertexBuffer.byteOffset / drawData.elmSize;
+			drawIndexedCommand.push_back(std::move(indirectCommand));
+
 			activeBatch->count++;
 			activeBatch->meshletCount += drawData.meshletCount;
 		}
@@ -866,6 +889,9 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 
 		uint32_t meshDrawDataCount = (uint32_t)meshDrawDatas.size();
 		mDevice->CopyToBuffer(mMeshDrawDataBuffer, meshDrawDatas.data(), lastOffset * dicSize, meshDrawDataCount * dicSize);
+
+		uint32_t indexedDrawCommandCount = (uint32_t)drawIndexedCommand.size();
+		mDevice->CopyToBuffer(mIndexedIndirectCommandBuffer, drawIndexedCommand.data(), lastOffset * sizeof(gfx::DrawIndirectCommand), indexedDrawCommandCount * sizeof(gfx::DrawIndirectCommand));
 		
 		currentOffset += (activeBatch ? activeBatch->count : 0);
 		lastOffset += currentOffset;
@@ -892,4 +918,5 @@ void Renderer::Shutdown()
 	mDevice->Destroy(mSkinnedMatrixBuffer);
 	mDevice->Destroy(mMeshDrawDataBuffer);
 	mDevice->Destroy(mDrawCommandCountBuffer);
+	mDevice->Destroy(mIndexedIndirectCommandBuffer);
 }

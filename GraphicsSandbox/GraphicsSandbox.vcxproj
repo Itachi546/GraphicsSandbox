@@ -168,6 +168,7 @@
   <ItemGroup>
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
     <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
+    <ClInclude Include="Source\Engine\Pass\CascadedShadowPass.h" />
     <ClInclude Include="Source\Engine\Pass\DrawCullPass.h" />
     <ClInclude Include="Source\Engine\Pass\FXAAPass.h" />
     <ClInclude Include="Source\Engine\Pass\LightingPass.h" />
@@ -269,6 +270,7 @@
     </None>
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
     <ClCompile Include="Source\Engine\Pass\BloomPass.cpp" />
+    <ClCompile Include="Source\Engine\Pass\CascadedShadowPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\DrawCullPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\FXAAPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\LightingPass.cpp" />
@@ -311,6 +313,12 @@
     <ClCompile Include="Source\Engine\spriv_reflect.c" />
     <ClCompile Include="Source\glfwMain.cpp" />
     <ClCompile Include="Source\Engine\MathUtils.cpp" />
+    <CustomBuild Include="Shaders\shadow.geom.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\shadow.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\bindless.glsl" />

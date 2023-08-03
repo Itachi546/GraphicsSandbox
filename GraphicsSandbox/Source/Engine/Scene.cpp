@@ -170,8 +170,8 @@ void Scene::Destroy(ecs::Entity entity)
 void Scene::AddUI()
 {
 	ImGui::Checkbox("Show AABB", &mShowBoundingBox);
-
 	mUISceneHierarchy->AddUI();
+	/*
 	LightComponent* light = mComponentManager->GetComponent<LightComponent>(mSun);
 	TransformComponent* transform = mComponentManager->GetComponent<TransformComponent>(mSun);
 	if (ImGui::CollapsingHeader("Directional Light"))
@@ -181,7 +181,7 @@ void Scene::AddUI()
 		ImGui::SliderFloat("intensity", &light->intensity, 0.0f, 4.0f);
 		ImGui::ColorPicker3("color", &light->color[0]);
 		ImGui::PopID();
-	}
+	}*/
 }
 
 std::vector<ecs::Entity> Scene::FindChildren(ecs::Entity entity)

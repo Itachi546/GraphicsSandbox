@@ -102,7 +102,7 @@ void EditorApplication::InitializeScene()
 
 	auto compMgr = mScene.GetComponentManager();
 	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/sponza/sponza.gltf");
-	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+	//ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
 	
 	ecs::Entity sun = mScene.GetSun();
 	compMgr->GetComponent<LightComponent>(sun)->enabled = false;

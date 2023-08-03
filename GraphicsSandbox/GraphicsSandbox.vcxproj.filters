@@ -189,6 +189,7 @@
     <ClInclude Include="Source\Engine\MathUtils.h" />
     <ClInclude Include="Source\Engine\MeshData.h" />
     <ClInclude Include="Source\Engine\Pass\DrawCullPass.h" />
+    <ClInclude Include="Source\Engine\Pass\CascadedShadowPass.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -323,6 +324,9 @@
     <ClCompile Include="Source\Engine\DebugDraw.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\Pass\CascadedShadowPass.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -385,5 +389,7 @@
     <CustomBuild Include="Shaders\depth_prepass.mesh.glsl" />
     <CustomBuild Include="Shaders\debug.frag.glsl" />
     <CustomBuild Include="Shaders\debug.vert.glsl" />
+    <CustomBuild Include="Shaders\shadow.geom.glsl" />
+    <CustomBuild Include="Shaders\shadow.vert.glsl" />
   </ItemGroup>
 </Project>

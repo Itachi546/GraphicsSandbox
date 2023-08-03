@@ -95,6 +95,9 @@ public:
 	gfx::BufferHandle mMeshDrawDataBuffer;
 	gfx::BufferHandle mDrawCommandCountBuffer;
 
+	// @Note Temporary only used for CSM as it doesn't currently support frustum culling
+	gfx::BufferHandle mIndexedIndirectCommandBuffer;
+
 	gfx::FrameGraphBuilder mFrameGraphBuilder;
 	gfx::FrameGraph mFrameGraph;
 	EnvironmentData mEnvironmentData;
@@ -135,6 +138,7 @@ private:
 	void AddUI();
 	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
 	void UpdateLights();
+
 
 	/*
 	gfx::PipelineHandle loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);

@@ -14,6 +14,10 @@ namespace StringConstants
 	constexpr const char* GBUFER_MESH_PATH = "Assets/SPIRV/gbuffer.mesh.spv";
 	constexpr const char* DEPTH_PREPASS_MESH_PATH = "Assets/SPIRV/depth_prepass.mesh.spv";
 
+	// Cascaded Shadow Map Path
+	constexpr const char* CSM_VERT_PATH = "Assets/SPIRV/shadow.vert.spv";
+	constexpr const char* CSM_GEOM_PATH = "Assets/SPIRV/shadow.geom.spv";
+
 	// Light Pass
 	constexpr const char* LIGHTING_FRAG_PATH = "Assets/SPIRV/lighting.frag.spv";
 

@@ -349,6 +349,7 @@
     <None Include="Shaders\material.glsl">
       <Filter>SHADERS</Filter>
     </None>
+    <None Include="Shaders\shadow.glsl" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Shaders\hdri_converter.comp.glsl" />

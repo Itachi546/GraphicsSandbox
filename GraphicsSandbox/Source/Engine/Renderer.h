@@ -52,11 +52,12 @@ struct EnvironmentData {
 	uint32_t colorBuffer;
 	uint32_t emissiveBuffer;
 
-	glm::vec3 cameraPosition;
+	uint32_t directionalShadowMap;
 	float exposure;
 	float globalAO;
 	uint32_t nLight;
 
+	glm::vec3 cameraPosition;
 };
 
 struct GlobalUniformData
@@ -66,6 +67,17 @@ struct GlobalUniformData
 	glm::mat4 VP;
 	glm::vec3 cameraPosition;
 	float dt;
+};
+
+struct Cascade {
+	glm::mat4 VP;
+	glm::vec4 splitDistance;
+};
+
+struct CascadeData
+{
+	Cascade cascades[5];
+	glm::vec4 shadowDims;
 };
 
 class Renderer
@@ -94,6 +106,7 @@ public:
 	gfx::BufferHandle mSkinnedMatrixBuffer;
 	gfx::BufferHandle mMeshDrawDataBuffer;
 	gfx::BufferHandle mDrawCommandCountBuffer;
+	gfx::BufferHandle mCascadeInfoBuffer;
 
 	// @Note Temporary only used for CSM as it doesn't currently support frustum culling
 	gfx::BufferHandle mIndexedIndirectCommandBuffer;

@@ -2,6 +2,7 @@
 
 #include "../FrameGraph.h"
 #include "../GlmIncludes.h"
+#include "../Renderer.h"
 
 #include <memory>
 
@@ -9,6 +10,7 @@ class Camera;
 class Renderer;
 class Scene;
 struct RenderBatch;
+
 namespace gfx {
 
 	class GraphicsDevice;
@@ -32,6 +34,9 @@ namespace gfx {
 			return gfx::DescriptorInfo{ mBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
 		}
 		*/
+		void SetShadowDims(uint32_t width, uint32_t height) {
+			mShadowDims = glm::vec2(width, height);
+		}
 
 		void SetShadowDistance(float distance)
 		{
@@ -49,28 +54,19 @@ namespace gfx {
 
 		//gfx::RenderPassHandle mRenderPass = gfx::INVALID_RENDERPASS;
 		//gfx::FramebufferHandle mFramebuffer = gfx::INVALID_FRAMEBUFFER;
-		gfx::BufferHandle mCascadeInfoBuffer;
 
 		//gfx::TextureHandle mAttachment0;
 
 		const int kNumCascades = 5;
-		const int kShadowDims = 4096;
 
+		glm::vec2 mShadowDims = glm::vec2(1024.0f, 1024.0f);
 		float kShadowDistance = 150.0f;
 		float kSplitLambda = 0.85f;
 
 		gfx::GraphicsDevice* mDevice;
 		Renderer* renderer;
 
-		struct Cascade {
-			glm::mat4 VP;
-			glm::vec4 splitDistance;
-		};
-		struct CascadeData
-		{
-			Cascade cascades[5];
-			glm::vec4 shadowDims;
-		} mCascadeData;
+		CascadeData mCascadeData;
 
 		void CalculateSplitDistance(Camera* camera);
 
@@ -81,7 +77,6 @@ namespace gfx {
 		0x00ff00,
 		0x0000ff
 		};
-
 
 		void update(Camera* camera, const glm::vec3& lightDirection);
 		void render(CommandList* commandList);

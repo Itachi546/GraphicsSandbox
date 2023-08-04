@@ -81,12 +81,6 @@
       ]
     },
     {
-      "inputs": [
-        {
-          "type": "buffer",
-          "name": "mesh_data_buffer"
-        }
-      ],
       "name": "cascaded_shadow_pass",
       "outputs": [
         {
@@ -94,8 +88,12 @@
           "name": "csm_depth",
           "format": "D32_SFLOAT",
           "layers": 5,
-          "resolution": [ 1920, 1080 ],
+          "resolution": [ 4096, 4096],
           "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
+        },
+        {
+          "type": "buffer",
+          "name": "cascade_info_buffer"
         }
       ]
     },
@@ -116,6 +114,14 @@
         {
           "type": "texture",
           "name": "gbuffer_position"
+        },
+        {
+          "type": "texture",
+          "name": "csm_depth"
+        },
+        {
+          "type": "buffer",
+          "name": "cascade_info_buffer"
         }
       ],
       "name": "lighting_pass",
@@ -142,6 +148,14 @@
         {
           "type": "buffer",
           "name": "indirect_draw_list"
+        },
+        {
+          "type": "texture",
+          "name": "csm_depth"
+        },
+        {
+          "type": "buffer",
+          "name": "cascade_info_buffer"
         }
       ],
       "name": "transparent_pass",

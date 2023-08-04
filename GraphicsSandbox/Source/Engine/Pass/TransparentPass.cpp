@@ -44,6 +44,7 @@ void gfx::TransparentPass::Initialize(RenderPassHandle renderPass)
 	delete[] fragmentCode;
 
 	descriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
+	descriptorInfos[6] = { renderer->mCascadeInfoBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer };
 }
 
 void gfx::TransparentPass::Render(CommandList* commandList, Scene* scene)
@@ -71,6 +72,8 @@ void gfx::TransparentPass::drawIndexed(gfx::GraphicsDevice* device, gfx::Command
 	mPushConstantData.cameraPosition = renderer->mEnvironmentData.cameraPosition;
 	mPushConstantData.exposure = renderer->mEnvironmentData.exposure;
 	mPushConstantData.globalAO = renderer->mEnvironmentData.globalAO;
+	mPushConstantData.directionLightShadowMap = renderer->mEnvironmentData.directionalShadowMap;
+
 	device->PushConstants(commandList, pipeline, ShaderStage::Fragment, &mPushConstantData, sizeof(mPushConstantData), 0);
 
 	descriptorInfos[5] = { renderer->mLightBuffer, 0, sizeof(LightData) * 128, gfx::DescriptorType::StorageBuffer };

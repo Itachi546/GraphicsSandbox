@@ -513,10 +513,18 @@ namespace gfx {
 		for (uint32_t r = 0; r < node->outputs.size(); ++r)
 		{
 			FrameGraphResource* output = builder->AccessResource(node->outputs[r]);
-			FrameGraphResourceInfo& info = output->info;
+			FrameGraphResourceInfo info = output->info;
 
-			if (output->type == FrameGraphResourceType::Buffer || output->type == FrameGraphResourceType::Reference)
+			if (output->type == FrameGraphResourceType::Buffer)
 				continue;
+
+			if (output->type == FrameGraphResourceType::Reference)
+			{
+				FrameGraphResource* refResource = builder->AccessResource(output->name);
+				width = refResource->info.texture.width;
+				height = refResource->info.texture.height;
+				continue;
+			}
 
 			if (width == 0) width = info.texture.width;
 			else assert(width == info.texture.width);
@@ -548,11 +556,6 @@ namespace gfx {
 
 			input->info.texture.texture = resource->info.texture.texture;
 
-			if (width == 0)	width = info.texture.width;
-			else assert(width == info.texture.width);
-			if (height == 0) height = info.texture.height;
-			else assert(height = info.texture.height);
-
 			if (input->type == FrameGraphResourceType::Texture) continue;
 
 			if (info.texture.imageAspect == ImageAspect::Depth)
@@ -563,6 +566,9 @@ namespace gfx {
 			else 
 				desc.outputTextures.push_back(info.texture.texture);
 		}
+
+		assert(width != 0);
+		assert(height != 0);
 
 		desc.width = width;
 		desc.height = height;

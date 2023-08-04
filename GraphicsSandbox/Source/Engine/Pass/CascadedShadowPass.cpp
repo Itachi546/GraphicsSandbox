@@ -3,89 +3,12 @@
 #include "../StringConstants.h"
 #include "../DebugDraw.h"
 #include "../Scene.h"
-#include "../Renderer.h"
 #include "../MeshData.h"
 
 #include <limits>
 namespace gfx {
 	CascadedShadowPass::CascadedShadowPass(Renderer* renderer_) : mDevice(gfx::GetDevice()), renderer(renderer_)
 	{
-		/*
-		{
-			gfx::RenderPassDesc renderPassDesc;
-			renderPassDesc.width = kShadowDims;
-			renderPassDesc.height = kShadowDims;
-
-			gfx::GPUTextureDesc depthAttachment = {};
-			depthAttachment.bCreateSampler = true;
-			depthAttachment.format = gfx::Format::D24_UNORM_S8_UINT;
-			depthAttachment.bindFlag = gfx::BindFlag::DepthStencil | gfx::BindFlag::ShaderResource;
-			depthAttachment.imageAspect = gfx::ImageAspect::Depth;
-			depthAttachment.width = kShadowDims;
-			depthAttachment.height = kShadowDims;
-			depthAttachment.arrayLayers = kNumCascades;
-			depthAttachment.mipLevels = 1;
-			depthAttachment.imageViewType = gfx::ImageViewType::IV2DArray;
-			depthAttachment.samplerInfo.wrapMode = gfx::TextureWrapMode::ClampToBorder;
-			depthAttachment.samplerInfo.enableBorder = true;
-
-			std::vector<gfx::Attachment> attachments = {
-				{0, depthAttachment},
-			};
-			renderPassDesc.attachments = attachments;
-			renderPassDesc.hasDepthAttachment = true;
-			mRenderPass = mDevice->CreateRenderPass(&renderPassDesc);
-		}
-
-		{
-			gfx::PipelineDesc pipelineDesc = {};
-			gfx::ShaderDescription shaders[2] = {};
-			uint32_t size = 0;
-			{
-				char* code = Utils::ReadFile(StringConstants::SHADOW_VERT_PATH, &size);
-				shaders[0] = { code, size };
-			}
-
-			{
-				char* code = Utils::ReadFile(StringConstants::SHADOW_GEOM_PATH, &size);
-				shaders[1] = { code, size };
-			}
-
-
-			pipelineDesc.shaderCount = (uint32_t)std::size(shaders);
-			pipelineDesc.shaderDesc = shaders;
-
-			pipelineDesc.renderPass = mRenderPass;
-			pipelineDesc.rasterizationState.enableDepthTest = true;
-			pipelineDesc.rasterizationState.enableDepthWrite = true;
-			pipelineDesc.rasterizationState.enableDepthClamp = true;
-			pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Front;
-			mPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
-
-			{
-				char* code = Utils::ReadFile(StringConstants::SHADOW_SKINNED_VERT_PATH, &size);
-				shaders[0] = { code, size };
-			}
-			mSkinnedPipeline = mDevice->CreateGraphicsPipeline(&pipelineDesc);
-
-			for (uint32_t i = 0; i < std::size(shaders); ++i)
-				delete[] shaders[i].code;
-		}
-
-		{
-			mFramebuffer = mDevice->CreateFramebuffer(mRenderPass, kNumCascades);
-		}
-
-		{
-			gfx::GPUBufferDesc bufferDesc;
-			bufferDesc.bindFlag = gfx::BindFlag::ConstantBuffer;
-			bufferDesc.size = sizeof(CascadeData);
-			bufferDesc.usage = gfx::Usage::Upload;
-			mBuffer = mDevice->CreateBuffer(&bufferDesc);
-		}
-
-		mAttachment0 = mDevice->GetFramebufferAttachment(mFramebuffer, 0);
-		*/
 	}
 
 	void CascadedShadowPass::Initialize(RenderPassHandle renderPass)
@@ -119,22 +42,22 @@ namespace gfx {
 
 		{
 			gfx::GPUBufferDesc bufferDesc;
-			bufferDesc.bindFlag = gfx::BindFlag::ConstantBuffer;
-			bufferDesc.size = sizeof(CascadeData);
 			bufferDesc.usage = gfx::Usage::Upload;
-			mCascadeInfoBuffer = mDevice->CreateBuffer(&bufferDesc);
-
 			bufferDesc.bindFlag = gfx::BindFlag::IndirectBuffer;
 			bufferDesc.size = sizeof(DrawIndirectCommand) * 10'000;
 		}
 
 		descriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
-		descriptorInfos[3] = { mCascadeInfoBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer };
+		descriptorInfos[3] = { renderer->mCascadeInfoBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer };
 	}
 
 	void CascadedShadowPass::Render(CommandList* commandList, Scene* scene)
 	{
 		ecs::Entity sun = scene->GetSun();
+		LightComponent* lightComponent = scene->GetComponentManager()->GetComponent<LightComponent>(sun);
+		if (!lightComponent->enabled) return;
+
+		// Calculate light direction
 		TransformComponent* lightTransform = scene->GetComponentManager()->GetComponent<TransformComponent>(sun);
 		glm::mat4 rotationMatrix = lightTransform->GetRotationMatrix();
 		glm::vec3 lightDir = rotationMatrix * glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
@@ -240,38 +163,15 @@ namespace gfx {
 		}
 
 		// Copy data to uniform buffer
-		mCascadeData.shadowDims = glm::vec4(kShadowDims, kShadowDims, kNumCascades, kNumCascades);
-		mDevice->CopyToBuffer(mCascadeInfoBuffer, &mCascadeData, 0, sizeof(CascadeData));
+		mCascadeData.shadowDims = glm::vec4(mShadowDims.x, mShadowDims.y, kNumCascades, kNumCascades);
+		mDevice->CopyToBuffer(renderer->mCascadeInfoBuffer, &mCascadeData, 0, sizeof(CascadeData));
 	}
 
-	/*
-	void CascadedShadowPass::BeginRender(gfx::CommandList* commandList)
-	{
-		gfx::ImageBarrierInfo barrierInfos[] = {
-			{gfx::AccessFlag::None, gfx::AccessFlag::DepthStencilWrite, gfx::ImageLayout::DepthAttachmentOptimal, mAttachment0},
-		};
-
-		gfx::PipelineBarrierInfo depthBarrier = { &barrierInfos[0], 1, gfx::PipelineStage::BottomOfPipe, gfx::PipelineStage::EarlyFramentTest };
-		mDevice->PipelineBarrier(commandList, &depthBarrier);
-
-		mDevice->BeginRenderPass(commandList, mRenderPass, mFramebuffer);
-		mDevice->BeginDebugMarker(commandList, "ShadowPass");
-	}
-
-
-	void CascadedShadowPass::EndRender(gfx::CommandList* commandList)
-	{
-		mDevice->EndDebugMarker(commandList);
-		mDevice->EndRenderPass(commandList);
-	}
-	*/
 	void CascadedShadowPass::Shutdown()
 	{
 		mDevice->Destroy(mPipeline);
 		mDevice->Destroy(mSkinnedPipeline);
-		//mDevice->Destroy(mRenderPass);
-		mDevice->Destroy(mCascadeInfoBuffer);
-		//mDevice->Destroy(mFramebuffer);
+
 	}
 
 	void CascadedShadowPass::CalculateSplitDistance(Camera* camera)

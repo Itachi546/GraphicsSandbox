@@ -86,7 +86,12 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 	RegisterPass("transparent_pass", new gfx::TransparentPass(this));
 	RegisterPass("fxaa_pass", new gfx::FXAAPass(this, width, height));
 	RegisterPass("drawcull_pass", new gfx::DrawCullPass(this));
-	RegisterPass("cascaded_shadow_pass", new gfx::CascadedShadowPass(this));
+
+	gfx::CascadedShadowPass* csmShadowPass = new gfx::CascadedShadowPass(this);
+	RegisterPass("cascaded_shadow_pass", csmShadowPass);
+	gfx::FrameGraphResourceInfo& csmInfo =  mFrameGraphBuilder.AccessResource("csm_depth")->info;
+	csmShadowPass->SetShadowDims(csmInfo.texture.width, csmInfo.texture.height);
+
 	auto found = std::find(mOutputAttachments.begin(), mOutputAttachments.end(), "lighting");
 	if (found != mOutputAttachments.end())
 		mFinalOutput = (uint32_t)std::distance(mOutputAttachments.begin(), found);
@@ -109,6 +114,7 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.normalBuffer = mFrameGraphBuilder.AccessResource("gbuffer_normals")->info.texture.texture.handle;
 	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
 	mEnvironmentData.emissiveBuffer = mFrameGraphBuilder.AccessResource("gbuffer_emissive")->info.texture.texture.handle;
+	mEnvironmentData.directionalShadowMap = mFrameGraphBuilder.AccessResource("csm_depth")->info.texture.texture.handle;
 	mEnvironmentData.globalAO = 0.2f;
 }
 
@@ -133,7 +139,6 @@ void Renderer::Update(float dt)
 
 	// Update Environment data
 	mEnvironmentData.cameraPosition = mScene->GetCamera()->GetPosition();
-	mEnvironmentData.nLight = (uint32_t)mScene->GetComponentManager()->GetComponentArray<LightComponent>()->components.size();
 
 	// Update Batch if needed
 	if (mUpdateBatches) {
@@ -143,8 +148,8 @@ void Renderer::Update(float dt)
 		std::vector<DrawData> opaque;
 		std::vector<DrawData> transparent;
 		mScene->GenerateDrawData(opaque, transparent);
-		mBatchId = 0;
 
+		mBatchId = 0;
 		uint32_t lastOffset = 0;
 		lastOffset = CreateBatch(opaque, mDrawBatches, lastOffset);
 		lastOffset = CreateBatch(transparent, mTransparentBatches, lastOffset);
@@ -520,6 +525,12 @@ void Renderer::InitializeBuffers()
 	bufferDesc.size = sizeof(uint32_t) * kMaxBatches;
 	bufferDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::IndirectBuffer;
 	mDrawCommandCountBuffer = mDevice->CreateBuffer(&bufferDesc);
+
+	// CascadeInfo bufferxs
+	bufferDesc.bindFlag = gfx::BindFlag::ConstantBuffer;
+	bufferDesc.size = sizeof(CascadeData);
+	bufferDesc.usage = gfx::Usage::Upload;
+	mCascadeInfoBuffer = mDevice->CreateBuffer(&bufferDesc);
 }
 
 void Renderer::AddUI()
@@ -625,7 +636,6 @@ void Renderer::UpdateLights()
 			i, z, zMin, zMax
 		};
 		sortedLights.emplace_back(SortedLight{ (uint32_t)i, z, zMin, zMax });
-
 	}
 
 	// Sort the light by projectedZ value
@@ -641,7 +651,11 @@ void Renderer::UpdateLights()
 	// Upload LightData to GPU
 	uint32_t nLights = static_cast<uint32_t>(lightData.size());
 	assert(nLights <= kMaxLights);
-	mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
+	if(nLights > 0)
+		mDevice->CopyToBuffer(mLightBuffer, lightData.data(), 0, sizeof(LightData) * nLights);
+	mEnvironmentData.nLight = nLights;
+
+
 
 	// Calculate light LUT, we use uniform distribution to sort the light into bins
 	const float binSize = 1.0f / kMaxLightBins;
@@ -919,4 +933,5 @@ void Renderer::Shutdown()
 	mDevice->Destroy(mMeshDrawDataBuffer);
 	mDevice->Destroy(mDrawCommandCountBuffer);
 	mDevice->Destroy(mIndexedIndirectCommandBuffer);
+	mDevice->Destroy(mCascadeInfoBuffer);
 }

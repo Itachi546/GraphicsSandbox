@@ -23,7 +23,7 @@ namespace gfx {
 
 		PipelineHandle pipeline;
 		Renderer* renderer;
-		DescriptorInfo descriptorInfos[6];
+		DescriptorInfo descriptorInfos[7];
 
 	private:
 		struct PushConstantData {
@@ -35,6 +35,7 @@ namespace gfx {
 			glm::vec3 cameraPosition;
 			float exposure;
 			float globalAO;
+			uint32_t directionLightShadowMap;
 		} mPushConstantData;
 
 		void drawIndexed(gfx::GraphicsDevice* device, gfx::CommandList* commandList, const std::vector<RenderBatch>& batches);

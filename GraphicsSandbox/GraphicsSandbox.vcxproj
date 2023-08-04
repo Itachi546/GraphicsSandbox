@@ -319,6 +319,7 @@
     <CustomBuild Include="Shaders\shadow.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <None Include="Shaders\shadow.glsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\bindless.glsl" />

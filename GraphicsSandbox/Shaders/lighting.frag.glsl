@@ -1,4 +1,4 @@
-#version 450
+ #version 450
 #extension GL_GOOGLE_include_directive: require
 
 #include "pbr.glsl"
@@ -12,7 +12,13 @@ layout(binding = 0) readonly buffer LightBuffer {
    LightData lightData[];
 } lightBuffer;
 
+layout(binding = 1, std140) uniform CascadeInfo
+{
+   Cascade cascades[MAX_CASCADES];
+   vec4 shadowDims;
+};
 #include "bindless.glsl"
+#include "shadow.glsl"
 
 layout(push_constant) uniform PushConstants
 {
@@ -26,10 +32,12 @@ layout(push_constant) uniform PushConstants
 	uint uColorBuffer;
 	uint uEmissiveBuffer;
 
-	vec3 uCameraPosition;
+	uint directionalShadowMap;
 	float exposure;
 	float globalAO;
 	uint nLight;
+
+	vec3 uCameraPosition;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -79,17 +87,18 @@ vec3 CalculateColor(vec2 uv)
     	vec3 l = light.position;
 		float attenuation = 1.0f;
 		float shadow = 1.0f;
-		if(light.type > 0.2f)
+		if(light.type > 0.5f)
 		{
             vec3 lightDir = light.position - worldPos;
 		    float dist = length(lightDir);
 			attenuation	= AttenuationSquareFallOff(dist * dist, 1.0f / light.radius);
 			l = lightDir / dist;
         }
-		else 
+		else if(light.type < 0.5f)
 		{
     		l= normalize(l);
-			//shadow = CalculateShadowFactor(fs_in.worldPos, abs(fs_in.lsPos.z), cascadeIndex);
+			float camDist = length(uCameraPosition - worldPos);
+			shadow = CalculateShadowFactor(worldPos, camDist, directionalShadowMap, cascadeIndex);
 		}
 
     	vec3 h = normalize(v + l);
@@ -121,13 +130,11 @@ vec3 CalculateColor(vec2 uv)
 	vec3 ambient = (Kd * diffuse + specular) * ao;
 	vec3 emissive = texture(uTextures[nonuniformEXT(uEmissiveBuffer)], uv).rgb;
 
-	//if(material.emissiveMap != INVALID_TEXTURE)
-	//emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb * material.emissive;
-
 	Lo += ambient + emissive;
 
-	//if(globals.enableCascadeDebug >	0)
-    //   Lo *= cascadeColor[cascadeIndex] * 0.5f;
+	#if ENABLE_CASCADE_DEBUG
+     Lo *= cascadeColor[cascadeIndex] *0.5;
+	#endif
 
 	return Lo;
 }

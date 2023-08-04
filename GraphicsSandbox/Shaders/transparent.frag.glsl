@@ -27,7 +27,15 @@ layout(binding = 5) readonly buffer LightBuffer {
    LightData lightData[];
 } lightBuffer;
 
+layout(binding = 6, std140) uniform CascadeInfo
+{
+   Cascade cascades[MAX_CASCADES];
+   vec4 shadowDims;
+};
+
 #include "bindless.glsl"
+#include "shadow.glsl"
+
 layout(push_constant) uniform PushConstants
 {
 	uint nLight;
@@ -38,6 +46,7 @@ layout(push_constant) uniform PushConstants
 	vec3 uCameraPosition;
 	float exposure;
 	float globalAO;
+	uint directionalShadowMap;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -140,7 +149,7 @@ vec4 CalculateColor(vec2 uv)
 		else 
 		{
     		l= normalize(l);
-			//shadow = CalculateShadowFactor(fs_in.worldPos, abs(fs_in.lsPos.z), cascadeIndex);
+			shadow = CalculateShadowFactor(fs_in.worldPos, abs(fs_in.lsPos.z), directionalShadowMap, cascadeIndex);
 		}
 
     	vec3 h = normalize(v + l);
@@ -172,13 +181,14 @@ vec4 CalculateColor(vec2 uv)
 	vec3 ambient = (Kd * diffuse + specular) * ao;
 	vec3 emissive = material.emissive;
 
-	//if(material.emissiveMap != INVALID_TEXTURE)
-	//emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb * material.emissive;
+	if(material.emissiveMap != INVALID_TEXTURE)
+	 emissive = texture(uTextures[nonuniformEXT(material.emissiveMap)], fs_in.uv).rgb * material.emissive;
 
 	Lo += ambient + emissive;
 
-	//if(globals.enableCascadeDebug >	0)
-    //   Lo *= cascadeColor[cascadeIndex] * 0.5f;
+	#if ENABLE_CASCADE_DEBUG
+       Lo *= cascadeColor[cascadeIndex] * 0.5;
+	#endif
 
 	return vec4(Lo, alpha);
 }

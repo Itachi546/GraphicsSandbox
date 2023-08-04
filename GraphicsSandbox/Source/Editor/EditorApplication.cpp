@@ -101,12 +101,13 @@ void EditorApplication::InitializeScene()
 	mRenderer->mEnvironmentData.globalAO = 0.01f;
 
 	auto compMgr = mScene.GetComponentManager();
-	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/sponza/sponza.gltf");
+	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.glb");
 	//ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
 	
 	ecs::Entity sun = mScene.GetSun();
-	compMgr->GetComponent<LightComponent>(sun)->enabled = false;
+	compMgr->GetComponent<LightComponent>(sun)->enabled = true;
 
+#if 0
 	const int nLight = 10;
 	const float lightStep = 20.0f / nLight;
 
@@ -125,6 +126,7 @@ void EditorApplication::InitializeScene()
 		lightComp.type = LightType::Point;
 		lightComp.radius = 5.0f;
 	}
+#endif
 }
 
 /*

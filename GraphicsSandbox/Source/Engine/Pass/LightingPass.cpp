@@ -47,8 +47,10 @@ void gfx::LightingPass::Initialize(RenderPassHandle renderPass)
 void gfx::LightingPass::Render(CommandList* commandList, Scene* scene)
 {
 	gfx::GraphicsDevice* device = gfx::GetDevice();
-	DescriptorInfo descriptorInfo = { renderer->mLightBuffer, 0, sizeof(LightData) * 128, gfx::DescriptorType::StorageBuffer };
-	device->UpdateDescriptor(pipeline, &descriptorInfo, 1);
+	DescriptorInfo descriptorInfo[] = { {renderer->mLightBuffer, 0, sizeof(LightData) * 128, gfx::DescriptorType::StorageBuffer},
+		{renderer->mCascadeInfoBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer}
+	};
+	device->UpdateDescriptor(pipeline, descriptorInfo, (uint32_t)std::size(descriptorInfo));
 	device->BindPipeline(commandList, pipeline);
 	device->PushConstants(commandList, pipeline, gfx::ShaderStage::Fragment, &renderer->mEnvironmentData, sizeof(EnvironmentData), 0);
 	device->Draw(commandList, 6, 0, 1);

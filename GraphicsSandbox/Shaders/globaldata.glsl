@@ -18,4 +18,20 @@ struct LightData
 	float type;
 };
 
+const int MAX_CASCADES = 5;
+
+struct Cascade {
+   mat4 VP;
+   vec4 splitDistance;
+};
+
+const vec3 cascadeColor[4] = vec3[](
+    vec3(1.0, 0.0, 0.0),
+    vec3(0.0, 1.0, 0.0),
+    vec3(0.0, 0.0, 1.0),
+    vec3(1.0, 1.0, 0.0)
+);
+#define ENABLE_CASCADE_DEBUG 0
+
+
 #endif 

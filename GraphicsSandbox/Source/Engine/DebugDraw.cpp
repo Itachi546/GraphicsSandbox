@@ -3,17 +3,42 @@
 #include "Graphics.h"
 #include "Utils.h"
 
-bool gEnableDebugDraw = true;
+#include <algorithm>
+
+bool gEnableDebugDraw = false;
 gfx::PipelineHandle gPipeline = gfx::INVALID_PIPELINE;
 gfx::BufferHandle gBuffer = gfx::INVALID_BUFFER;
+
+gfx::BufferHandle gPrimitiveBuffer = gfx::INVALID_BUFFER;
+gfx::PipelineHandle gPrimitivePipeline = gfx::INVALID_PIPELINE;
+
 uint32_t gDataOffset = 0;
-const uint32_t kMaxDebugData = 1000'000;
+uint32_t gPrimBufferOffset = 0;
+
+const uint32_t kMaxDebugData = 100'000;
+
 struct DebugData
 {
 	glm::vec3 position;
 	uint32_t color;
 };
-DebugData* dataPtr = nullptr;
+
+struct Quad {
+	glm::vec3 p0;
+	glm::vec3 p1;
+	glm::vec3 p2;
+	glm::vec3 p3;
+	uint32_t color;
+
+	glm::vec3 getCenter() const {
+		return p0 + (p2 - p0) * 0.5f;
+	}
+};
+
+std::vector<Quad> gQuadPrimitive;
+
+DebugData* gDataBufferPtr = nullptr;
+DebugData* gPrimitiveBufferPtr = nullptr;
 
 void DebugDraw::Initialize(gfx::RenderPassHandle renderPass)
 {
@@ -33,12 +58,17 @@ void DebugDraw::Initialize(gfx::RenderPassHandle renderPass)
 	pipelineDesc.topology = gfx::Topology::Line;
 	pipelineDesc.renderPass = renderPass;
 	gfx::BlendState blendState = {};
+	blendState.enable = true;
 	pipelineDesc.blendStates = &blendState;
 	pipelineDesc.blendStateCount = 1;
-	pipelineDesc.rasterizationState.lineWidth = 1.0f;
+	pipelineDesc.rasterizationState.lineWidth = 2.0f;
 	
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	gPipeline = device->CreateGraphicsPipeline(&pipelineDesc); 
+
+	pipelineDesc.topology = gfx::Topology::TriangleList;
+	gPrimitivePipeline = device->CreateGraphicsPipeline(&pipelineDesc);
+
 
 	delete[] shaderDesc[0].code;
 	delete[] shaderDesc[1].code;
@@ -48,7 +78,11 @@ void DebugDraw::Initialize(gfx::RenderPassHandle renderPass)
 	bufferDesc.usage = gfx::Usage::Upload;
 	bufferDesc.size = kMaxDebugData * sizeof(DebugData);
 	gBuffer = device->CreateBuffer(&bufferDesc);
-	dataPtr = reinterpret_cast<DebugData*>(device->GetMappedDataPtr(gBuffer));
+	gDataBufferPtr = reinterpret_cast<DebugData*>(device->GetMappedDataPtr(gBuffer));
+
+	gPrimitiveBuffer = device->CreateBuffer(&bufferDesc);
+	gPrimitiveBufferPtr = reinterpret_cast<DebugData*>(device->GetMappedDataPtr(gPrimitiveBuffer));
+
 }
 
 void DebugDraw::SetEnable(bool state)
@@ -61,8 +95,8 @@ void DebugDraw::AddLine(const glm::vec3& start, const glm::vec3& end, uint32_t c
 	if (!gEnableDebugDraw)
 		return;
 
-	assert(dataPtr != nullptr);
-	DebugData* data = dataPtr + gDataOffset;
+	assert(gDataBufferPtr != nullptr);
+	DebugData* data = gDataBufferPtr + gDataOffset;
 	data->position = start;
 	data->color = color;
 	gDataOffset++;
@@ -119,6 +153,51 @@ void DebugDraw::AddSphere(const glm::vec3& p, float radius, uint32_t color)
 	}
 }
 
+void DebugDraw::AddQuadPrimitive(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, uint32_t color)
+{
+	if (!gEnableDebugDraw)
+		return;
+
+	gQuadPrimitive.emplace_back(Quad{ p0, p1, p2, p3, color });
+
+}
+
+static void AddQuadInternal(Quad& quad) {
+
+	assert(gPrimitiveBufferPtr != nullptr);
+
+	DebugData* data = gPrimitiveBufferPtr + gPrimBufferOffset;
+
+	data->position = quad.p0;
+	data->color = quad.color;
+	gPrimBufferOffset++;
+	data++;
+
+	data->position = quad.p1;
+	data->color = quad.color;
+	gPrimBufferOffset++;
+	data++;
+
+	data->position = quad.p2;
+	data->color = quad.color;
+	gPrimBufferOffset++;
+	data++;
+
+	data->position = quad.p0;
+	data->color = quad.color;
+	gPrimBufferOffset++;
+	data++;
+
+	data->position = quad.p2;
+	data->color = quad.color;
+	gPrimBufferOffset++;
+	data++;
+
+	data->position = quad.p3;
+	data->color = quad.color;
+	gPrimBufferOffset++;
+}
+
 void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t color)
 {
 	if (!gEnableDebugDraw)
@@ -144,22 +223,49 @@ void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t col
 }
 
 
-void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP)
+void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP, const glm::vec3& camPos)
 {
-	if (gEnableDebugDraw && gDataOffset > 0)
+	if (gQuadPrimitive.size() > 0) {
+		std::sort(gQuadPrimitive.begin(), gQuadPrimitive.end(), [&camPos](const Quad& a, const Quad& b) {
+
+			float d1 = glm::distance2(a.getCenter(), camPos);
+			float d2 = glm::distance2(b.getCenter(), camPos);
+			return d1 > d2;
+		});
+
+		for (auto& quad : gQuadPrimitive)
+			AddQuadInternal(quad);
+
+		gQuadPrimitive.clear();
+	}
+	if (gEnableDebugDraw)
 	{
 		auto device = gfx::GetDevice();
-		gfx::DescriptorInfo descriptorInfo = {gBuffer, 0, gDataOffset * sizeof(DebugData), gfx::DescriptorType::StorageBuffer};
-		device->UpdateDescriptor(gPipeline, &descriptorInfo, 1);
-		device->BindPipeline(commandList, gPipeline);
-		device->PushConstants(commandList, gPipeline, gfx::ShaderStage::Vertex, &VP[0][0], sizeof(glm::mat4), 0);
-		device->Draw(commandList, gDataOffset, 0, 1);
+		if (gDataOffset > 0) {
+			gfx::DescriptorInfo descriptorInfo = { gBuffer, 0, gDataOffset * sizeof(DebugData), gfx::DescriptorType::StorageBuffer };
+			device->UpdateDescriptor(gPipeline, &descriptorInfo, 1);
+			device->BindPipeline(commandList, gPipeline);
+			device->PushConstants(commandList, gPipeline, gfx::ShaderStage::Vertex, &VP[0][0], sizeof(glm::mat4), 0);
+			device->Draw(commandList, gDataOffset, 0, 1);
+		}
+
+		if (gPrimBufferOffset > 0) {
+			gfx::DescriptorInfo descriptorInfo = { gPrimitiveBuffer, 0, gPrimBufferOffset * sizeof(DebugData), gfx::DescriptorType::StorageBuffer };
+			device->UpdateDescriptor(gPrimitivePipeline, &descriptorInfo, 1);
+			device->BindPipeline(commandList, gPrimitivePipeline);
+			device->PushConstants(commandList, gPrimitivePipeline, gfx::ShaderStage::Vertex, &VP[0][0], sizeof(glm::mat4), 0);
+			device->Draw(commandList, gPrimBufferOffset, 0, 1);
+		}
+
 	}
+	gPrimBufferOffset = 0;
 	gDataOffset = 0;
 }
 
 void DebugDraw::Shutdown()
 {
 	gfx::GetDevice()->Destroy(gBuffer);
+	gfx::GetDevice()->Destroy(gPrimitiveBuffer);
 	gfx::GetDevice()->Destroy(gPipeline);
+	gfx::GetDevice()->Destroy(gPrimitivePipeline);
 }

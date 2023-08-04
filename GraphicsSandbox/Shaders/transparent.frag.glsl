@@ -149,7 +149,7 @@ vec4 CalculateColor(vec2 uv)
 		else 
 		{
     		l= normalize(l);
-			shadow = CalculateShadowFactor(fs_in.worldPos, abs(fs_in.lsPos.z), directionalShadowMap, cascadeIndex);
+			//shadow = CalculateShadowFactor(fs_in.worldPos, abs(fs_in.lsPos.z), directionalShadowMap, cascadeIndex);
 		}
 
     	vec3 h = normalize(v + l);

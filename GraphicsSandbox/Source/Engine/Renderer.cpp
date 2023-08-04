@@ -270,7 +270,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 			node->renderer->Render(commandList, mScene);
 
 			if (node->name == "transparent_pass") {
-				DebugDraw::Draw(commandList, mGlobalUniformData.VP);
+				DebugDraw::Draw(commandList, mGlobalUniformData.VP, mGlobalUniformData.cameraPosition);
 			}
 
 			mDevice->EndRenderPass(commandList);

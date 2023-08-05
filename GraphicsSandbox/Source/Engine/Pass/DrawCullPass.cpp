@@ -92,7 +92,7 @@ namespace gfx {
 			descriptorInfos[0] = { transformBuffer, (uint32_t)batch.offset * mat4Size, (uint32_t)batch.count * mat4Size, gfx::DescriptorType::StorageBuffer };
 			descriptorInfos[1] = { meshDrawDataBuffer, (uint32_t)batch.offset * drawDataSize, (uint32_t)batch.count * drawDataSize, gfx::DescriptorType::StorageBuffer };
 			descriptorInfos[2] = { drawIndirectBuffer, (uint32_t)batch.offset * drawIndirectSize, diBufferSize, gfx::DescriptorType::StorageBuffer };
-			descriptorInfos[3] = { drawCommandCountBuffer, batch.id * sizeof(uint32_t), sizeof(uint32_t), gfx::DescriptorType::StorageBuffer};
+			descriptorInfos[3] = { drawCommandCountBuffer, batch.id * (uint32_t)sizeof(uint32_t), sizeof(uint32_t), gfx::DescriptorType::StorageBuffer};
 
 			device->UpdateDescriptor(pipeline, descriptorInfos, (uint32_t)std::size(descriptorInfos));
 

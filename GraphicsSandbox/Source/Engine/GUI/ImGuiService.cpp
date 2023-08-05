@@ -98,7 +98,7 @@ namespace ui {
 		}
 		else textureId = (ImTextureID)found->second;
 
-		ImGui::ImageButton(textureId, size, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+		ImGui::Image(textureId, size, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
 	}
 
 	bool ImGuiService::IsAcceptingEvent()

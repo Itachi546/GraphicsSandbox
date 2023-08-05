@@ -43,7 +43,7 @@ struct PerObjectData
 
 vec3 UnpackU8toFloat(uint nx, uint ny, uint nz)
 {
-   return vec3((nx - 127.5f) / 127.0f, (ny - 127.5f) / 127.0f, (nz - 127.5f) / 127.0f);
+   return vec3((nx - 127.0f) / 127.0f, (ny - 127.0f) / 127.0f, (nz - 127.0f) / 127.0f);
 }
 
 

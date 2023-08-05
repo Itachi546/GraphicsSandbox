@@ -61,7 +61,7 @@ void DebugDraw::Initialize(gfx::RenderPassHandle renderPass)
 	blendState.enable = true;
 	pipelineDesc.blendStates = &blendState;
 	pipelineDesc.blendStateCount = 1;
-	pipelineDesc.rasterizationState.lineWidth = 2.0f;
+	pipelineDesc.rasterizationState.lineWidth = 5.0f;
 	
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	gPipeline = device->CreateGraphicsPipeline(&pipelineDesc); 
@@ -274,7 +274,7 @@ void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP, const glm::vec
 	{
 		auto device = gfx::GetDevice();
 		if (gDataOffset > 0) {
-			gfx::DescriptorInfo descriptorInfo = { gBuffer, 0, gDataOffset * sizeof(DebugData), gfx::DescriptorType::StorageBuffer };
+			gfx::DescriptorInfo descriptorInfo = { gBuffer, 0, (uint32_t)(gDataOffset * sizeof(DebugData)), gfx::DescriptorType::StorageBuffer };
 			device->UpdateDescriptor(gPipeline, &descriptorInfo, 1);
 			device->BindPipeline(commandList, gPipeline);
 			device->PushConstants(commandList, gPipeline, gfx::ShaderStage::Vertex, &VP[0][0], sizeof(glm::mat4), 0);
@@ -282,7 +282,7 @@ void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP, const glm::vec
 		}
 
 		if (gPrimBufferOffset > 0) {
-			gfx::DescriptorInfo descriptorInfo = { gPrimitiveBuffer, 0, gPrimBufferOffset * sizeof(DebugData), gfx::DescriptorType::StorageBuffer };
+			gfx::DescriptorInfo descriptorInfo = { gPrimitiveBuffer, 0, (uint32_t)(gPrimBufferOffset * sizeof(DebugData)), gfx::DescriptorType::StorageBuffer };
 			device->UpdateDescriptor(gPrimitivePipeline, &descriptorInfo, 1);
 			device->BindPipeline(commandList, gPrimitivePipeline);
 			device->PushConstants(commandList, gPrimitivePipeline, gfx::ShaderStage::Vertex, &VP[0][0], sizeof(glm::mat4), 0);

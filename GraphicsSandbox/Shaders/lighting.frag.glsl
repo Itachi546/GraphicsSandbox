@@ -133,7 +133,7 @@ vec3 CalculateColor(vec2 uv)
 	Lo += ambient + emissive;
 
 	#if ENABLE_CASCADE_DEBUG
-     Lo *= cascadeColor[cascadeIndex] *0.5;
+     Lo *= cascadeColor[cascadeIndex] * 0.5;
 	#endif
 
 	return Lo;
@@ -144,6 +144,5 @@ void main()
 	vec3 Lo = CalculateColor(uv);
  	Lo = ACESFilm(Lo * exposure);
     Lo = pow(Lo, vec3(0.4545));
-	//Lo = pow(Lo, vec3(0.4545));
 	fragColor =	vec4(Lo, 1.0f);
 }

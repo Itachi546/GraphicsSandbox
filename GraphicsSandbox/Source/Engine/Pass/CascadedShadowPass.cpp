@@ -79,6 +79,11 @@ namespace gfx {
 			ImGui::Checkbox("Freeze frustum", &mFreezeCameraFrustum);
 			ImGui::Checkbox("Enable Debug Cascade", &mEnableCascadeDebug);
 			ImGui::SliderInt("Debug Cascade Index", &debugCascadeIndex, 0, 4);
+			ImGui::Text("%.2f/%.2f/%.2f/%.2f/%.2f", mCascadeData.cascades[0].splitDistance.x,
+				mCascadeData.cascades[1].splitDistance.x,
+				mCascadeData.cascades[2].splitDistance.x,
+				mCascadeData.cascades[3].splitDistance.x,
+				mCascadeData.cascades[4].splitDistance.x);
 		}
 	}
 
@@ -162,9 +167,9 @@ namespace gfx {
 				center += frustumCorners[i];
 			center /= float(frustumCorners.size());
 
-			glm::mat4 lightView = glm::lookAt(center + ld, center, glm::vec3(0.0f, 1.0f, 0.0f));
-			glm::vec3 minPoint = glm::vec3(std::numeric_limits<float>::max());
-			glm::vec3 maxPoint = glm::vec3(std::numeric_limits<float>::lowest());
+			glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+			if (ld.y > 0.99f)
+				up = glm::vec3(0.0f, 0.0f, 1.0f);
 
 			float radius = 0.0f;
 			for (const auto& v : frustumCorners)
@@ -173,12 +178,17 @@ namespace gfx {
 				radius = glm::max(radius, distance);
 			}
 			radius = std::ceil(radius * 16.0f) / 16.0f;
-			glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, -radius, radius);
+			glm::vec3 maxExtents = glm::vec3(radius);
+			glm::vec3 minExtents = -maxExtents;
+
+			glm::mat4 lightView = glm::lookAt(center - minExtents.z * ld, center, up);
+			glm::mat4 lightProj = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, 0.0f, maxExtents.z - minExtents.z);
 			currentCascade.VP = lightProj * lightView;
 
 			if (cascade == debugCascadeIndex && mEnableCascadeDebug) {
 				auto fp = CalculateFrustumCorners(currentCascade.VP);
 				DebugDraw::AddFrustumPrimitive(fp, colors[cascade]);
+				DebugDraw::AddFrustum(frustumCorners.data(), 8, 0xffffffff);
 			}
 
 			lastSplitDistance = splitDistance;

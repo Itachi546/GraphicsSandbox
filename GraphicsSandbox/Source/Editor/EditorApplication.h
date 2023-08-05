@@ -24,7 +24,7 @@ private:
 	//void UpdateSkeletonTransform(Skeleton& skeleton, const AnimationClip& animationClip, uint32_t node, const glm::mat4& parentTransform);
 	//void DrawSkeleton();
 	
-	ecs::Entity character;
+	ecs::Entity helmet;
 	bool mShowUI = false;
 	bool mShowSkeleton = true;
 

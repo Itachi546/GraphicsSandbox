@@ -29,12 +29,7 @@ namespace gfx {
 		}
 
 		void AddUI() override;
-		/*
-		gfx::DescriptorInfo GetCascadeBufferDescriptor()
-		{
-			return gfx::DescriptorInfo{ mBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer};
-		}
-		*/
+
 		void SetShadowDims(uint32_t width, uint32_t height) {
 			mShadowDims = glm::vec2(width, height);
 		}
@@ -53,16 +48,11 @@ namespace gfx {
 		gfx::PipelineHandle mPipeline = gfx::INVALID_PIPELINE;
 		gfx::PipelineHandle mSkinnedPipeline = gfx::INVALID_PIPELINE;
 
-		//gfx::RenderPassHandle mRenderPass = gfx::INVALID_RENDERPASS;
-		//gfx::FramebufferHandle mFramebuffer = gfx::INVALID_FRAMEBUFFER;
-
-		//gfx::TextureHandle mAttachment0;
-
 		const int kNumCascades = 5;
 
 		glm::vec2 mShadowDims = glm::vec2(1024.0f, 1024.0f);
-		float kShadowDistance = 150.0f;
-		float kSplitLambda = 0.85f;
+		float kShadowDistance = 80.0f;
+		float kSplitLambda = 0.9f;
 
 		gfx::GraphicsDevice* mDevice;
 		Renderer* renderer;
@@ -80,8 +70,8 @@ namespace gfx {
 		};
 
 		glm::mat4 cameraVP = glm::mat4(1.0f);
-		bool mFreezeCameraFrustum = true;
-		bool mEnableCascadeDebug = true;
+		bool mFreezeCameraFrustum = false;
+		bool mEnableCascadeDebug = false;
 		glm::vec3* cameraFrustumPoints = nullptr;
 		int debugCascadeIndex = 0;
 

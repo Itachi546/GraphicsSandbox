@@ -100,10 +100,10 @@ void Application::render_()
 	mDevice->PrepareSwapchain(&commandList);
 	mRenderer->Render(&commandList);
 	mDevice->PrepareSwapchainForPresent(&commandList);
-
 	Profiler::EndRangeGPU(&commandList, gpuRenderTime);
 	mDevice->Present(&commandList);
 	Profiler::EndRangeCPU(cpuRenderTime);
+
 }
 
 void Application::SetWindow(Platform::WindowType window, bool fullscreen)

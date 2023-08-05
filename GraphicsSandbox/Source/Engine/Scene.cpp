@@ -258,7 +258,7 @@ void Scene::InitializeLights()
 	mComponentManager->AddComponent<NameComponent>(mSun).name = "Sun";
 	TransformComponent& transform = mComponentManager->AddComponent<TransformComponent>(mSun);
 	transform.position = glm::vec3(0.0f, 1.0f, 0.0f);
-	transform.rotation = glm::vec3(-0.967f, 0.021f, 0.675f);
+	transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
 	//transform.rotation = glm::vec3(0.0f, 0.021f, 0.375f);
 	LightComponent& light = mComponentManager->AddComponent<LightComponent>(mSun);
 	light.color = glm::vec3(1.28f, 1.20f, 0.99f);
@@ -588,6 +588,8 @@ ecs::Entity Scene::CreateMesh(const std::string& filename)
 
 		// clear the staging data
 		mStagingData.clear();
+
+		return entity;
 	}
 	return ecs::INVALID_ENTITY;
 }

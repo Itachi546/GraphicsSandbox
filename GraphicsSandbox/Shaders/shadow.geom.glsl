@@ -20,6 +20,7 @@ void main()
    {
       gl_Layer = gl_InvocationID;
       gl_Position = cascades[gl_InvocationID].VP * gl_in[i].gl_Position;
+      gl_Position.z = max(gl_Position.z, 0.0);
       EmitVertex();
    }
    EndPrimitive();

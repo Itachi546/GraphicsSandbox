@@ -85,41 +85,32 @@ void EditorApplication::PreUpdate(float dt) {
 			animationClip.Sample(animatedPose, mCurrentTime * animationClip.GetTickPerSeconds());
 		}
 	}
+
+	TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
+	transform->SetRotationFomEuler(0.0f, mElapsedTime, 0.0f);
+	transform->dirty = true;
 }
 
 void EditorApplication::PostUpdate(float dt) {
-	glm::vec3 p0 = glm::vec3(-1.0f, -1.0f, 0.0f) * 4.0f;
-	glm::vec3 p1 = glm::vec3(-1.0f, 1.0f, 0.0f) * 4.0f;
-	glm::vec3 p2 = glm::vec3( 1.0f, 1.0f, 0.0f) * 4.0f;
-	glm::vec3 p3 = glm::vec3( 1.0f, -1.0f, 0.0f) * 4.0f;
-	uint32_t color = 0xffffff44;
-	/*
-	DebugDraw::AddQuadPrimitive(p0, p1, p2, p3, color);
-	DebugDraw::AddQuadPrimitive(p0 + glm::vec3(0.0f, 0.0f, 1.0f),
-		p1 + glm::vec3(0.0f, 0.0f, 1.0f),
-		p2 + glm::vec3(0.0f, 0.0f, 1.0f),
-		p3 + glm::vec3(0.0f, 0.0f, 1.0f),
-		0xff000033);
-		*/
 }
 
 void EditorApplication::InitializeScene()
 {
-	mCamera->SetPosition({ 5.0f, 1.0f, 0.0f });
+	mCamera->SetPosition({ 5.0f, 3.0f, 0.0f });
 	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
-	mCamera->SetNearPlane(0.1f);
-	mCamera->SetFarPlane(1000.0f);
-
-	mRenderer->mEnvironmentData.globalAO = 0.01f;
+	mCamera->SetNearPlane(0.2f);
+	mCamera->SetFarPlane(500.0f);
 
 	auto compMgr = mScene.GetComponentManager();
-	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.glb");
-	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/sponza/sponza.gltf");
+	{
+		helmet = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
+		transform->scale = glm::vec3(0.5f);
+		transform->position.y += 1.0f;
+	}
 	
-	ecs::Entity sun = mScene.GetSun();
-	compMgr->GetComponent<LightComponent>(sun)->enabled = true;
-
-#if 0
+#if 1
 	const int nLight = 10;
 	const float lightStep = 20.0f / nLight;
 
@@ -134,7 +125,7 @@ void EditorApplication::InitializeScene()
 
 		LightComponent& lightComp = compMgr->AddComponent<LightComponent>(light);
 		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
-		lightComp.intensity = 1.0f;
+		lightComp.intensity = 2.0f;
 		lightComp.type = LightType::Point;
 		lightComp.radius = 5.0f;
 	}

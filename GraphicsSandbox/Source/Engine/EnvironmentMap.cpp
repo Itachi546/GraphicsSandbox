@@ -30,7 +30,7 @@ void EnvironmentMap::CreateFromHDRI(const char* hdri)
 	hdriDesc.height = height;
 	hdriDesc.bindFlag = gfx::BindFlag::StorageImage | gfx::BindFlag::ShaderResource;
 	hdriDesc.imageViewType = gfx::ImageViewType::IV2D;
-	hdriDesc.format = gfx::Format::R32B32G32A32_SFLOAT;
+	hdriDesc.format = gfx::Format::R32G32B32A32_SFLOAT;
 	hdriDesc.bCreateSampler = true;
 	hdriDesc.bAddToBindless = false;
 	gfx::TextureHandle hdriTexture = mDevice->CreateTexture(&hdriDesc);

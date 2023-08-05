@@ -149,6 +149,14 @@ namespace gfx {
 			format = Format::R16B16G16A16_SFLOAT;
 			aspect = ImageAspect::Color;
 		}
+		else if (inputFormat == "R32G32B32_SFLOAT") {
+			format = Format::R32G32B32_SFLOAT;
+			aspect = ImageAspect::Color;
+		}
+		else if (inputFormat == "R32G32B32A32_SFLOAT") {
+			format = Format::R32G32B32A32_SFLOAT;
+			aspect = ImageAspect::Color;
+		}
 		else if (inputFormat == "D32_SFLOAT")
 		{
 			format = Format::D32_SFLOAT;

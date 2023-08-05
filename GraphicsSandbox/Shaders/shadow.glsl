@@ -11,7 +11,7 @@ float textureProj(vec4 shadowCoord, vec2 offset, uint shadowMap, int cascadeInde
   float currentDepth = shadowCoord.z;
   if(currentDepth >	-1.0 &&	currentDepth <	1.0)
   {
-     float depthFromTexture = texture(uTexturesCube[nonuniformEXT(shadowMap)], vec3(shadowCoord.xy + offset, cascadeIndex)).r;
+     float depthFromTexture = texture(uTexturesArray[nonuniformEXT(shadowMap)], vec3(shadowCoord.xy + offset, cascadeIndex)).r;
 	 if(shadowCoord.w > 0.0 && depthFromTexture < currentDepth)
 	    shadow = 0.0f;
   }
@@ -29,12 +29,14 @@ float CalculateShadowFromTexture(vec3 worldPos, uint shadowMap, int cascadeIndex
 
 
     float shadowFactor = 0.0f;
-    const float scale = 0.75f;
+    const float scale = 1.0f;
     vec2 invRes = scale / shadowDims.xy;
+
+    int kSampleRadius = 1;
     int sampleCount = 0;
-    for(int x = -1; x <= 1; ++x)
+    for(int x = -kSampleRadius; x <= kSampleRadius; ++x)
     {
-       for(int y = -1; y <= 1; ++y)
+       for(int y = -kSampleRadius; y <= kSampleRadius; ++y)
        {
           shadowFactor += textureProj(shadowCoord / shadowCoord.w, vec2(x * invRes.x, y * invRes.y), shadowMap, cascadeIndex, 0.0f);
           sampleCount ++;
@@ -49,7 +51,7 @@ float CalculateShadowFactor(vec3 worldPos, float camDist, uint shadowMap, out in
     cascadeIndex = 0;
     for(int i = 0; i < MAX_CASCADES; ++i)
     {
-        if(camDist < cascades[i].splitDistance.x) 
+        if(camDist <= cascades[i].splitDistance.x) 
         {
     		cascadeIndex = i;
             break;

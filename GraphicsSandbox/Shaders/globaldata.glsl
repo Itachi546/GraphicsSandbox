@@ -33,5 +33,9 @@ const vec3 cascadeColor[4] = vec3[](
 );
 #define ENABLE_CASCADE_DEBUG 0
 
+float LinearDepth(float d,float zNear,float zFar)
+{
+    return zNear * zFar / (zFar + d * (zNear - zFar));
+}
 
 #endif 

@@ -98,7 +98,7 @@ vec3 CalculateColor(vec2 uv)
 		{
     		l= normalize(l);
 			float camDist = length(uCameraPosition - worldPos);
-			//shadow = CalculateShadowFactor(worldPos, camDist, directionalShadowMap, cascadeIndex);
+			shadow = CalculateShadowFactor(worldPos, camDist, directionalShadowMap, cascadeIndex);
 		}
 
     	vec3 h = normalize(v + l);

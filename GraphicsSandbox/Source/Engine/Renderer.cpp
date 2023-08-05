@@ -78,7 +78,9 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
 		mFrameGraph.RegisterRenderer(name, pass);
 		pass->Initialize(node->renderPass);
 	};
+
 	DebugDraw::Initialize(mSwapchainRP);
+	DebugDraw::SetEnable(mEnableDebugDraw);
 
 	RegisterPass("depth_pre_pass", new gfx::DepthPrePass(this));
 	RegisterPass("gbuffer_pass", new gfx::GBufferPass(this));
@@ -535,6 +537,7 @@ void Renderer::InitializeBuffers()
 
 void Renderer::AddUI()
 {
+	ImGui::Separator();
 	if (ImGui::Checkbox("DebugDraw", &mEnableDebugDraw))
 		DebugDraw::SetEnable(mEnableDebugDraw);
 	if (mDevice->SupportMeshShading())
@@ -557,6 +560,12 @@ void Renderer::AddUI()
 		}
 		ImGui::EndCombo();
 	}
+
+	/*
+	gfx::FrameGraphResource* csmDepth = mFrameGraphBuilder.AccessResource("csm_depth");
+	if (csmDepth) {
+		ui::ImGuiService::GetInstance()->AddImage(csmDepth->info.texture.texture, ImVec2(256.0f, 256.0f));
+	}*/
 }
 
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)

@@ -145,7 +145,7 @@ private:
 
 	uint32_t mBatchId = 0;
 	GlobalUniformData mGlobalUniformData;
-	bool mEnableDebugDraw = false;
+	bool mEnableDebugDraw = true;
 
 	void InitializeBuffers();
 	void AddUI();

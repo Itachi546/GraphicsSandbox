@@ -162,6 +162,37 @@ void DebugDraw::AddQuadPrimitive(const glm::vec3& p0, const glm::vec3& p1, const
 
 }
 
+void DebugDraw::AddFrustumPrimitive(const std::array<glm::vec3, 8>& points, uint32_t color)
+{
+	const glm::vec3& ntl = points[0];
+	const glm::vec3& ntr = points[1];
+	const glm::vec3& nbr = points[2];
+	const glm::vec3& nbl = points[3];
+
+	const glm::vec3& ftl = points[4];
+	const glm::vec3& ftr = points[5];
+	const glm::vec3& fbr = points[6];
+	const glm::vec3& fbl = points[7];
+
+	// Near plane
+	AddQuadPrimitive(ntl, ntr, nbr, nbl, color);
+
+	// Far plane
+	AddQuadPrimitive(ftl, ftr, fbr, fbl, color);
+
+	// Top Plane
+	AddQuadPrimitive(ntl, ftl, ftr, ntr, color);
+
+	// Bottom plane
+	AddQuadPrimitive(nbl, fbl, fbr, nbr, color);
+
+	// Left plane
+	AddQuadPrimitive(nbl, ntl, ftl, fbl, color);
+
+	// Right plane
+	AddQuadPrimitive(nbr, ntr, ftr, fbr, color);
+}
+
 static void AddQuadInternal(Quad& quad) {
 
 	assert(gPrimitiveBufferPtr != nullptr);
@@ -226,6 +257,7 @@ void DebugDraw::AddFrustum(const glm::vec3* points, uint32_t count, uint32_t col
 void DebugDraw::Draw(gfx::CommandList* commandList, glm::mat4 VP, const glm::vec3& camPos)
 {
 	if (gQuadPrimitive.size() > 0) {
+
 		std::sort(gQuadPrimitive.begin(), gQuadPrimitive.end(), [&camPos](const Quad& a, const Quad& b) {
 
 			float d1 = glm::distance2(a.getCenter(), camPos);

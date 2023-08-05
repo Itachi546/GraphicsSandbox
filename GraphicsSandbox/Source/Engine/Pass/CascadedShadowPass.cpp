@@ -4,6 +4,7 @@
 #include "../DebugDraw.h"
 #include "../Scene.h"
 #include "../MeshData.h"
+#include "../GUI/ImGuiService.h"
 
 #include <limits>
 namespace gfx {
@@ -69,6 +70,18 @@ namespace gfx {
 
 	}
 
+	void CascadedShadowPass::AddUI()
+	{
+		ImGui::Separator();
+		if (ImGui::CollapsingHeader("Casaded Shadow Map")) {
+			ImGui::SliderFloat("Shadow distance", &kShadowDistance, 5.0f, 200.0f);
+			ImGui::SliderFloat("Split Factor", &kSplitLambda, 0.0f, 1.0f);
+			ImGui::Checkbox("Freeze frustum", &mFreezeCameraFrustum);
+			ImGui::Checkbox("Enable Debug Cascade", &mEnableCascadeDebug);
+			ImGui::SliderInt("Debug Cascade Index", &debugCascadeIndex, 0, 4);
+		}
+	}
+
 	void CascadedShadowPass::render(CommandList* commandList)
 	{
 		gfx::BufferHandle transformBuffer = renderer->mTransformBuffer;
@@ -128,8 +141,11 @@ namespace gfx {
 	void CascadedShadowPass::update(Camera* camera, const glm::vec3& lightDirection)
 	{
 		CalculateSplitDistance(camera);
+		if (!mFreezeCameraFrustum) {
+			cameraFrustumPoints = camera->mFrustumPoints;
+			cameraVP = camera->GetViewMatrix();
+		}
 
-		auto cameraFrustum = camera->mFrustumPoints;
 		float lastSplitDistance = camera->GetNearPlane();
 
 		glm::vec3 ld = glm::normalize(lightDirection);
@@ -137,9 +153,9 @@ namespace gfx {
 		{
 			Cascade& currentCascade = mCascadeData.cascades[cascade];
 			float splitDistance = currentCascade.splitDistance.x;
-			glm::mat4 V = camera->GetViewMatrix();
+
 			glm::mat4 P = glm::perspective(camera->GetFOV(), camera->GetAspect(), lastSplitDistance, splitDistance);
-			auto frustumCorners = CalculateFrustumCorners(P * V);
+			auto frustumCorners = CalculateFrustumCorners(P * cameraVP);
 
 			glm::vec3 center = glm::vec3(0.0f);
 			for (int i = 0; i < frustumCorners.size(); ++i)
@@ -159,6 +175,12 @@ namespace gfx {
 			radius = std::ceil(radius * 16.0f) / 16.0f;
 			glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, -radius, radius);
 			currentCascade.VP = lightProj * lightView;
+
+			if (cascade == debugCascadeIndex && mEnableCascadeDebug) {
+				auto fp = CalculateFrustumCorners(currentCascade.VP);
+				DebugDraw::AddFrustumPrimitive(fp, colors[cascade]);
+			}
+
 			lastSplitDistance = splitDistance;
 		}
 

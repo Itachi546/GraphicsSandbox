@@ -1,9 +1,9 @@
 #include "ImGuiService.h"
 
-#include "ImGui/imgui_impl_glfw.h"
-#include "ImGui/imgui_impl_vulkan.h"
-#include "ImPlot/implot.h"
-#include "ImGui/IconsFontAwesome5.h"
+#include <imgui/imgui_impl_glfw.h>
+
+#include <imgui/imgui_impl_vulkan.h>
+#include "IconsFontAwesome6.h"
 
 #include "../Profiler.h"
 #include "../VulkanGraphicsDevice.h"
@@ -13,27 +13,22 @@
 #include <string>
 namespace ui {
 
+	std::unordered_map<uint32_t, VkDescriptorSet> ImTextureIDMap;
+
 	void ImGuiService::Init(Platform::WindowType window, std::shared_ptr<gfx::GraphicsDevice> device_)
 	{
+		device = std::static_pointer_cast <gfx::VulkanGraphicsDevice>(device_);
+
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImPlot::CreateContext();
 
 		ImGuiIO& io = ImGui::GetIO(); (void)io;
 
-		io.Fonts->AddFontDefault();
-		static const ImWchar icons_ranges[] = { ICON_MIN_FA, ICON_MAX_16_FA, 0 };
-		ImFontConfig iconConfig;
-		iconConfig.MergeMode = true;
-		iconConfig.PixelSnapH = true;
-		iconConfig.GlyphMinAdvanceX = 13.0f;
-		std::string filename = "Assets/Fonts/" + std::string(FONT_ICON_FILE_NAME_FAS);
-		io.Fonts->AddFontFromFileTTF(filename.c_str(), 13.0f, &iconConfig, icons_ranges);
-		// use FONT_ICON_FILE_NAME_FAR if you want regular instead of solid
-
+		VkInstance instance = device->GetInstance();
+		ImGui_ImplVulkan_LoadFunctions([](const char* function_name, void* vulkan_instance) {
+			return vkGetInstanceProcAddr(*(reinterpret_cast<VkInstance*>(vulkan_instance)), function_name);
+			}, &instance);
 		ImGui_ImplGlfw_InitForVulkan(window, true);
-
-		device = std::static_pointer_cast <gfx::VulkanGraphicsDevice>(device_);
 
 		ImGui_ImplVulkan_InitInfo initInfo = {};
 		initInfo.Instance = device->GetInstance();
@@ -89,6 +84,23 @@ namespace ui {
 		ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), device->Get(commandList));
 	}
 
+	void ImGuiService::AddImage(gfx::TextureHandle texture, const ImVec2& size)
+	{
+		gfx::VulkanGraphicsDevice* vkDevice = (gfx::VulkanGraphicsDevice*)gfx::GetDevice();
+		auto found = ImTextureIDMap.find(texture.handle);
+
+		ImTextureID textureId = nullptr;
+		if (found == ImTextureIDMap.end()) {
+			VulkanTexture* vkTexture = vkDevice->textures.AccessResource(texture.handle);
+			VkDescriptorSet descriptorSet = ImGui_ImplVulkan_AddTexture(vkTexture->sampler, vkTexture->imageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			ImTextureIDMap[texture.handle] = descriptorSet;
+			textureId = (ImTextureID)descriptorSet;
+		}
+		else textureId = (ImTextureID)found->second;
+
+		ImGui::ImageButton(textureId, size, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
+	}
+
 	bool ImGuiService::IsAcceptingEvent()
 	{
 		return ImGui::IsAnyItemActive() || ImGui::IsAnyItemHovered();
@@ -98,7 +110,6 @@ namespace ui {
 	{
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
-		ImPlot::DestroyContext();
 		ImGui::DestroyContext();
 	}
 }

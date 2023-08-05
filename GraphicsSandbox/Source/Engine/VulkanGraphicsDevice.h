@@ -118,6 +118,13 @@ namespace gfx
 		bool SupportMeshShading() override { return supportMeshShader; }
 
 		virtual ~VulkanGraphicsDevice() = default;
+
+		// Resource Pools
+		ResourcePool<VulkanRenderPass> renderPasses;
+		ResourcePool<VulkanPipeline> pipelines;
+		ResourcePool<VulkanBuffer> buffers;
+		ResourcePool<VulkanTexture> textures;
+		ResourcePool<VulkanFramebuffer> framebuffers;
 	private:
 		VkInstance instance_ = VK_NULL_HANDLE;
 		VkDebugUtilsMessengerEXT messenger_ = VK_NULL_HANDLE;
@@ -221,11 +228,6 @@ namespace gfx
 
 		void AdvanceFrameCounter();
 
-		// Resource Pools
-		ResourcePool<VulkanRenderPass> renderPasses;
-		ResourcePool<VulkanPipeline> pipelines;
-		ResourcePool<VulkanBuffer> buffers;
-		ResourcePool<VulkanTexture> textures;
-		ResourcePool<VulkanFramebuffer> framebuffers;
+		
 	};
 };

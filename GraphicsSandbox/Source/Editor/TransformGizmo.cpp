@@ -1,7 +1,7 @@
 #include "TransformGizmo.h"
 
-#include "ImGui/imgui.h"
-#include "ImGui/imgui_internal.h"
+#include <imgui.h>
+#include <imgui_internal.h>
 
 namespace TransformGizmo
 {

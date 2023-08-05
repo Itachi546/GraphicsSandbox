@@ -1,7 +1,9 @@
 #pragma once
 
-#include "ImGui/imgui.h"
+#define IMGUI_IMPL_VULKAN_NO_PROTOTYPES
+#include <imgui/imgui.h>
 #include "../Platform.h"
+#include "../Graphics.h"
 
 #include <memory>
 
@@ -25,6 +27,8 @@ namespace ui {
 		void NewFrame();
 
 		void Render(gfx::CommandList* commandList);
+
+		void AddImage(gfx::TextureHandle texture, const ImVec2& size = {256, 256});
 
 		bool IsAcceptingEvent();
 

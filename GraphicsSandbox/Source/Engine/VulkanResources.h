@@ -2,10 +2,8 @@
 
 #include "Graphics.h"
 
-#define VK_NO_PROTOTYPES
 #include <Volk/volk.h>
 #include <vma/vk_mem_alloc.h>
-
 #include <vector>
 #include <memory>
 

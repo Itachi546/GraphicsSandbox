@@ -2,6 +2,8 @@
 
 #include "GlmIncludes.h"
 
+#include <array>
+
 namespace gfx {
 	struct RenderPassHandle;
 	struct CommandList;
@@ -18,6 +20,7 @@ namespace DebugDraw
 	void AddSphere(const glm::vec3& p, float radius, uint32_t color = 0xff0000ff);
 
 	void AddQuadPrimitive(const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3, uint32_t color = 0xffffffff);
+	void AddFrustumPrimitive(const std::array<glm::vec3, 8>& points, uint32_t color = 0xffffffff);
 
 	/*
 	* Points should be in given order

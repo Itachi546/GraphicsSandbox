@@ -29,14 +29,14 @@
     <Filter Include="TEST">
       <UniqueIdentifier>{53d12f9d-2a10-4ae2-b34f-23ad70b08dff}</UniqueIdentifier>
     </Filter>
-    <Filter Include="IMGUI">
-      <UniqueIdentifier>{e5f8327d-c66a-44b0-991e-141851066155}</UniqueIdentifier>
-    </Filter>
     <Filter Include="EDITOR">
       <UniqueIdentifier>{8d7e6dde-c9a4-4137-860d-3c78b4507056}</UniqueIdentifier>
     </Filter>
     <Filter Include="EDITOR\ANIMAITION">
       <UniqueIdentifier>{ecd203a7-3fa6-4fb5-9772-a2551f85d2b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="IMGUI">
+      <UniqueIdentifier>{764cbcb5-4d76-4ea4-a9a2-64880939093b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -109,36 +109,6 @@
     <ClInclude Include="Source\Engine\GlmIncludes.h">
       <Filter>SOURCE\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imconfig.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imgui.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imgui_impl_glfw.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imgui_impl_vulkan.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imgui_internal.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImPlot\implot.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImPlot\implot_internal.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imstb_rectpack.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imstb_textedit.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
-    <ClInclude Include="Source\External\ImGui\imstb_truetype.h">
-      <Filter>IMGUI</Filter>
-    </ClInclude>
     <ClInclude Include="Source\Engine\GUI\SceneHierarchy.h">
       <Filter>EDITOR</Filter>
     </ClInclude>
@@ -190,6 +160,30 @@
     <ClInclude Include="Source\Engine\MeshData.h" />
     <ClInclude Include="Source\Engine\Pass\DrawCullPass.h" />
     <ClInclude Include="Source\Engine\Pass\CascadedShadowPass.h" />
+    <ClInclude Include="Source\External\imgui\imconfig.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imgui.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imgui_impl_glfw.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imgui_impl_vulkan.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imgui_internal.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imstb_rectpack.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imstb_textedit.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Source\External\imgui\imstb_truetype.h">
+      <Filter>IMGUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -239,36 +233,6 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Camera.cpp">
       <Filter>SOURCE\ECS</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui_demo.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui_draw.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui_impl_glfw.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui_impl_vulkan.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui_tables.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImGui\imgui_widgets.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImPlot\implot.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImPlot\implot_demo.cpp">
-      <Filter>IMGUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Source\External\ImPlot\implot_items.cpp">
-      <Filter>IMGUI</Filter>
     </ClCompile>
     <ClCompile Include="Source\Editor\EditorApplication.cpp">
       <Filter>EDITOR</Filter>
@@ -326,6 +290,27 @@
     </ClCompile>
     <ClCompile Include="Source\Engine\Pass\CascadedShadowPass.cpp">
       <Filter>SOURCE</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui_demo.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui_draw.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui_impl_glfw.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui_impl_vulkan.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui_tables.cpp">
+      <Filter>IMGUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Source\External\imgui\imgui_widgets.cpp">
+      <Filter>IMGUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

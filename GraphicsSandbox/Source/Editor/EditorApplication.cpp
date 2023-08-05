@@ -87,25 +87,20 @@ void EditorApplication::PreUpdate(float dt) {
 	}
 }
 
-/*
-* -       -
-* 
-* -       -
-*/
-
 void EditorApplication::PostUpdate(float dt) {
 	glm::vec3 p0 = glm::vec3(-1.0f, -1.0f, 0.0f) * 4.0f;
 	glm::vec3 p1 = glm::vec3(-1.0f, 1.0f, 0.0f) * 4.0f;
 	glm::vec3 p2 = glm::vec3( 1.0f, 1.0f, 0.0f) * 4.0f;
 	glm::vec3 p3 = glm::vec3( 1.0f, -1.0f, 0.0f) * 4.0f;
 	uint32_t color = 0xffffff44;
+	/*
 	DebugDraw::AddQuadPrimitive(p0, p1, p2, p3, color);
-
 	DebugDraw::AddQuadPrimitive(p0 + glm::vec3(0.0f, 0.0f, 1.0f),
 		p1 + glm::vec3(0.0f, 0.0f, 1.0f),
 		p2 + glm::vec3(0.0f, 0.0f, 1.0f),
 		p3 + glm::vec3(0.0f, 0.0f, 1.0f),
 		0xff000033);
+		*/
 }
 
 void EditorApplication::InitializeScene()
@@ -118,8 +113,8 @@ void EditorApplication::InitializeScene()
 	mRenderer->mEnvironmentData.globalAO = 0.01f;
 
 	auto compMgr = mScene.GetComponentManager();
-	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.glb");
-	//ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
+	//ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/scene/scene.glb");
+	ecs::Entity scene1 = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
 	
 	ecs::Entity sun = mScene.GetSun();
 	compMgr->GetComponent<LightComponent>(sun)->enabled = true;

@@ -130,8 +130,11 @@ namespace gfx {
 
 	void DrawCullPass::AddUI()
 	{
-		ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
-		ImGui::Text("Total Mesh: %d", totalMesh);
-		ImGui::Text("Visible Mesh Last Frame: %d", totalVisibleMesh);
+		ImGui::Separator();
+		if(ImGui::CollapsingHeader("DrawCull")) {
+			ImGui::Checkbox("Frustum Culling", &enableFrustumCulling);
+			ImGui::Text("Total Mesh: %d", totalMesh);
+			ImGui::Text("Visible Mesh Last Frame: %d", totalVisibleMesh);
+		}
 	}
 }

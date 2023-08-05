@@ -1,7 +1,7 @@
 #include "SceneHierarchy.h"
 #include "FileDialog.h"
-#include "ImGui/imgui.h"
-#include "ImGui/IconsFontAwesome5.h"
+#include "ImGuiService.h"
+#include "IconsFontAwesome6.h"
 
 #include "../Engine/Input.h"
 #include "../Engine/DebugDraw.h"
@@ -237,8 +237,10 @@ namespace ui {
 
 			auto ShowTexture = [](uint32_t index, std::string textureType) {
 				std::string filename = "No File";
-				if (index != gfx::INVALID_TEXTURE_ID)
+				if (index != gfx::INVALID_TEXTURE_ID) {
 					filename = TextureCache::GetTextureName(index);
+					ui::ImGuiService::GetInstance()->AddImage(gfx::TextureHandle{index}, ImVec2{ 256, 256 });
+				}
 				ImGui::Text("%s: %s\n", textureType.c_str(), filename.c_str());
 			};
 

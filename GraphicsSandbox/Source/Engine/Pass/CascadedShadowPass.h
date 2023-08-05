@@ -28,6 +28,7 @@ namespace gfx {
 			this->kSplitLambda = splitLambda;
 		}
 
+		void AddUI() override;
 		/*
 		gfx::DescriptorInfo GetCascadeBufferDescriptor()
 		{
@@ -71,12 +72,18 @@ namespace gfx {
 		void CalculateSplitDistance(Camera* camera);
 
 		uint32_t colors[5] = {
-		0xff0000,
-		0xffff00,
-		0xffffff,
-		0x00ff00,
-		0x0000ff
+		0xff000022,
+		0xffff0022,
+		0xffffff22,
+		0x00ff0022,
+		0x0000ff22
 		};
+
+		glm::mat4 cameraVP = glm::mat4(1.0f);
+		bool mFreezeCameraFrustum = true;
+		bool mEnableCascadeDebug = true;
+		glm::vec3* cameraFrustumPoints = nullptr;
+		int debugCascadeIndex = 0;
 
 		void update(Camera* camera, const glm::vec3& lightDirection);
 		void render(CommandList* commandList);

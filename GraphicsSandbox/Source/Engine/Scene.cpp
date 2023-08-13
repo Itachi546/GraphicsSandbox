@@ -385,7 +385,7 @@ void Scene::parseMesh(tinygltf::Model* model, tinygltf::Mesh& mesh, ecs::Entity 
 
 
 			if (tangents) {
-				glm::vec3 t = glm::vec3(tangents[i * 3 + 0], tangents[i * 3 + 0], tangents[i * 3 + 0]);
+				glm::vec3 t = glm::vec3(tangents[i * 3 + 0], tangents[i * 3 + 1], tangents[i * 3 + 2]);
 				glm::vec3 bt = glm::normalize(glm::cross(n, t));
 
 				vertex.tx = uint8_t(t.x * 127.0f + 127.0f);

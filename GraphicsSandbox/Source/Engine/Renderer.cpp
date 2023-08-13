@@ -30,7 +30,7 @@ struct SortedLight {
 };
 
 
-Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice())
+Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()), mSwapchainWidth(width), mSwapchainHeight(height)
 {
 	// Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
@@ -544,6 +544,7 @@ void Renderer::AddUI()
 		ImGui::Checkbox("Mesh Shading", &mUseMeshShading);
 	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
 	ImGui::SliderFloat("exposure", &mEnvironmentData.exposure, 0.0f, 4.0f);
+	ImGui::Text("Visible Light: %d", (uint32_t)projectedLightRects.size());
 
 	if (ImGui::BeginCombo("Final Output", mOutputAttachments[mFinalOutput].c_str()))
 	{
@@ -560,6 +561,25 @@ void Renderer::AddUI()
 		}
 		ImGui::EndCombo();
 	}
+
+	const ImU32 flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar |
+		ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
+	ImGuiIO& io = ImGui::GetIO();
+	ImGui::SetWindowSize(io.DisplaySize);
+	ImGui::SetNextWindowPos(ImVec2(0, 0));
+	ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
+	ImGui::PushStyleColor(ImGuiCol_Border, 0);
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+
+	ImGui::Begin("LightRect");
+	ImDrawList* drawList = ImGui::GetWindowDrawList();
+	ImGui::End();
+	ImGui::PopStyleVar();
+	ImGui::PopStyleColor(2);
+
+	for (auto& rect : projectedLightRects) {
+		drawList->AddRectFilled(ImVec2{ rect.x, rect.y }, ImVec2{ rect.z, rect.w }, ImColor(1.0f, 0.0f, 0.0f, 0.1f));
+	};
 
 	/*
 	gfx::FrameGraphResource* csmDepth = mFrameGraphBuilder.AccessResource("csm_depth");
@@ -691,6 +711,71 @@ void Renderer::UpdateLights()
 		mLightLUT[bin] = (maxLightId << 16) | minLightId;
 	}
 
+	projectedLightRects.clear();
+	for (uint32_t i = 0; i < lights.size(); ++i) {
+		// Update the lightData that is sent to buffer
+		LightComponent& light = lights[i];
+		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(entities[i]);
+		glm::vec3 position = transform->position;
+		float radius = light.radius;
+
+		glm::vec3 vsPos = camera->ComputeViewSpaceCoordinate(position);
+
+		bool isVisible = (vsPos.z - radius) < camera->GetNearPlane();
+
+		if (!isVisible) continue;
+
+		glm::vec3 aabbMin = glm::vec3(FLT_MAX);
+		glm::vec3 aabbMax = glm::vec3(-FLT_MAX);
+		for (uint32_t c = 0; c < 8; ++c) {
+			glm::vec3 corner{
+				(c % 2) ? 1.0f : -1.0f,
+				(c & 2) ? 1.0f : -1.0f,
+				(c & 4) ? 1.0f : -1.0f
+			};
+			corner *= radius;
+			corner += position;
+
+			glm::vec4 vsPos = mGlobalUniformData.V * glm::vec4(corner, 1.0f);
+			vsPos.z = -std::max(camera->GetNearPlane(), -vsPos.z);
+
+			glm::vec4 clipPos = mGlobalUniformData.P * vsPos;
+			clipPos.x /= clipPos.w;
+			clipPos.y /= clipPos.w;
+			clipPos.z /= clipPos.w;
+
+			aabbMin.x = glm::min(aabbMin.x, clipPos.x);
+			aabbMin.y = glm::min(aabbMin.y, clipPos.y);
+
+			aabbMax.x = glm::max(aabbMax.x, clipPos.x);
+			aabbMax.y = glm::max(aabbMax.y, clipPos.y);
+		}
+
+		glm::vec4 aabb = {
+			aabbMin.x, -aabbMax.y, aabbMax.x, -aabbMin.y
+		};
+
+		glm::vec4 aabbScreen{
+			(aabb.x * 0.5 + 0.5) * (mSwapchainWidth - 1),
+			(aabb.y * 0.5 + 0.5) * (mSwapchainHeight - 1),
+			(aabb.z * 0.5 + 0.5) * (mSwapchainWidth - 1),
+			(aabb.w * 0.5 + 0.5) * (mSwapchainHeight - 1),
+		};
+
+		float width = aabbScreen.z - aabbScreen.x;
+		float height = aabbScreen.w - aabbScreen.y;
+
+		if (width < 0.0001f || height < 0.0001f) continue;
+
+		float minX = aabbScreen.x;
+		float minY = aabbScreen.y;
+		float maxX = minX + width;
+		float maxY = minY + height;
+
+		if (minX > mSwapchainWidth || minY > mSwapchainHeight) continue;
+		if (maxX < 0.0f || maxY < 0.0f) continue;
+		projectedLightRects.emplace_back(glm::vec4{ minX, minY, maxX, maxY });
+	}
 }
 /*
 void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)
@@ -925,6 +1010,8 @@ uint32_t Renderer::CreateBatch(std::vector<DrawData>& drawDatas, std::vector<Ren
 void Renderer::onResize(uint32_t width, uint32_t height)
 {
 	mFrameGraph.onResize(width, height);
+	mSwapchainWidth = width;
+	mSwapchainHeight = height;
 }
 
 void Renderer::Shutdown()

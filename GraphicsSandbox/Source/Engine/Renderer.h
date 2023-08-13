@@ -118,13 +118,14 @@ public:
 
 	std::vector<RenderBatch> mDrawBatches;
 	std::vector<RenderBatch> mTransparentBatches;
+	std::vector<glm::vec4> projectedLightRects;
 
 private:
-
 	gfx::GraphicsDevice* mDevice;
 	Scene* mScene;
 	bool mUpdateBatches = true;
-
+	uint32_t mSwapchainWidth;
+	uint32_t mSwapchainHeight;
 
 	std::vector<std::string> mOutputAttachments;
 	uint32_t mFinalOutput;

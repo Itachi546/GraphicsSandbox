@@ -1565,7 +1565,7 @@ namespace gfx {
             mSwapchainRP = CreateRenderPass(&renderPassDesc);
             swapchain_->renderPass = renderPasses.AccessResource(mSwapchainRP.handle);
 			swapchain_->surface = CreateSurface(instance_, physicalDevice_, queueFamilyIndices_, window);
-            swapchain_->vsync = true;
+            swapchain_->vsync = false;
         }
 
         VulkanRenderPass* vkRenderPass = swapchain_->renderPass;
@@ -3002,9 +3002,10 @@ namespace gfx {
         else {
             gAllocationHandler.destroyedSemaphore_.push_back(mRenderTimelineSemaphore);
             gAllocationHandler.destroyedSemaphore_.push_back(mComputeTimelineSemaphore);
-            for (uint32_t i = 0; i < kMaxFrame; ++i)
-                gAllocationHandler.destroyedSemaphore_.push_back(mRenderCompleteSemaphore[i]);
         }
+        for (uint32_t i = 0; i < kMaxFrame; ++i)
+            gAllocationHandler.destroyedSemaphore_.push_back(mRenderCompleteSemaphore[i]);
+
 
         gAllocationHandler.destroyedFramebuffers_.insert(gAllocationHandler.destroyedFramebuffers_.end(), swapchain_->framebuffers.begin(), swapchain_->framebuffers.end());
         swapchain_->framebuffers.clear();

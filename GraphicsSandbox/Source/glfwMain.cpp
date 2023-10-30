@@ -16,7 +16,7 @@ int main(int argc, char** argv)
 	* swapchain in some case.
 	*/
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	GLFWwindow* window = glfwCreateWindow(1920, 1080, "Hello World", 0, 0);
+	GLFWwindow* window = glfwCreateWindow(1360, 769, "Hello World", 0, 0);
 	glfwSwapInterval(0);
 	application->SetWindow(window, false);
 	application->Initialize();

@@ -13,7 +13,7 @@ namespace Utils
 {
 	void ShowMessageBox(const std::string& message, const std::string& caption, MessageType type = MessageType::Info);
 
-	char* ReadFile(const char* filename, uint32_t* fileSizeInByte);
+	char* ReadFile(const std::string& filename, uint32_t* fileSizeInByte);
 
 	constexpr std::size_t StringHash(const char* input)
 	{

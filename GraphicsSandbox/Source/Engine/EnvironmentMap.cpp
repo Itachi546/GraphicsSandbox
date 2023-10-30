@@ -9,11 +9,10 @@ EnvironmentMap::EnvironmentMap()
 {
 	mDevice = gfx::GetDevice();
 
-	mHdriToCubemap = gfx::CreateComputePipeline(StringConstants::HDRI_CONVERTER_COMP_PATH, mDevice);
-	mIrradiancePipeline = gfx::CreateComputePipeline(StringConstants::IRRADIANCE_COMP_PATH, mDevice);
-	mPrefilterPipeline = gfx::CreateComputePipeline(StringConstants::PREFILTER_COMP_PATH, mDevice);
-	mBRDFPipeline = gfx::CreateComputePipeline(StringConstants::BRDF_LUT_COMP_PATH, mDevice);
-
+	mHdriToCubemap = gfx::CreateComputePipeline(ShaderPath::get("hdri_converter_pass")->shaders[0], mDevice);
+	mIrradiancePipeline = gfx::CreateComputePipeline(ShaderPath::get("irradiance_pass")->shaders[0], mDevice);
+	mPrefilterPipeline = gfx::CreateComputePipeline(ShaderPath::get("prefilter_pass")->shaders[0], mDevice);
+	mBRDFPipeline = gfx::CreateComputePipeline(ShaderPath::get("brdf_lut_gen_pass")->shaders[0], mDevice);
 }
 
 void EnvironmentMap::CreateFromHDRI(const char* hdri)

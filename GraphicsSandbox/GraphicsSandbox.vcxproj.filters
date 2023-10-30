@@ -184,6 +184,7 @@
     <ClInclude Include="Source\External\imgui\imstb_truetype.h">
       <Filter>IMGUI</Filter>
     </ClInclude>
+    <ClInclude Include="Source\Editor\TestScene.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source\Engine\Application.cpp">
@@ -312,6 +313,9 @@
     <ClCompile Include="Source\External\imgui\imgui_widgets.cpp">
       <Filter>IMGUI</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\StringConstants.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -335,6 +339,9 @@
       <Filter>SHADERS</Filter>
     </None>
     <None Include="Shaders\shadow.glsl" />
+    <None Include="Shaders\shaders.json">
+      <Filter>SHADERS</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="Shaders\hdri_converter.comp.glsl" />

@@ -166,6 +166,7 @@
     </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Source\Editor\TestScene.h" />
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
     <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
     <ClInclude Include="Source\Engine\Pass\CascadedShadowPass.h" />
@@ -295,6 +296,7 @@
     <ClCompile Include="Source\Engine\Profiler.cpp" />
     <ClCompile Include="Source\Engine\Renderer.cpp" />
     <ClCompile Include="Source\Engine\Scene.cpp" />
+    <ClCompile Include="Source\Engine\StringConstants.cpp" />
     <ClCompile Include="Source\Engine\TextureCache.cpp" />
     <ClCompile Include="Source\Engine\Utils.cpp" />
     <ClCompile Include="Source\Engine\VulkanGraphicsDevice.cpp" />
@@ -314,6 +316,7 @@
     <CustomBuild Include="Shaders\shadow.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <None Include="Shaders\shaders.json" />
     <None Include="Shaders\shadow.glsl" />
   </ItemGroup>
   <ItemGroup>

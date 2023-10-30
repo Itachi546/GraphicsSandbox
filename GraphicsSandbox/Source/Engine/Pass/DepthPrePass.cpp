@@ -20,9 +20,10 @@ void gfx::DepthPrePass::Initialize(RenderPassHandle renderPass)
 	pipelineDesc.rasterizationState.enableDepthWrite = true;
 	pipelineDesc.rasterizationState.enableDepthClamp = true;
 
+	ShaderPathInfo* shaderPathInfo = ShaderPath::get("depth_prepass");
 	if (mSupportMeshShading) {
 		uint32_t size = 0;
-		char* code = Utils::ReadFile(StringConstants::DEPTH_PREPASS_MESH_PATH, &size);
+		char* code = Utils::ReadFile(shaderPathInfo->meshShaders[0], &size);
 		ShaderDescription shader = { code, size };
 		pipelineDesc.shaderCount = 1;
 		pipelineDesc.shaderDesc = &shader;
@@ -32,7 +33,7 @@ void gfx::DepthPrePass::Initialize(RenderPassHandle renderPass)
 	}
 	
 	uint32_t size = 0;
-	char* code = Utils::ReadFile(StringConstants::DEPTH_PREPASS_PATH, &size);
+	char* code = Utils::ReadFile(shaderPathInfo->shaders[0], &size);
 	ShaderDescription shader = { code, size };
 	pipelineDesc.shaderCount = 1;
 	pipelineDesc.shaderDesc = &shader;

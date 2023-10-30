@@ -38,7 +38,7 @@ float CalculateShadowFromTexture(vec3 worldPos, uint shadowMap, int cascadeIndex
     {
        for(int y = -kSampleRadius; y <= kSampleRadius; ++y)
        {
-          shadowFactor += textureProj(shadowCoord / shadowCoord.w, vec2(x * invRes.x, y * invRes.y), shadowMap, cascadeIndex, 0.0f);
+          shadowFactor += textureProj(shadowCoord / shadowCoord.w, vec2(x * invRes.x, y * invRes.y), shadowMap, cascadeIndex, 0.001f);
           sampleCount ++;
        }
     }

@@ -12,7 +12,7 @@ namespace gfx
 		return (width + localWorkSize - 1) / localWorkSize;
 	}
 
-	inline PipelineHandle CreateComputePipeline(const char* filename, gfx::GraphicsDevice* device)
+	inline PipelineHandle CreateComputePipeline(const std::string& filename, gfx::GraphicsDevice* device)
 	{
 		uint32_t codeLen = 0;
 		char* code = Utils::ReadFile(filename, &codeLen);

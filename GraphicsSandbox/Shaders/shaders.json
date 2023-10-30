@@ -1,0 +1,68 @@
+{
+  "root":  "Assets/SPIRV/",
+  "shaders": [
+    {
+      "name": "drawcull_pass",
+      "shaders": [ "drawcull.comp.spv" ]
+    },
+    {
+      "name": "depth_prepass",
+      "shaders": [ "depth_prepass.vert.spv" ],
+      "meshShaders": [ "depth_prepass.mesh.spv" ]
+    },
+    {
+      "name": "gbuffer_pass",
+      "shaders": [ "main.vert.spv", "gbuffer.frag.spv" ],
+      "meshShaders": [ "gbuffer.task.spv", "gbuffer.mesh.spv" ]
+    },
+    {
+      "name": "upsample_pass",
+      "shaders": [ "bloom-upsample.comp.spv" ]
+    },
+    {
+      "name": "downsample_pass",
+      "shaders": [ "bloom-downsample.comp.spv" ]
+    },
+    {
+      "name": "bloom_composite_pass",
+      "shaders": [ "bloom-composite.comp.spv" ]
+    },
+
+    {
+      "name": "csm_pass",
+      "shaders": [ "shadow.vert.spv", "shadow.geom.spv" ]
+    },
+    {
+      "name": "transparent_pass",
+      "shaders": [ "main.vert.spv", "transparent.frag.spv" ]
+    },
+    {
+      "name": "fxaa_pass",
+      "shaders": [ "fullscreen.vert.spv", "fxaa.frag.spv" ]
+    },
+    {
+      "name": "lighting_pass",
+      "shaders": [ "fullscreen.vert.spv", "lighting.frag.spv" ]
+    },
+    {
+      "name": "fullscreen_pass",
+      "shaders": [ "fullscreen.vert.spv", "fullscreen.frag.spv" ]
+    },
+    {
+      "name": "hdri_converter_pass",
+      "shaders": [ "hdri_converter.comp.spv" ]
+    },
+    {
+      "name": "irradiance_pass",
+      "shaders": [ "irradiance.comp.spv" ]
+    },
+    {
+      "name": "prefilter_pass",
+      "shaders": [ "prefilter_env.comp.spv" ]
+    },
+    {
+      "name": "brdf_lut_gen_pass",
+      "shaders": [ "brdf_lut.comp.spv" ]
+    }
+  ]
+}

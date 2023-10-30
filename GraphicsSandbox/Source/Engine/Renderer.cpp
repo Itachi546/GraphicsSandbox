@@ -34,8 +34,10 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 {
 	// Create SwapchainPipeline
 	uint32_t vertexLen = 0, fragmentLen = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::FULLSCREEN_VERT_PATH, &vertexLen);
-	char* fragmentCode = Utils::ReadFile(StringConstants::FULLSCREEN_FRAG_PATH, &fragmentLen);
+
+	ShaderPathInfo* shaderPathInfo = ShaderPath::get("fullscreen_pass");
+	char* vertexCode = Utils::ReadFile(shaderPathInfo->shaders[0], &vertexLen);
+	char* fragmentCode = Utils::ReadFile(shaderPathInfo->shaders[1], &fragmentLen);
 	assert(vertexCode != nullptr);
 	assert(fragmentCode != nullptr);
 

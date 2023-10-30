@@ -15,14 +15,15 @@ gfx::TransparentPass::TransparentPass(Renderer* renderer_) :
 
 void gfx::TransparentPass::Initialize(RenderPassHandle renderPass)
 {
-	PipelineDesc pipelineDesc = {};
+	ShaderPathInfo* pathInfo = ShaderPath::get("transparent_pass");
 
+	PipelineDesc pipelineDesc = {};
 	ShaderDescription shaders[2];
 	uint32_t size = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);
+	char* vertexCode = Utils::ReadFile(pathInfo->shaders[0], &size);
 	shaders[0] = { vertexCode, size };
 
-	char* fragmentCode = Utils::ReadFile(StringConstants::TRANSPARENT_FRAG_PATH, &size);
+	char* fragmentCode = Utils::ReadFile(pathInfo->shaders[1], &size);
 	shaders[1] = { fragmentCode, size };
 
 	pipelineDesc.shaderCount = 2;

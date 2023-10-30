@@ -27,15 +27,17 @@ void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
 
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	mSupportMeshShading = device->SupportMeshShading();
+
+	ShaderPathInfo* shaderPathInfo = ShaderPath::get("gbuffer_pass");
 	if (mSupportMeshShading) {
 		uint32_t size = 0;
 		//char* taskCode = Utils::ReadFile(StringConstants::GBUFER_TASK_PATH, &size);
 		//shaders[0] = { taskCode, size };
 
-		char* meshCode = Utils::ReadFile(StringConstants::GBUFER_MESH_PATH, &size);
+		char* meshCode = Utils::ReadFile(shaderPathInfo->meshShaders[1], &size);
 		shaders[0] = { meshCode, size };
 
-		char* fragmentCode = Utils::ReadFile(StringConstants::GBUFFER_FRAG_PATH, &size);
+		char* fragmentCode = Utils::ReadFile(shaderPathInfo->shaders[1], &size);
 		shaders[1] = { fragmentCode, size };
 
 		pipelineDesc.shaderCount = 2;
@@ -49,10 +51,10 @@ void gfx::GBufferPass::Initialize(RenderPassHandle renderPass)
 	}
 
 	uint32_t size = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::MAIN_VERT_PATH, &size);
+	char* vertexCode = Utils::ReadFile(shaderPathInfo->shaders[0], &size);
 	shaders[0] = { vertexCode, size };
 
-	char* fragmentCode = Utils::ReadFile(StringConstants::GBUFFER_FRAG_PATH, &size);
+	char* fragmentCode = Utils::ReadFile(shaderPathInfo->shaders[1], &size);
 	shaders[1] = { fragmentCode, size };
 
 	pipelineDesc.shaderCount = 2;

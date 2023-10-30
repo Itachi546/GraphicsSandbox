@@ -17,9 +17,13 @@ namespace gfx
 
 	void BloomPass::Initialize(RenderPassHandle renderPass)
 	{
-		mDownSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_UPSAMPLE_PATH, mDevice);
-		mUpSamplePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_PATH, mDevice);
-		mCompositePipeline = gfx::CreateComputePipeline(StringConstants::BLOOM_COMPOSITE_PATH, mDevice);
+		ShaderPathInfo* upSamplePath = ShaderPath::get("upsample_pass");
+		ShaderPathInfo* downSamplePath = ShaderPath::get("upsample_pass");
+		ShaderPathInfo* compositePath = ShaderPath::get("bloom_composite_pass");
+
+		mDownSamplePipeline = gfx::CreateComputePipeline(downSamplePath->shaders[0], mDevice);
+		mUpSamplePipeline = gfx::CreateComputePipeline(upSamplePath->shaders[0], mDevice);
+		mCompositePipeline = gfx::CreateComputePipeline(compositePath->shaders[0], mDevice);
 
 		gfx::GPUTextureDesc textureDesc = {};
 		gfx::SamplerInfo samplerInfo = {};

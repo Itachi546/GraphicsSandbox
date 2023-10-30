@@ -16,14 +16,15 @@ gfx::LightingPass::LightingPass(Renderer* renderer_) :
 
 void gfx::LightingPass::Initialize(RenderPassHandle renderPass)
 {
+	ShaderPathInfo* shaderPathInfo = ShaderPath::get("lighting_pass");
 	PipelineDesc pipelineDesc = {};
 
 	ShaderDescription shaders[2];
 	uint32_t size = 0;
-	char* vertexCode = Utils::ReadFile(StringConstants::FULLSCREEN_VERT_PATH, &size);
+	char* vertexCode = Utils::ReadFile(shaderPathInfo->shaders[0], &size);
 	shaders[0] = { vertexCode, size };
 
-	char* fragmentCode = Utils::ReadFile(StringConstants::LIGHTING_FRAG_PATH, &size);
+	char* fragmentCode = Utils::ReadFile(shaderPathInfo->shaders[1], &size);
 	shaders[1] = { fragmentCode, size };
 
 	pipelineDesc.shaderCount = 2;

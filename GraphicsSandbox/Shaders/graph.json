@@ -175,7 +175,7 @@
         }
       ],
       "name": "fxaa_pass",
-      "enabled": false,
+      "enabled": true,
       "outputs": [
         {
           "type": "attachment",

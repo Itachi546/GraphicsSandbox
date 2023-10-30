@@ -28,6 +28,7 @@ void Application::initialize_()
 	Logger::Initialize();
 	Input::Initialize(mWindow);
 	TextureCache::Initialize();
+	ShaderPath::LoadStringPath();
 
    	mScene.Initialize();
 	mScene.SetSize(mWidth, mHeight);

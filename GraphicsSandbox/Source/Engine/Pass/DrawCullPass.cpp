@@ -15,12 +15,13 @@ namespace gfx {
 
 	void DrawCullPass::Initialize(RenderPassHandle renderPass)
 	{
+		ShaderPathInfo* shaderPathInfo = ShaderPath::get("drawcull_pass");
 		PipelineDesc desc;
 		desc.shaderCount = 1;
 
 		ShaderDescription shaderDesc = {};
 		uint32_t sizeInBytes = 0;
-		const char* code = Utils::ReadFile(StringConstants::DRAWCULL_COMPUTE_PATH, &sizeInBytes);
+		const char* code = Utils::ReadFile(shaderPathInfo->shaders[0], &sizeInBytes);
 		assert(code != nullptr);
 		shaderDesc.code = code;
 		shaderDesc.sizeInByte = sizeInBytes;

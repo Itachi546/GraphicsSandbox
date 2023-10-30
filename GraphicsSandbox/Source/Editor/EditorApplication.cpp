@@ -7,6 +7,7 @@
 #include "../Engine/GUI/ImGuiService.h"
 
 #include "TransformGizmo.h"
+#include "TestScene.h"
 #include <iomanip>
 #include <algorithm>
 
@@ -85,10 +86,6 @@ void EditorApplication::PreUpdate(float dt) {
 			animationClip.Sample(animatedPose, mCurrentTime * animationClip.GetTickPerSeconds());
 		}
 	}
-
-	TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
-	transform->SetRotationFomEuler(0.0f, mElapsedTime, 0.0f);
-	transform->dirty = true;
 }
 
 void EditorApplication::PostUpdate(float dt) {
@@ -96,40 +93,8 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	mCamera->SetPosition({ 5.0f, 3.0f, 0.0f });
-	mCamera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
-	mCamera->SetNearPlane(0.2f);
-	mCamera->SetFarPlane(500.0f);
-
-	auto compMgr = mScene.GetComponentManager();
-	ecs::Entity scene = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/sponza/sponza.gltf");
-	{
-		helmet = mScene.CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/DamagedHelmet/DamagedHelmet.gltf");
-		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(helmet);
-		transform->scale = glm::vec3(0.5f);
-		transform->position.y += 1.0f;
-	}
-	
-#if 1
-	const int nLight = 10;
-	const float lightStep = 20.0f / nLight;
-
-	for (uint32_t i = 0; i < nLight; ++i)
-	{
-		ecs::Entity light = ecs::CreateEntity();
-		compMgr->AddComponent<NameComponent>(light).name = "light" + std::to_string(i);
-		TransformComponent& transform = compMgr->AddComponent<TransformComponent>(light);
-		//transform.position = glm::vec3(MathUtils::Rand01() * 16.0f - 8.0f, 3.0f, 0.0f);
-		transform.position = glm::vec3(-10.0f + i * lightStep, 2.0f, 0.0f);
-		transform.rotation = glm::vec3(0.0f, 0.0f, 0.0f);
-
-		LightComponent& lightComp = compMgr->AddComponent<LightComponent>(light);
-		lightComp.color = glm::vec3(MathUtils::Rand01(), 1.0f - MathUtils::Rand01(), MathUtils::Rand01());
-		lightComp.intensity = 2.0f;
-		lightComp.type = LightType::Point;
-		lightComp.radius = 5.0f;
-	}
-#endif
+	InitializeSponzaScene(&mScene);
+	//InitializeAOScene(&mScene);
 }
 
 /*

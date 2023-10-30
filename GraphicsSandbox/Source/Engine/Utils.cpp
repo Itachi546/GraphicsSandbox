@@ -26,13 +26,13 @@ void Utils::ShowMessageBox(const std::string& message, const std::string& captio
 #endif
 }
 
-char* Utils::ReadFile(const char* path, uint32_t* fileSizeInByte)
+char* Utils::ReadFile(const std::string& path, uint32_t* fileSizeInByte)
 {
 	FILE* file = nullptr;
-	fopen_s(&file, path, "rb");
+	fopen_s(&file, path.c_str(), "rb");
 	if (!file)
 	{
-		Logger::Error("Failed to load file: " + std::string(path));
+		Logger::Error("Failed to load file: " + path);
 		return nullptr;
 	}
 

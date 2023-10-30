@@ -14,16 +14,17 @@ namespace gfx {
 
 	void CascadedShadowPass::Initialize(RenderPassHandle renderPass)
 	{
+		ShaderPathInfo* pathInfo = ShaderPath::get("csm_pass");
 		gfx::PipelineDesc pipelineDesc = {};
 		gfx::ShaderDescription shaders[2] = {};
 		uint32_t size = 0;
 		{
-			char* code = Utils::ReadFile(StringConstants::CSM_VERT_PATH, &size);
+			char* code = Utils::ReadFile(pathInfo->shaders[0], &size);
 			shaders[0] = { code, size };
 		}
 
 		{
-			char* code = Utils::ReadFile(StringConstants::CSM_GEOM_PATH, &size);
+			char* code = Utils::ReadFile(pathInfo->shaders[1], &size);
 			shaders[1] = { code, size };
 		}
 

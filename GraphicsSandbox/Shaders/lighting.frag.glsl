@@ -38,6 +38,7 @@ layout(push_constant) uniform PushConstants
 	uint nLight;
 
 	vec3 uCameraPosition;
+	uint enableShadow;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -98,7 +99,7 @@ vec3 CalculateColor(vec2 uv)
 		{
     		l= normalize(l);
 			float camDist = length(uCameraPosition - worldPos);
-			shadow = CalculateShadowFactor(worldPos, camDist, directionalShadowMap, cascadeIndex);
+			shadow = enableShadow > 0 ? CalculateShadowFactor(worldPos, camDist, directionalShadowMap, cascadeIndex) : 1.0;
 		}
 
     	vec3 h = normalize(v + l);

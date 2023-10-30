@@ -120,6 +120,7 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.emissiveBuffer = mFrameGraphBuilder.AccessResource("gbuffer_emissive")->info.texture.texture.handle;
 	mEnvironmentData.directionalShadowMap = mFrameGraphBuilder.AccessResource("csm_depth")->info.texture.texture.handle;
 	mEnvironmentData.globalAO = 0.2f;
+	mEnvironmentData.enableShadow = 1;
 }
 
 // TODO: temp width and height variable
@@ -556,6 +557,13 @@ void Renderer::AddUI()
 		ImGui::Checkbox("Mesh Shading", &mUseMeshShading);
 	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
 	ImGui::SliderFloat("exposure", &mEnvironmentData.exposure, 0.0f, 4.0f);
+
+	static bool enableShadow = mEnvironmentData.enableShadow > 0 ? true : false;
+	if (ImGui::Checkbox("Shadow", &enableShadow)) {
+		mEnvironmentData.enableShadow = uint32_t(enableShadow);
+		mFrameGraphBuilder.AccessNode("cascaded_shadow_pass")->enabled = enableShadow;
+	}
+
 	ImGui::Text("Visible Light: %d", (uint32_t)projectedLightRects.size());
 
 	if (ImGui::BeginCombo("Final Output", mOutputAttachments[mFinalOutput].c_str()))

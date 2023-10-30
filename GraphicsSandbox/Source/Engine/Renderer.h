@@ -58,6 +58,7 @@ struct EnvironmentData {
 	uint32_t nLight;
 
 	glm::vec3 cameraPosition;
+	uint32_t enableShadow;
 };
 
 struct GlobalUniformData

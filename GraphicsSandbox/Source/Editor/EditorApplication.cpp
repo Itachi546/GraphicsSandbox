@@ -93,8 +93,8 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	InitializeSponzaScene(&mScene);
-	//InitializeAOScene(&mScene);
+	//InitializeSponzaScene(&mScene);
+	InitializeAOScene(&mScene);
 }
 
 /*

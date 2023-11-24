@@ -8,9 +8,9 @@
 #include "DebugDraw.h"
 #include "TransformComponent.h"
 #include "TextureCache.h"
-
 #include "GUI/ImGuiService.h"
 #include "MeshData.h"
+
 #include "Pass/DepthPrePass.h"
 #include "Pass/GBufferPass.h"
 #include "Pass/LightingPass.h"
@@ -18,6 +18,7 @@
 #include "Pass/FXAAPass.h"
 #include "Pass/DrawCullPass.h"
 #include "Pass/CascadedShadowPass.h"
+#include "Pass/SSAO.h"
 
 #include <vector>
 #include <algorithm>
@@ -90,6 +91,7 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 	RegisterPass("transparent_pass", new gfx::TransparentPass(this));
 	RegisterPass("fxaa_pass", new gfx::FXAAPass(this, width, height));
 	RegisterPass("drawcull_pass", new gfx::DrawCullPass(this));
+	RegisterPass("ssao_pass", new gfx::SSAO(this));
 
 	gfx::CascadedShadowPass* csmShadowPass = new gfx::CascadedShadowPass(this);
 	RegisterPass("cascaded_shadow_pass", csmShadowPass);
@@ -323,6 +325,12 @@ void Renderer::Render(gfx::CommandList* commandList)
 
 	mDevice->BeginRenderPass(commandList, mSwapchainRP, gfx::INVALID_FRAMEBUFFER);
 	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
+
+	uint32_t depth = 4;
+	if (mFinalAttachmentName == "ssao" || mFinalAttachmentName == "depth")
+		depth = 1;
+	mDevice->PushConstants(commandList, mFullScreenPipeline, gfx::ShaderStage::Fragment, &depth, sizeof(uint32_t));
+
 	mDevice->UpdateDescriptor(mFullScreenPipeline, &descriptorInfo, 1);
 	mDevice->BindPipeline(commandList, mFullScreenPipeline);
 	mDevice->Draw(commandList, 6, 0, 1);
@@ -572,8 +580,10 @@ void Renderer::AddUI()
 		{
 			const bool isSelected = (i == mFinalOutput);
 
-			if (ImGui::Selectable(mOutputAttachments[i].c_str(), isSelected))
+			if (ImGui::Selectable(mOutputAttachments[i].c_str(), isSelected)) {
 				mFinalOutput = i;
+				mFinalAttachmentName = mOutputAttachments[i];
+			}
 
 			// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
 			if (isSelected)

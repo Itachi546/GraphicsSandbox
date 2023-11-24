@@ -27,7 +27,10 @@
       "name": "bloom_composite_pass",
       "shaders": [ "bloom-composite.comp.spv" ]
     },
-
+    {
+      "name": "ssao_pass",
+      "shaders": [ "fullscreen.vert.spv", "ssao.frag.spv" ]
+    },
     {
       "name": "csm_pass",
       "shaders": [ "shadow.vert.spv", "shadow.geom.spv" ]

@@ -130,6 +130,7 @@ private:
 
 	std::vector<std::string> mOutputAttachments;
 	uint32_t mFinalOutput;
+	std::string mFinalAttachmentName;
 
 	// Returns total number of drawElements pushed while creating batch
 	uint32_t CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch, uint32_t lastOffset = 0);

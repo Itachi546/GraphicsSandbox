@@ -162,6 +162,10 @@ namespace gfx {
 			format = Format::D32_SFLOAT;
 			aspect = ImageAspect::Depth;
 		}
+		else if (inputFormat == "R16_SFLOAT") {
+			format = Format::R16_SFLOAT;
+			aspect = ImageAspect::Color;
+		}
 		else {
 			assert(!"Undefined input format");
 			format = Format::FormatCount;

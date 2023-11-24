@@ -167,6 +167,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\TestScene.h" />
+    <ClInclude Include="Source\Engine\Pass\SSAO.h" />
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
     <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
     <ClInclude Include="Source\Engine\Pass\CascadedShadowPass.h" />
@@ -268,6 +269,7 @@
       <FileType>Document</FileType>
     </None>
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
+    <ClCompile Include="Source\Engine\Pass\SSAO.cpp" />
     <ClCompile Include="Source\Engine\Pass\BloomPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\CascadedShadowPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\DrawCullPass.cpp" />
@@ -314,6 +316,9 @@
       <FileType>Document</FileType>
     </CustomBuild>
     <CustomBuild Include="Shaders\shadow.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\ssao.frag.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
     <None Include="Shaders\shaders.json" />

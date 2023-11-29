@@ -21,6 +21,7 @@ namespace gfx {
 		pushConstants.bias = 0.025f;
 		pushConstants.kernelSamples = 64;
 		pushConstants.noiseScale = glm::vec2(960.0f / 4.0f, 540.0f / 4.0f);
+		pushConstants.wsNormal = 0.0f;
 	}
 
 	void SSAO::Initialize(RenderPassHandle renderPass)
@@ -60,14 +61,14 @@ namespace gfx {
 
 	void SSAO::Render(CommandList* commandList, Scene* scene)
 	{
-		pushConstants.projection = scene->GetCamera()->GetProjectionMatrix();
+		pushConstants.projectionMatrix = scene->GetCamera()->GetProjectionMatrix();
+		pushConstants.normalViewMatrix = glm::inverse(glm::transpose(scene->GetCamera()->GetViewMatrix()));
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 
 		device->UpdateDescriptor(pipeline, descriptorInfos, (uint32_t)std::size(descriptorInfos));
 
 		device->BindPipeline(commandList, pipeline);
 		device->PushConstants(commandList, pipeline, gfx::ShaderStage::Fragment, &pushConstants, sizeof(PushConstants));
-
 
 		device->Draw(commandList, 6, 0, 1);
 	}
@@ -79,6 +80,10 @@ namespace gfx {
 			ImGui::SliderFloat("kernelRadius", &pushConstants.kernelRadius, 0.0f, 2.0f);
 			ImGui::SliderInt("kernelSamples", &pushConstants.kernelSamples, 0, 64);
 			ImGui::SliderFloat("bias", &pushConstants.bias, 0.0f, 0.1f);
+
+			static bool worldSpaceNormal = pushConstants.wsNormal > 0.5f ? true : false;
+			if (ImGui::Checkbox("World Space Normal", &worldSpaceNormal))
+				pushConstants.wsNormal = worldSpaceNormal ? 1.0f : 0.0f;
 		}
 	}
 

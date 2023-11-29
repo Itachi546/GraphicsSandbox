@@ -9,8 +9,8 @@ namespace gfx {
 	{
 		device = device_;
 
-		nodePools.Initialize(kMaxNodes);
-		resourcePools.Initialize(kMaxResourceCount);
+		nodePools.Initialize(kMaxNodes, "FrameGraphNodes");
+		resourcePools.Initialize(kMaxResourceCount, "FrameGraphResources");
 	}
 
 	void FrameGraphBuilder::Shutdown()
@@ -18,7 +18,7 @@ namespace gfx {
 		for (auto& [key, value] : resourceCache)
 		{
 			FrameGraphResource* resource = resourcePools.AccessResource(value);
-			if (resource->type == FrameGraphResourceType::Attachment)
+			if (resource->type == FrameGraphResourceType::Attachment || resource->type == FrameGraphResourceType::StorageImage)
 				device->Destroy(resource->info.texture.texture);
 			else if (resource->type == FrameGraphResourceType::Buffer)
 				device->Destroy(resource->info.buffer.buffer);
@@ -134,6 +134,8 @@ namespace gfx {
 			return FrameGraphResourceType::Buffer;
 		else if (inputType == "reference")
 			return FrameGraphResourceType::Reference;
+		else if (inputType == "storage-image")
+			return FrameGraphResourceType::StorageImage;
 		return FrameGraphResourceType::Invalid;
 	}
 
@@ -246,6 +248,7 @@ namespace gfx {
 				{
 				case FrameGraphResourceType::Attachment:
 				case FrameGraphResourceType::Texture:
+				case FrameGraphResourceType::StorageImage:
 				{
 					json resolution = passOutput["resolution"];
 					resource.info.texture.width = resolution[0];
@@ -328,7 +331,8 @@ namespace gfx {
 				{
 					allocations[resourceIndex] = nodeHandles[i];
 
-					if (resource->type == FrameGraphResourceType::Attachment)
+					if (resource->type == FrameGraphResourceType::Attachment || 
+						resource->type == FrameGraphResourceType::StorageImage)
 					{
 						GPUTextureDesc textureDesc;
 						textureDesc.format = resource->info.texture.format;
@@ -340,7 +344,7 @@ namespace gfx {
 						if(textureDesc.imageAspect == ImageAspect::Depth)
 							textureDesc.bindFlag = BindFlag::DepthStencil | BindFlag::ShaderResource;
 						else
-							textureDesc.bindFlag = BindFlag::RenderTarget | BindFlag::ShaderResource;
+							textureDesc.bindFlag = (resource->type == FrameGraphResourceType::Attachment ? BindFlag::RenderTarget : BindFlag::StorageImage) | BindFlag::ShaderResource;
 
 						textureDesc.imageType = ImageType::I2D;
 						if (resource->info.texture.layerCount > 1)

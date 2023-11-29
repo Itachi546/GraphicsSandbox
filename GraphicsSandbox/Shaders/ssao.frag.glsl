@@ -5,7 +5,8 @@
 #include "bindless.glsl"
 
 layout(push_constant) uniform PushConstants {
-   mat4 uProjection;
+   mat4 uProjectionMatrix;
+   mat4 uNormalViewMatrix;
    uint uDepthMap;
    uint uNormalMap;
    vec2 uNoiseScale;
@@ -13,6 +14,7 @@ layout(push_constant) uniform PushConstants {
    int uKernelSamples;
    float uKernelRadius;
    float uBias;
+   float uWSNormal;
 };
 
 layout(binding = 0) uniform readonly KernelBuffer{
@@ -29,13 +31,16 @@ vec3 GetViewSpacePos(vec2 uv) {
     float depth = texture(uTextures[nonuniformEXT(uDepthMap)], uv).r;
     vec4 sspos = vec4(uv, depth, 1.0f);
     sspos.xyz = sspos.xyz * 2.0f - 1.0f;
-    vec4 viewPos = inverse(uProjection) * sspos;
+    vec4 viewPos = inverse(uProjectionMatrix) * sspos;
     return viewPos.xyz / viewPos.w;
 }
 
 void main() {
    vec3 viewPos = GetViewSpacePos(uv);
    vec3 normal = texture(uTextures[nonuniformEXT(uNormalMap)], uv).rgb;
+   if(uWSNormal < 0.5f)
+     normal = vec3(uNormalViewMatrix * vec4(normal, 0.0));
+
    vec3 randomVec = vec3(texture(uRandomTexture, uv * uNoiseScale).xy, 0.0f);
    vec3 t = normalize(randomVec - normal * dot(randomVec, normal));
    vec3 bt = cross(normal, t);
@@ -48,7 +53,7 @@ void main() {
       // ViewSpace sample position
       vec3 samplePos = viewPos + direction * uKernelRadius;
 
-      vec4 offset = uProjection * vec4(samplePos, 1.0f);
+      vec4 offset = uProjectionMatrix * vec4(samplePos, 1.0f);
       offset.xyz /= offset.w;
       offset.xyz = offset.xyz * 0.5 + 0.5;
 

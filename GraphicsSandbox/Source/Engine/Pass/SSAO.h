@@ -32,13 +32,15 @@ namespace gfx {
 		void GenerateRandomTexture();
 
 		struct PushConstants {
-			glm::mat4 projection;
+			glm::mat4 projectionMatrix;
+			glm::mat4 normalViewMatrix;
 			uint32_t depthTexture;
 			uint32_t normalTexture;
 			glm::vec2 noiseScale;
 			int kernelSamples;
 			float kernelRadius;
 			float bias;
+			float wsNormal;
 		} pushConstants;
 
 		const int RANDOM_TEXTURE_DIM = 4;

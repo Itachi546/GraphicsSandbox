@@ -11,14 +11,7 @@
 #include "GUI/ImGuiService.h"
 #include "MeshData.h"
 
-#include "Pass/DepthPrePass.h"
-#include "Pass/GBufferPass.h"
-#include "Pass/LightingPass.h"
-#include "Pass/TransparentPass.h"
-#include "Pass/FXAAPass.h"
-#include "Pass/DrawCullPass.h"
-#include "Pass/CascadedShadowPass.h"
-#include "Pass/SSAO.h"
+#include "Pass/Pass.h"
 
 #include <vector>
 #include <algorithm>
@@ -93,6 +86,12 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 	RegisterPass("drawcull_pass", new gfx::DrawCullPass(this));
 	RegisterPass("ssao_pass", new gfx::SSAO(this));
 
+	// @NOTE For ComputePass with ImageStorage access layout we have to manually transition the image layout
+	gfx::BlurPass* blurPass = new gfx::BlurPass(this, 960, 540);
+	blurPass->SetInputTexture(mFrameGraphBuilder.AccessResource("ssao")->info.texture.texture);
+	blurPass->SetOutputTexture(mFrameGraphBuilder.AccessResource("ssao_blur")->info.texture.texture);
+	RegisterPass("ssao_blur_pass", blurPass);
+
 	gfx::CascadedShadowPass* csmShadowPass = new gfx::CascadedShadowPass(this);
 	RegisterPass("cascaded_shadow_pass", csmShadowPass);
 	gfx::FrameGraphResourceInfo& csmInfo =  mFrameGraphBuilder.AccessResource("csm_depth")->info;
@@ -121,8 +120,10 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.positionBuffer = mFrameGraphBuilder.AccessResource("gbuffer_position")->info.texture.texture.handle;
 	mEnvironmentData.emissiveBuffer = mFrameGraphBuilder.AccessResource("gbuffer_emissive")->info.texture.texture.handle;
 	mEnvironmentData.directionalShadowMap = mFrameGraphBuilder.AccessResource("csm_depth")->info.texture.texture.handle;
+	mEnvironmentData.ssaoBuffer = mFrameGraphBuilder.AccessResource("ssao_blur")->info.texture.texture.handle;
 	mEnvironmentData.globalAO = 0.2f;
 	mEnvironmentData.enableShadow = 1;
+	mEnvironmentData.enableAO = 1;
 }
 
 // TODO: temp width and height variable
@@ -327,7 +328,7 @@ void Renderer::Render(gfx::CommandList* commandList)
 	gfx::DescriptorInfo descriptorInfo = { &outputTexture, 0, 0, gfx::DescriptorType::Image };
 
 	uint32_t depth = 4;
-	if (mFinalAttachmentName == "ssao" || mFinalAttachmentName == "depth")
+	if (mFinalAttachmentName == "ssao" || mFinalAttachmentName == "depth" || mFinalAttachmentName == "ssao_blur")
 		depth = 1;
 	mDevice->PushConstants(commandList, mFullScreenPipeline, gfx::ShaderStage::Fragment, &depth, sizeof(uint32_t));
 
@@ -570,6 +571,11 @@ void Renderer::AddUI()
 	if (ImGui::Checkbox("Shadow", &enableShadow)) {
 		mEnvironmentData.enableShadow = uint32_t(enableShadow);
 		mFrameGraphBuilder.AccessNode("cascaded_shadow_pass")->enabled = enableShadow;
+	}
+
+	static bool enableAO = mEnvironmentData.enableAO > 0 ? true : false;
+	if (ImGui::Checkbox("AO", &enableAO)) {
+		mEnvironmentData.enableAO = uint32_t(enableAO);
 	}
 
 	ImGui::Text("Visible Light: %d", (uint32_t)projectedLightRects.size());

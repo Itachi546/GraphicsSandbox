@@ -13,8 +13,9 @@ struct ResourcePool
 	* resourceSize
 	* poolSize: Maximum number of resource count
 	*/
-	void Initialize(uint32_t poolSize)
+	void Initialize(uint32_t poolSize, std::string name)
 	{
+		this->name = name;
 		this->poolSize = poolSize;
 		freeIndices.resize(poolSize);
 		resourceMemory.resize(poolSize);
@@ -30,7 +31,7 @@ struct ResourcePool
 	*/
 	void Shutdown() {
 		if (usedIndices > 0) {
-			Logger::Warn("Resource pool has unfreed resources.\n");
+			Logger::Warn("Resource pool has unfreed resources [" + name + "]\n");
 			resourceMemory.clear();
 			freeIndices.clear();
 		}
@@ -50,7 +51,7 @@ struct ResourcePool
 			return freeIndex;
 		}
 
-		Logger::Error("Resource space unavailable");
+		Logger::Error("Resource space unavailable [" + name + "]");
 		return gfx::K_INVALID_RESOURCE_HANDLE;
 	}
 
@@ -66,7 +67,7 @@ struct ResourcePool
 			usedIndices--;
 		}
 		else {
-			Logger::Warn("Releasing already destroyed resource");
+			Logger::Warn("Releasing already destroyed resource [" + name + "]");
 		}
 	}
 
@@ -92,6 +93,9 @@ struct ResourcePool
 
 	// Count of used indices
 	uint32_t usedIndices;
+
+	// Name of resource pool
+	std::string name;
 };
 
 

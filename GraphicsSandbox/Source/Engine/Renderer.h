@@ -45,20 +45,23 @@ struct EnvironmentData {
 	uint32_t irradianceMap;
 	uint32_t prefilterEnvMap;
 	uint32_t brdfLUT;
-
 	uint32_t positionBuffer;
+
 	uint32_t normalBuffer;
 	uint32_t pbrBuffer;
 	uint32_t colorBuffer;
 	uint32_t emissiveBuffer;
 
+	uint32_t ssaoBuffer;
 	uint32_t directionalShadowMap;
 	float exposure;
 	float globalAO;
-	uint32_t nLight;
 
 	glm::vec3 cameraPosition;
+	uint32_t nLight;
+
 	uint32_t enableShadow;
+	uint32_t enableAO;
 };
 
 struct GlobalUniformData

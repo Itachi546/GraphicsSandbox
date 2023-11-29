@@ -2,15 +2,15 @@
   "name": "gltf_graph",
   "passes": [
     {
-      "name": "drawcull_pass",
-      "type": "compute",
       "enabled": true,
+      "name": "drawcull_pass",
       "outputs": [
         {
           "type": "buffer",
           "name": "indirect_draw_list"
         }
-      ]
+      ],
+      "type": "compute"
     },
     {
       "inputs": [
@@ -120,6 +120,10 @@
           "name": "csm_depth"
         },
         {
+          "type": "texture",
+          "name": "ssao_blur"
+        },
+        {
           "type": "buffer",
           "name": "cascade_info_buffer"
         }
@@ -154,6 +158,26 @@
           "format": "R16_SFLOAT",
           "resolution": [ 960, 540 ],
           "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
+        }
+      ]
+    },
+    {
+      "inputs": [
+        {
+          "type": "texture",
+          "name": "ssao"
+        }
+      ],
+      "name": "ssao_blur_pass",
+      "enabled":  true,
+      "type":  "compute",
+      "outputs": [
+        {
+          "format": "R16_SFLOAT",
+          "name": "ssao_blur",
+          "op": "VK_ATTACHMENT_LOAD_OP_CLEAR",
+          "resolution": [ 960, 540 ],
+          "type": "storage-image"
         }
       ]
     },

@@ -167,6 +167,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Source\Editor\TestScene.h" />
+    <ClInclude Include="Source\Engine\Pass\BlurPass.h" />
+    <ClInclude Include="Source\Engine\Pass\Pass.h" />
     <ClInclude Include="Source\Engine\Pass\SSAO.h" />
     <ClInclude Include="Source\Engine\GLTF-Mesh.h" />
     <ClInclude Include="Source\Engine\Pass\BloomPass.h" />
@@ -265,10 +267,14 @@
     <CustomBuild Include="Shaders\debug.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\box-blur.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />
+    <ClCompile Include="Source\Engine\Pass\BlurPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\SSAO.cpp" />
     <ClCompile Include="Source\Engine\Pass\BloomPass.cpp" />
     <ClCompile Include="Source\Engine\Pass\CascadedShadowPass.cpp" />

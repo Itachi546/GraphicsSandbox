@@ -25,7 +25,8 @@ namespace gfx
 		Buffer,
 		Texture,
 		Attachment,
-		Reference
+		Reference,
+		StorageImage
 	};
 	
 	struct FrameGraphResourceInfo {

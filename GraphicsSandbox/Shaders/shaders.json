@@ -32,6 +32,10 @@
       "shaders": [ "fullscreen.vert.spv", "ssao.frag.spv" ]
     },
     {
+      "name": "blur_pass",
+      "shaders": [ "box-blur.comp.spv" ]
+    },
+    {
       "name": "csm_pass",
       "shaders": [ "shadow.vert.spv", "shadow.geom.spv" ]
     },

@@ -1452,11 +1452,11 @@ namespace gfx {
         Logger::Debug("Created VulkanGraphicsDevice (" + std::to_string(timer.elapsedSeconds()) + "s)");
 
         // Initialize Resource Pool
-        renderPasses.Initialize(256);
-        pipelines.Initialize(128);
-        buffers.Initialize(256);
-        textures.Initialize(1024);
-        framebuffers.Initialize(64);
+        renderPasses.Initialize(256, "RenderPasses");
+        pipelines.Initialize(128, "Pipelines");
+        buffers.Initialize(256, "Buffers");
+        textures.Initialize(1024, "Textures");
+        framebuffers.Initialize(64, "Framebuffers");
 
         if (supportBindless)
         {

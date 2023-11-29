@@ -31,14 +31,17 @@ layout(push_constant) uniform PushConstants
 	uint uPBRBuffer;
 	uint uColorBuffer;
 	uint uEmissiveBuffer;
-
+	
+	uint uSSAOBuffer;
 	uint directionalShadowMap;
 	float exposure;
 	float globalAO;
-	uint nLight;
 
 	vec3 uCameraPosition;
+	uint nLight;
+
 	uint enableShadow;
+	uint enableAO;
 };
 
 vec3 ACESFilm(vec3 x)
@@ -64,7 +67,10 @@ vec3 CalculateColor(vec2 uv)
 	vec3 pbrFactor = texture(uTextures[nonuniformEXT(uPBRBuffer)], uv).rgb;
 	float metallic = pbrFactor.r;
 	float roughness = pbrFactor.g;
-	float ao = pbrFactor.b * globalAO;
+	//float ao = pbrFactor.b * globalAO;
+	float ao = globalAO;
+	if(enableAO > 0.5)
+    	ao = texture(uTextures[nonuniformEXT(uSSAOBuffer)],	uv).r * globalAO;
 
     vec3 n = texture(uTextures[nonuniformEXT(uNormalBuffer)], uv).rgb;
 

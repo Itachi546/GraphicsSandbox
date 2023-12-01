@@ -88,7 +88,7 @@
           "name": "csm_depth",
           "format": "D32_SFLOAT",
           "layers": 5,
-          "resolution": [ 2048, 2048 ],
+          "resolution": [ 4096, 4096 ],
           "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
         },
         {

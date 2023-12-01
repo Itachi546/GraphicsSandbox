@@ -10,6 +10,7 @@
 namespace gfx {
 	CascadedShadowPass::CascadedShadowPass(Renderer* renderer_) : mDevice(gfx::GetDevice()), renderer(renderer_)
 	{
+		csmTexture = renderer->mFrameGraphBuilder.AccessResource("csm_depth")->info.texture.texture;
 	}
 
 	void CascadedShadowPass::Initialize(RenderPassHandle renderPass)
@@ -51,6 +52,9 @@ namespace gfx {
 
 		descriptorInfos[0] = { renderer->mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
 		descriptorInfos[3] = { renderer->mCascadeInfoBuffer, 0, sizeof(CascadeData), gfx::DescriptorType::UniformBuffer };
+
+		mCascadeData.pcfSampleRadius = 4;
+		mCascadeData.pcfSampleRadiusMultiplier = 1.0f;
 	}
 
 	void CascadedShadowPass::Render(CommandList* commandList, Scene* scene)
@@ -85,6 +89,8 @@ namespace gfx {
 				mCascadeData.cascades[2].splitDistance.x,
 				mCascadeData.cascades[3].splitDistance.x,
 				mCascadeData.cascades[4].splitDistance.x);
+			ImGui::SliderInt("PCF Sample Count", &mCascadeData.pcfSampleRadius, 0, 5);
+			ImGui::SliderFloat("PCF Sample Radius", &mCascadeData.pcfSampleRadiusMultiplier, 0.1f, 10.0f);
 		}
 	}
 
@@ -196,7 +202,8 @@ namespace gfx {
 		}
 
 		// Copy data to uniform buffer
-		mCascadeData.shadowDims = glm::vec4(mShadowDims.x, mShadowDims.y, kNumCascades, kNumCascades);
+		mCascadeData.width = mShadowDims.x;
+		mCascadeData.height = mShadowDims.y;
 		mDevice->CopyToBuffer(renderer->mCascadeInfoBuffer, &mCascadeData, 0, sizeof(CascadeData));
 	}
 

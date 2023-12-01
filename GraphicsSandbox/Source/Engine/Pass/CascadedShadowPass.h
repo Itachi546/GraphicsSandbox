@@ -75,6 +75,8 @@ namespace gfx {
 		glm::vec3* cameraFrustumPoints = nullptr;
 		int debugCascadeIndex = 0;
 
+		TextureHandle csmTexture = gfx::INVALID_TEXTURE;
+
 		void update(Camera* camera, const glm::vec3& lightDirection);
 		void render(CommandList* commandList);
 	};

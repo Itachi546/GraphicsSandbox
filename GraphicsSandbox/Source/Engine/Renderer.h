@@ -81,7 +81,10 @@ struct Cascade {
 struct CascadeData
 {
 	Cascade cascades[5];
-	glm::vec4 shadowDims;
+	float width;
+	float height;
+	int pcfSampleRadius;
+	float pcfSampleRadiusMultiplier;
 };
 
 class Renderer

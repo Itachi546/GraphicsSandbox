@@ -48,7 +48,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, IMeshRenderer* meshRenderer, st
 		aabb.Transform(transform->worldMatrix);
 
 		auto& [min, max] = aabb;
-		const glm::vec3 halfExtent = (max - min) * 0.5f;
+		const glm::vec3 halfExtent = (max - min) * 0.5f * std::sqrt(2.0f);
 		glm::vec3 center = min + halfExtent;
 
 		float radius = glm::compMax(glm::abs(halfExtent));

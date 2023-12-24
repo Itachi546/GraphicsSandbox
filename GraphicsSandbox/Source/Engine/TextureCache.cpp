@@ -50,8 +50,9 @@ namespace TextureCache
 		desc.bindFlag = gfx::BindFlag::ShaderResource;
 		desc.format = gfx::Format::R8G8B8A8_UNORM;
 		desc.samplerInfo.wrapMode = gfx::TextureWrapMode::Repeat;
-		if (generateMipmap)
+		if (generateMipmap) {
 			desc.samplerInfo.enableAnisotropicFiltering = true;
+		}
 		
 		gfx::GraphicsDevice* device = gfx::GetDevice();
 

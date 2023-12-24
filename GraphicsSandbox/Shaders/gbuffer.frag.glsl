@@ -45,16 +45,16 @@ void main()
   //colorBuffer =	vec4(fs_in.bitangent, 1.0);
 
   // Export normals
-  vec3 n = fs_in.normal;
+  vec3 n = normalize(fs_in.normal);
   if(material.normalMap != INVALID_TEXTURE)
   {    
-    vec3 bumpNormal = normalize(texture(uTextures[nonuniformEXT(material.normalMap)], fs_in.uv).rgb * 2.0f - 1.0f);
-	vec3 t = fs_in.tangent;
-	vec3 bt	= fs_in.bitangent;
+    vec3 bumpNormal = texture(uTextures[nonuniformEXT(material.normalMap)], fs_in.uv).rgb * 2.0f - 1.0f;
+	vec3 t = normalize(fs_in.tangent);
+	vec3 bt	= normalize(fs_in.bitangent);
     mat3 tbn = mat3(t, bt, n);
-    n = tbn * bumpNormal;
+    n = normalize(tbn * bumpNormal);
   }
-  normalBuffer = vec4(normalize(n), 1.0f);
+  normalBuffer = vec4(n, 1.0f);
 
   // Export metallic, roughness and AO component
   float metallic = material.metallic;

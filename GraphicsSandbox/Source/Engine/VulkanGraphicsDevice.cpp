@@ -625,7 +625,7 @@ namespace gfx {
     }
 
     // TODO: Can create once and reuse
-    VkSampler CreateSampler(VkDevice device, const SamplerInfo* samplerInfo, float maxAnisotropy)
+    VkSampler CreateSampler(VkDevice device, const SamplerInfo* samplerInfo, float maxAnisotropy, VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR)
     {
         VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
 
@@ -640,6 +640,7 @@ namespace gfx {
         createInfo.addressModeW = addressMode;
         createInfo.anisotropyEnable = samplerInfo->enableAnisotropicFiltering;
         createInfo.maxAnisotropy = maxAnisotropy;
+        createInfo.mipmapMode = mipmapMode;
         createInfo.minLod = 0.0f;
         createInfo.maxLod = 16.0f;
         

@@ -65,5 +65,5 @@ void main() {
       ao += ((sampleDepth >= samplePos.z + uBias) ? 1.0f : 0.0f) * rangeCheck;
    }
 
-   fragColor = 1.0 - ao / float(uKernelSamples);
+   fragColor = pow(1.0 - ao / float(uKernelSamples), 2.0f);
 }

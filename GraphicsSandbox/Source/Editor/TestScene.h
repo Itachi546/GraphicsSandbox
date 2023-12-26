@@ -15,7 +15,7 @@ void InitializeSponzaScene(Scene* scene) {
 		ecs::Entity e1 = scene->CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/damagedHelmet/damagedHelmet.gltf");
 		TransformComponent* transform = compMgr->GetComponent<TransformComponent>(e1);
 		transform->scale = glm::vec3(0.5f);
-		transform->position.y += 1.0f;
+		transform->position += glm::vec3{3.0f, 1.0f, 0.0f};
 	}
 
 #if 1

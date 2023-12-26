@@ -71,9 +71,9 @@ vec3 CalculateColor(vec2 uv)
 	float metallic = pbrFactor.r;
 	float roughness = pbrFactor.g;
 	//float ao = pbrFactor.b * globalAO;
-	float ao = globalAO;
+	float occlusion = 1.0f;
 	if(enableAO > 0.5)
-    	ao = texture(uTextures[nonuniformEXT(uSSAOBuffer)],	uv).r * globalAO;
+    	occlusion = texture(uTextures[nonuniformEXT(uSSAOBuffer)],	uv).r;
 
     vec3 n = texture(uTextures[nonuniformEXT(uNormalBuffer)], uv).rgb;
 
@@ -124,7 +124,7 @@ vec3 CalculateColor(vec2 uv)
 		vec3  Kd = vec3(1.0f - Ks) * (1.0f - metallic);
 		vec3 specular =	(V * F * D) / (4.0f * NoV * NoL + 0.0001f);
 
-		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation * shadow;
+		Lo	+= (Kd * (albedo.rgb / PI) + specular) * NoL * light.color * attenuation * shadow * occlusion;
 	}
 
 	vec3 Ks = F_SchlickRoughness(NoV, f0, roughness);
@@ -137,7 +137,7 @@ vec3 CalculateColor(vec2 uv)
 	vec2 brdf = texture(uTextures[nonuniformEXT(uBRDFLUT)], vec2(NoV, roughness)).rg;
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
-	vec3 ambient = (Kd * diffuse + specular) * ao;
+	vec3 ambient = (Kd * diffuse + specular) * globalAO;
 	vec3 emissive = texture(uTextures[nonuniformEXT(uEmissiveBuffer)], uv).rgb;
 
 	Lo += ambient + emissive;

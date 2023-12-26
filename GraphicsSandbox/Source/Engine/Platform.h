@@ -11,13 +11,13 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-#else 
+#else
 #endif
 
 #if defined(GLFW_WINDOW)
-    #define GLFW_EXPOSE_NATIVE_WIN32
-   #include <GLFW/glfw3.h>
-   #include <GLFW/glfw3native.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #endif
 
 struct WindowProperties
@@ -29,19 +29,19 @@ struct WindowProperties
 namespace Platform
 {
 #ifdef GLFW_WINDOW
-	using WindowType = GLFWwindow*;
+	using WindowType = GLFWwindow *;
 #else
-using WindowType = void*;
+	using WindowType = void *;
 #endif
 
-    inline void GetWindowProperties(WindowType window, WindowProperties* properties)
+	inline void GetWindowProperties(WindowType window, WindowProperties *properties)
 	{
 #ifdef GLFW_WINDOW
 		glfwGetFramebufferSize(window, &properties->width, &properties->height);
 #endif
 	}
 
-	inline void SetWindowTitle(WindowType window, const char* title)
+	inline void SetWindowTitle(WindowType window, const char *title)
 	{
 #ifdef GLFW_WINDOW
 		glfwSetWindowTitle(window, title);
@@ -54,7 +54,7 @@ using WindowType = void*;
 		return glfwGetWin32Window(window);
 	}
 
-	inline std::string WStringToString(const std::wstring& wstr)
+	inline std::string WStringToString(const std::wstring &wstr)
 	{
 		std::string str;
 		size_t size;
@@ -66,4 +66,4 @@ using WindowType = void*;
 #endif
 };
 
-#define  EXIT_ERROR -1
+#define EXIT_ERROR -1

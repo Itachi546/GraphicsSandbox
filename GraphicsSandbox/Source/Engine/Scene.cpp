@@ -48,10 +48,10 @@ void Scene::GenerateMeshData(ecs::Entity entity, IMeshRenderer* meshRenderer, st
 		aabb.Transform(transform->worldMatrix);
 
 		auto& [min, max] = aabb;
-		const glm::vec3 halfExtent = (max - min) * 0.5f * std::sqrt(2.0f);
+		const glm::vec3 halfExtent = (max - min) * 0.5f;
 		glm::vec3 center = min + halfExtent;
 
-		float radius = glm::compMax(glm::abs(halfExtent));
+		float radius = glm::compMax(glm::abs(halfExtent)) * sqrtf(2.0f);
 		meshRenderer->boundingSphere = glm::vec4(center.x, center.y, center.z, radius);
 
 		DrawData drawData = {};

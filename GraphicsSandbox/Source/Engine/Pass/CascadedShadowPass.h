@@ -50,7 +50,7 @@ namespace gfx {
 
 		const int kNumCascades = 5;
 
-		glm::vec2 mShadowDims = glm::vec2(1024.0f, 1024.0f);
+		glm::vec2 mShadowDims = glm::vec2(2048.0f, 2048.0f);
 		float kShadowDistance = 80.0f;
 		float kSplitLambda = 0.9f;
 

@@ -23,6 +23,7 @@ namespace gfx
 		gfx::GraphicsDevice* mDevice = nullptr;
 
 		gfx::TextureHandle mDownSampleTexture;
+		gfx::TextureHandle mLightingTexture;
 
 		gfx::PipelineHandle mDownSamplePipeline;
 		gfx::PipelineHandle mUpSamplePipeline;
@@ -35,7 +36,7 @@ namespace gfx
 
 		void GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture);
 		void GenerateUpSamples(gfx::CommandList* commandList, float blurRadius);
-		void Composite(gfx::CommandList* commandList, TextureHandle inputTexture);
+		void Composite(gfx::CommandList* commandList);
 
 	};
 };

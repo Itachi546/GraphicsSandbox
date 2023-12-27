@@ -346,6 +346,10 @@ namespace gfx {
 						else
 							textureDesc.bindFlag = (resource->type == FrameGraphResourceType::Attachment ? BindFlag::RenderTarget : BindFlag::StorageImage) | BindFlag::ShaderResource;
 
+						// @TODO Hardcoded remove it
+						if (resource->name == "lighting")
+							textureDesc.bindFlag = textureDesc.bindFlag | BindFlag::StorageImage;
+
 						textureDesc.imageType = ImageType::I2D;
 						if (resource->info.texture.layerCount > 1)
 							textureDesc.imageViewType = gfx::ImageViewType::IV2DArray;

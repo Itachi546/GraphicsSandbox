@@ -86,7 +86,7 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 	RegisterPass("fxaa_pass", new gfx::FXAAPass(this, width, height));
 	RegisterPass("drawcull_pass", new gfx::DrawCullPass(this));
 	RegisterPass("ssao_pass", new gfx::SSAO(this));
-
+	RegisterPass("bloom_pass", new gfx::BloomPass(this, 1920, 1080));
 	// @NOTE For ComputePass with ImageStorage access layout we have to manually transition the image layout
 	gfx::BlurPass* blurPass = new gfx::BlurPass(this, 960, 540);
 	blurPass->SetInputTexture(mFrameGraphBuilder.AccessResource("ssao")->info.texture.texture);
@@ -133,6 +133,7 @@ void Renderer::SetScene(Scene* scene)
 	mEnvironmentData.globalAO = 0.2f;
 	mEnvironmentData.enableShadow = 1;
 	mEnvironmentData.enableAO = 1;
+	mEnvironmentData.bloomThreshold = 0.9f;
 }
 
 // TODO: temp width and height variable
@@ -502,6 +503,7 @@ void Renderer::AddUI()
 		ImGui::Checkbox("Mesh Shading", &mUseMeshShading);
 	ImGui::SliderFloat("globalAOMultiplier", &mEnvironmentData.globalAO, 0.0f, 1.0f);
 	ImGui::SliderFloat("exposure", &mEnvironmentData.exposure, 0.0f, 4.0f);
+	ImGui::DragFloat("Bloom Threshold", &mEnvironmentData.bloomThreshold, 0.001f, 0.0f, 1.0f);
 
 	static bool enableShadow = mEnvironmentData.enableShadow > 0 ? true : false;
 	if (ImGui::Checkbox("Shadow", &enableShadow)) {

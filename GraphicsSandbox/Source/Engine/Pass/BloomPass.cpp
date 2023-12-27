@@ -13,12 +13,13 @@ namespace gfx
 		mHeight(height)
 	{
 		mDevice = gfx::GetDevice();
+		mLightingTexture = renderer->mFrameGraphBuilder.AccessResource("lighting")->info.texture.texture;
 	}
 
 	void BloomPass::Initialize(RenderPassHandle renderPass)
 	{
 		ShaderPathInfo* upSamplePath = ShaderPath::get("upsample_pass");
-		ShaderPathInfo* downSamplePath = ShaderPath::get("upsample_pass");
+		ShaderPathInfo* downSamplePath = ShaderPath::get("downsample_pass");
 		ShaderPathInfo* compositePath = ShaderPath::get("bloom_composite_pass");
 
 		mDownSamplePipeline = gfx::CreateComputePipeline(downSamplePath->shaders[0], mDevice);
@@ -32,14 +33,14 @@ namespace gfx
 		textureDesc.height = mHeight >> 1;
 		textureDesc.mipLevels = kMaxMipLevel;
 		textureDesc.bindFlag = gfx::BindFlag::ShaderResource | gfx::BindFlag::StorageImage;
-		textureDesc.format = gfx::Format::R8G8B8A8_UNORM;
+		textureDesc.format = gfx::Format::R16B16G16A16_SFLOAT;
 		textureDesc.bAddToBindless = false;
 		mDownSampleTexture = mDevice->CreateTexture(&textureDesc);
 	}
 
 	void BloomPass::Render(CommandList* commandList, Scene* scene)
 	{
-		gfx::TextureHandle inputTexture = mRenderer->mFrameGraphBuilder.AccessResource("bright_texture")->info.texture.texture;
+		gfx::TextureHandle inputTexture = mRenderer->mFrameGraphBuilder.AccessResource("luminance")->info.texture.texture;
 		RangeId bloomDownsample = Profiler::StartRangeGPU(commandList, "Bloom Downsample");
 		GenerateDownSamples(commandList, inputTexture);
 		Profiler::EndRangeGPU(commandList, bloomDownsample);
@@ -47,15 +48,17 @@ namespace gfx
 		RangeId bloomUpsample = Profiler::StartRangeGPU(commandList, "Bloom Upsample");
 		GenerateUpSamples(commandList, mBlurRadius);
 		Profiler::EndRangeGPU(commandList, bloomUpsample);
+
+		Composite(commandList);
 	}
 
-	void BloomPass::Composite(gfx::CommandList* commandList, gfx::TextureHandle inputTexture)
+	void BloomPass::Composite(gfx::CommandList* commandList)
 	{
 		RangeId compositeId = Profiler::StartRangeGPU(commandList, "Bloom Composite Pass");
 		// Composite Pass
 		mDevice->BeginDebugLabel(commandList, "Bloom Composite Pass");
 		gfx::ResourceBarrierInfo imageBarrierInfo[] = {
-			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, inputTexture, 0, 0, 1, 1),
+			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderRead, gfx::AccessFlag::ShaderReadWrite, gfx::ImageLayout::General, mLightingTexture, 0, 0, 1, 1),
 			gfx::ResourceBarrierInfo::CreateImageBarrier(gfx::AccessFlag::ShaderReadWrite, gfx::AccessFlag::ShaderRead, gfx::ImageLayout::General, mDownSampleTexture, 0, 0, 1, 1)
 		};
 
@@ -67,14 +70,14 @@ namespace gfx
 
 		mDevice->PipelineBarrier(commandList, &barrier);
 		gfx::DescriptorInfo descriptorInfos[] = {
-			gfx::DescriptorInfo{&inputTexture, 0, 0, gfx::DescriptorType::Image},
+			gfx::DescriptorInfo{&mLightingTexture, 0, 0, gfx::DescriptorType::Image},
 			gfx::DescriptorInfo{&mDownSampleTexture, 0, 0, gfx::DescriptorType::Image},
 		};
 
 		uint32_t width = mWidth;
 		uint32_t height = mHeight;
 
-		float shaderData[] = { mBloomStrength, 0.0f, 0.0f, 0.0f };
+		float shaderData[] = { mBloomStrength, mRenderer->mEnvironmentData.exposure, 0.0f, 0.0f };
 		mDevice->PushConstants(commandList, mUpSamplePipeline, gfx::ShaderStage::Compute, shaderData, (uint32_t)(sizeof(float) * 4), 0);
 
 		mDevice->UpdateDescriptor(mCompositePipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
@@ -117,6 +120,9 @@ namespace gfx
 				imageBarrierInfo[0] = { gfx::AccessFlag::ShaderWrite, gfx::AccessFlag::ShaderRead };
 				imageBarrierInfo[0].resourceInfo.texture.baseMipLevel = i - 1;
 				imageBarrierInfo[0].resourceInfo.texture.texture = mDownSampleTexture;
+				imageBarrierInfo[0].resourceInfo.texture.mipCount = 1;
+				imageBarrierInfo[0].resourceInfo.texture.layerCount = ~0u;
+
 				imageBarrierInfo[1].resourceInfo.texture.baseMipLevel = i;
 
 				barrier.srcStage = gfx::PipelineStage::ComputeShader;

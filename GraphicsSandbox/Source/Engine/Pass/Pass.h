@@ -9,3 +9,4 @@
 #include "CascadedShadowPass.h"
 #include "SSAO.h"
 #include "BlurPass.h"
+#include "BloomPass.h"

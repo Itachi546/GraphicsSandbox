@@ -328,6 +328,9 @@
     <ClCompile Include="Source\Engine\MeshData.cpp">
       <Filter>SOURCE</Filter>
     </ClCompile>
+    <ClCompile Include="Source\Engine\GraphicsUtils.cpp">
+      <Filter>SOURCE</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Shaders\graph.json" />
@@ -353,6 +356,9 @@
     <None Include="Shaders\shadow.glsl" />
     <None Include="Shaders\shaders.json">
       <Filter>SHADERS</Filter>
+    </None>
+    <None Include="Shaders\utils.glsl">
+      <Filter>SOURCE</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -408,5 +414,8 @@
     <CustomBuild Include="Shaders\cubemap.frag.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="Shaders\downsample.comp.glsl" />
+    <CustomBuild Include="Shaders\upsample.comp.glsl" />
+    <CustomBuild Include="Shaders\bloom-final.comp.glsl" />
   </ItemGroup>
 </Project>

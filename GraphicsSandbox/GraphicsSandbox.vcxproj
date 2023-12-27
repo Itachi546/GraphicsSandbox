@@ -276,7 +276,19 @@
     <CustomBuild Include="Shaders\cubemap.vert.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\downsample.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\bloom-final.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="Shaders\globaldata.glsl">
+      <FileType>Document</FileType>
+    </None>
+    <CustomBuild Include="Shaders\upsample.comp.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <None Include="Shaders\utils.glsl">
       <FileType>Document</FileType>
     </None>
     <ClCompile Include="Source\Engine\DebugDraw.cpp" />

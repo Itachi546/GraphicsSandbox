@@ -2,6 +2,7 @@
 
 #extension GL_GOOGLE_include_directive : require
 #include "bindless.glsl"
+#include "utils.glsl"
 
 layout(location = 0) out vec4 fragColor;
 
@@ -24,12 +25,6 @@ const float QUALITY[7] = float[7](1.5, 2.0, 2.0, 2.0, 2.0, 4.0, 8.0);
  * However we already output the value with gamma correction from the 
  * lighting pass.
 */
-float rgb2Luma(vec3 rgb)
-{
-  //return sqrt(dot(rgb, vec3(0.299, 0.587, 0.114)));
-  return dot(rgb, vec3(0.299, 0.587, 0.114));
-}
-
 void main()
 {
    vec4 col = texture(uTextures[nonuniformEXT(uInputTexture)], uv);

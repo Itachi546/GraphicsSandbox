@@ -2187,7 +2187,7 @@ namespace gfx {
 
         std::vector<VkClearValue> clearValues(attachmentCount);
         for (uint32_t i = 0; i < attachmentCount; ++i)
-			clearValues[i].color = { 0.5f, 0.5f, 0.5f, 1 };
+			clearValues[i].color = { 0.0f, 0.0f, 0.0f, 0.0f };
 
         if (vkRenderpass->hasDepthAttachment)
         {
@@ -2743,15 +2743,12 @@ namespace gfx {
                 VkImageLayout newLayout = _ConvertLayout(barrierInfo.resourceInfo.texture.newLayout);
                 VulkanTexture* texture = textures.AccessResource(barrierInfo.resourceInfo.texture.texture.handle);
 
-                // @NOTE: for now we don't care about access mask
-                //if (texture->layout == newLayout)
-                //    continue;
-
+                VkImageLayout srcLayout = texture->layout;
                 imageBarriers.push_back(CreateImageBarrier(texture->image,
                     texture->imageAspect,
                     _ConvertAccessFlags(barrierInfo.srcAccessMask),
                     _ConvertAccessFlags(barrierInfo.dstAccessMask),
-                    texture->layout,
+                    srcLayout,
                     newLayout,
                     barrierInfo.resourceInfo.texture.baseMipLevel,
                     barrierInfo.resourceInfo.texture.baseArrayLevel,
@@ -2831,7 +2828,10 @@ namespace gfx {
                     TextureHandle texture = inputTextures[imageIndex];
                     VulkanDescriptorInfo descriptorInfo = {};
                     auto vkTexture = textures.AccessResource(texture.handle);
-					descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
+                    if(info._layout == ImageLayout::DontCare)
+                        descriptorInfo.imageInfo.imageLayout = vkTexture->layout;
+                    else
+                        descriptorInfo.imageInfo.imageLayout = _ConvertLayout(info._layout);
 					
 					assert(vkTexture->imageViews.size() > mipLevel);
 					descriptorInfo.imageInfo.imageView = vkTexture->imageViews[mipLevel];

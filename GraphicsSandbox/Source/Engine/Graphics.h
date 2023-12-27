@@ -74,7 +74,8 @@ namespace gfx
 		TransferSrcOptimal,
 		TransferDstOptimal,
 		ShaderReadOptimal,
-		PresentSrc
+		PresentSrc,
+		DontCare
 	};
 
 	enum class ImageUsage
@@ -467,6 +468,9 @@ namespace gfx
 		};
 		DescriptorType type = DescriptorType::StorageBuffer;
 		uint32_t totalSize = 64;
+		// Only used in case of miplevels when the layout is not clear between
+		// mip levels
+		ImageLayout _layout = ImageLayout::DontCare;
 
 		DescriptorInfo() = default;
 

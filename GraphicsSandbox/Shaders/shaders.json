@@ -17,15 +17,15 @@
     },
     {
       "name": "upsample_pass",
-      "shaders": [ "bloom-upsample.comp.spv" ]
+      "shaders": [ "upsample.comp.spv" ]
     },
     {
       "name": "downsample_pass",
-      "shaders": [ "bloom-downsample.comp.spv" ]
+      "shaders": [ "downsample.comp.spv" ]
     },
     {
       "name": "bloom_composite_pass",
-      "shaders": [ "bloom-composite.comp.spv" ]
+      "shaders": [ "bloom-final.comp.spv" ]
     },
     {
       "name": "ssao_pass",

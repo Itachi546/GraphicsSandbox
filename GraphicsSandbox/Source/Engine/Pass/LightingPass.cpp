@@ -36,9 +36,9 @@ void gfx::LightingPass::Initialize(RenderPassHandle renderPass)
 		pipelineDesc.rasterizationState.enableDepthClamp = true;
 		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
 
-		gfx::BlendState blendState = {};
-		pipelineDesc.blendStates = &blendState;
-		pipelineDesc.blendStateCount = 1;
+		gfx::BlendState blendStates[2] = {};
+		pipelineDesc.blendStates = blendStates;
+		pipelineDesc.blendStateCount = 2;
 		pipeline = gfx::GetDevice()->CreateGraphicsPipeline(&pipelineDesc);
 		delete[] vertexCode;
 		delete[] fragmentCode;
@@ -62,9 +62,9 @@ void gfx::LightingPass::Initialize(RenderPassHandle renderPass)
 		pipelineDesc.rasterizationState.enableDepthWrite = false;
 		pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
 
-		gfx::BlendState blendState = {};
-		pipelineDesc.blendStates = &blendState;
-		pipelineDesc.blendStateCount = 1;
+		gfx::BlendState blendStates[2] = {};
+		pipelineDesc.blendStates = blendStates;
+		pipelineDesc.blendStateCount = 2;
 		cubemapPipeline = gfx::GetDevice()->CreateGraphicsPipeline(&pipelineDesc);
 		delete[] vertexCode;
 		delete[] fragmentCode;
@@ -111,9 +111,13 @@ void gfx::LightingPass::drawCubemap(gfx::CommandList* commandList, Scene* scene)
 	descriptorInfos[2].offset = 0;
 	descriptorInfos[2].type = gfx::DescriptorType::Image;
 
+
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	device->UpdateDescriptor(cubemapPipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	device->BindPipeline(commandList, cubemapPipeline);
+	float bloomThreshold = renderer->mEnvironmentData.bloomThreshold;
+	device->PushConstants(commandList, cubemapPipeline, ShaderStage::Fragment, &bloomThreshold, (uint32_t)sizeof(float));
+
 	device->BindIndexBuffer(commandList, ib.buffer);
 	device->DrawIndexed(commandList, cubeRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
 }

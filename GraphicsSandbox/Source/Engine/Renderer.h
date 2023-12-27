@@ -62,6 +62,7 @@ struct EnvironmentData {
 
 	uint32_t enableShadow;
 	uint32_t enableAO;
+	float bloomThreshold;
 };
 
 struct GlobalUniformData

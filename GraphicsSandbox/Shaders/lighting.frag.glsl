@@ -4,9 +4,11 @@
 #include "pbr.glsl"
 #include "globaldata.glsl"
 #include "material.glsl"
+#include "utils.glsl"
 
 layout(location = 0) in vec2 uv;
 layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 brightColor;
 
 layout(binding = 0) readonly buffer LightBuffer {
    LightData lightData[];
@@ -45,17 +47,9 @@ layout(push_constant) uniform PushConstants
 
 	uint enableShadow;
 	uint enableAO;
+	float bloomThreshold;
 };
 
-vec3 ACESFilm(vec3 x)
-{
-   float a = 2.51f;
-   float b = 0.03f;
-   float c = 2.43f;
-   float d = 0.59f;
-   float e = 0.14f;
-   return clamp((x*(a*x+b))/(x*(c*x+d)+e), vec3(0.0f), vec3(1.0f));
-}
 
 float AttenuationSquareFallOff(float lightDistSqr, float invRadius) {
    const float factor = lightDistSqr * invRadius * invRadius;
@@ -65,6 +59,9 @@ float AttenuationSquareFallOff(float lightDistSqr, float invRadius) {
 
 vec3 CalculateColor(vec2 uv)
 {
+	vec3 emissive = texture(uTextures[nonuniformEXT(uEmissiveBuffer)], uv).rgb;
+	if(dot(emissive, vec3(1.0f)) > 0.001f) return emissive * 5.0f;
+
 	vec4 albedo = texture(uTextures[nonuniformEXT(uColorBuffer)], uv);
 
 	vec3 pbrFactor = texture(uTextures[nonuniformEXT(uPBRBuffer)], uv).rgb;
@@ -138,7 +135,7 @@ vec3 CalculateColor(vec2 uv)
 	vec3 specular = prefilteredColor * (Ks * brdf.x + brdf.y);
 
 	vec3 ambient = (Kd * diffuse + specular) * globalAO;
-	vec3 emissive = texture(uTextures[nonuniformEXT(uEmissiveBuffer)], uv).rgb;
+
 
 	Lo += ambient + emissive;
 
@@ -152,7 +149,14 @@ vec3 CalculateColor(vec2 uv)
 void main()
 {
 	vec3 Lo = CalculateColor(uv);
+	fragColor =	vec4(Lo, 1.0f);
+	if(rgb2Luma(Lo) > bloomThreshold) 
+	  brightColor = fragColor;
+    else
+	 brightColor = vec4(0.0f);
+	/*
  	Lo = ACESFilm(Lo * exposure);
     Lo = pow(Lo, vec3(0.4545));
 	fragColor =	vec4(Lo, 1.0f);
+	*/
 }

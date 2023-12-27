@@ -137,7 +137,14 @@
           {
             "type": "attachment",
             "name": "lighting",
-            "format": "B8G8R8A8_UNORM",
+            "format": "R16G16B16A16_SFLOAT",
+            "resolution": [ 1920, 1080 ],
+            "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
+          },
+          {
+            "type": "attachment",
+            "name": "luminance",
+            "format": "R16G16B16A16_SFLOAT",
             "resolution": [ 1920, 1080 ],
             "op": "VK_ATTACHMENT_LOAD_OP_CLEAR"
           }
@@ -209,13 +216,34 @@
         }
       ],
       "name": "transparent_pass",
-      "enabled": true,
+      "enabled": false,
       "outputs": [
         {
           "type": "reference",
           "name": "lighting"
         }
       ]
+    },
+    {
+      "inputs": [
+        {
+          "type": "reference",
+          "name": "luminance"
+        },
+        {
+          "type": "attachment",
+          "name":  "lighting"
+        }
+      ],
+      "name": "bloom_pass",
+      "enabled": true,
+      "outputs": [
+        {
+          "type": "reference",
+          "name": "lighting"
+        }
+      ],
+      "type": "compute"
     },
     {
       "inputs": [

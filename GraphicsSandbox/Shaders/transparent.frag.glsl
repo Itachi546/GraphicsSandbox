@@ -18,6 +18,7 @@ layout(location = 0) in VS_OUT
 } fs_in;
 
 layout(location = 0) out vec4 fragColor;
+layout(location = 1) out vec4 brightColor;
 
 layout(binding = 4) readonly buffer MaterialData {
   Material aMaterialData[];
@@ -199,7 +200,10 @@ vec4 CalculateColor(vec2 uv)
 void main()
 {
 	vec4 Lo = CalculateColor(fs_in.uv);
+	fragColor =	Lo;
+	/*
  	Lo.xyz = ACESFilm(Lo.xyz * exposure);
     Lo.xyz = pow(Lo.xyz, vec3(0.4545));
-	fragColor =	Lo;
+
+	*/
 }

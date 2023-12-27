@@ -402,5 +402,11 @@
     <CustomBuild Include="Shaders\box-blur.comp.glsl">
       <Filter>SHADERS</Filter>
     </CustomBuild>
+    <CustomBuild Include="Shaders\cubemap.vert.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\cubemap.frag.glsl">
+      <Filter>SHADERS</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

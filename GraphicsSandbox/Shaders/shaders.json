@@ -70,6 +70,10 @@
     {
       "name": "brdf_lut_gen_pass",
       "shaders": [ "brdf_lut.comp.spv" ]
+    },
+    {
+      "name": "cubemap",
+      "shaders": ["cubemap.vert.spv", "cubemap.frag.spv"]
     }
   ]
 }

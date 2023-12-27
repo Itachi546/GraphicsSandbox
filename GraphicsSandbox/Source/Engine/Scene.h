@@ -21,6 +21,7 @@ namespace ui {
 class Scene
 {
 public:
+	friend struct LightingPass;
 
 	Scene(){}
 
@@ -61,13 +62,11 @@ public:
 	void Shutdown();
 	virtual ~Scene() = default; 
 
-
-private:
 	// Default Entities
 	ecs::Entity mCube;
 	ecs::Entity mSphere;
 	ecs::Entity mPlane;
-
+private:
 	ecs::Entity mSun;
 
 	Camera mCamera;

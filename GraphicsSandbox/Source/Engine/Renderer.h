@@ -127,9 +127,9 @@ public:
 	std::vector<RenderBatch> mTransparentBatches;
 	std::vector<glm::vec4> projectedLightRects;
 
+	Scene* mScene;
 private:
 	gfx::GraphicsDevice* mDevice;
-	Scene* mScene;
 	bool mUpdateBatches = true;
 	uint32_t mSwapchainWidth;
 	uint32_t mSwapchainHeight;
@@ -141,7 +141,6 @@ private:
 	// Returns total number of drawElements pushed while creating batch
 	uint32_t CreateBatch(std::vector<DrawData>& drawDatas, std::vector<RenderBatch>& renderBatch, uint32_t lastOffset = 0);
 
-	gfx::PipelineHandle mCubemapPipeline;
 	gfx::RenderPassHandle mSwapchainRP;
 	gfx::PipelineHandle mFullScreenPipeline;
 
@@ -158,7 +157,6 @@ private:
 
 	void InitializeBuffers();
 	void AddUI();
-	void DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap);
 	void UpdateLights();
 
 

@@ -5,6 +5,7 @@
 
 class Scene;
 class Renderer;
+struct MeshRenderer;
 
 namespace gfx {
 	struct LightingPass : public FrameGraphPass
@@ -19,8 +20,9 @@ namespace gfx {
 
 		PipelineHandle pipeline;
 		Renderer* renderer;
-
-		
+		PipelineHandle cubemapPipeline;
+	private:
+		void drawCubemap(gfx::CommandList* commandList, Scene* scene);
 	};
 
 }

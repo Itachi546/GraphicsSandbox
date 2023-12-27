@@ -30,7 +30,10 @@ layout(binding = 5) readonly buffer LightBuffer {
 layout(binding = 6, std140) uniform CascadeInfo
 {
    Cascade cascades[MAX_CASCADES];
-   vec4 shadowDims;
+   float shadowMapWidth;
+   float shadowMapHeight;
+   int uPCFRadius;
+   float uPCFRadiusMultiplier;
 };
 
 #include "bindless.glsl"

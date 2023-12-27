@@ -647,7 +647,7 @@ void Renderer::AddUI()
 		ui::ImGuiService::GetInstance()->AddImage(csmDepth->info.texture.texture, ImVec2(256.0f, 256.0f));
 	}*/
 }
-
+/*
 void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
 {
 	MeshRenderer* meshRenderer = mScene->mComponentManager->GetComponent<MeshRenderer>(mScene->mCube);
@@ -676,7 +676,7 @@ void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cub
 	mDevice->BindIndexBuffer(commandList, ib.buffer);
 	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
 }
-
+*/
 void Renderer::UpdateLights()
 {
 	// Update Light Uniform Data

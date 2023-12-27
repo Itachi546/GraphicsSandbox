@@ -270,6 +270,12 @@
     <CustomBuild Include="Shaders\box-blur.comp.glsl">
       <FileType>Document</FileType>
     </CustomBuild>
+    <CustomBuild Include="Shaders\cubemap.frag.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
+    <CustomBuild Include="Shaders\cubemap.vert.glsl">
+      <FileType>Document</FileType>
+    </CustomBuild>
     <None Include="Shaders\globaldata.glsl">
       <FileType>Document</FileType>
     </None>

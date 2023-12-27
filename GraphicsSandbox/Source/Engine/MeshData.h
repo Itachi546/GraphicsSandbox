@@ -104,3 +104,7 @@ struct MeshDrawData {
 };
 
 static_assert(sizeof(MeshDrawData) % 16 == 0);
+
+void InitializeCubeMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+void InitializePlaneMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices, uint32_t subdivide = 2);
+void InitializeSphereMesh(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);

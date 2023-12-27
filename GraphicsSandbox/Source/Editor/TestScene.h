@@ -17,7 +17,6 @@ void InitializeSponzaScene(Scene* scene) {
 		transform->scale = glm::vec3(0.5f);
 		transform->position += glm::vec3{3.0f, 1.0f, 0.0f};
 	}
-
 #if 1
 	const int nLight = 10;
 	const float lightStep = 20.0f / nLight;
@@ -49,4 +48,6 @@ void InitializeAOScene(Scene* scene) {
 
 	auto compMgr = scene->GetComponentManager();
 	ecs::Entity e0 = scene->CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/dragon/dragon.glb");
+	ecs::Entity sphere = scene->CreateSphere("Sphere");
+	compMgr->GetComponent<TransformComponent>(sphere)->position = glm::vec3(0.0f, 1.0f, 3.0f);
 }

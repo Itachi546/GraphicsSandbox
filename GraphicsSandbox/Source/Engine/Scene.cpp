@@ -35,6 +35,8 @@ void Scene::Initialize()
 
 	// Initialize debug UI
 	mUISceneHierarchy = std::make_shared<ui::SceneHierarchy>(this);
+
+	initializePrimitiveMesh();
 }
 
 void Scene::GenerateMeshData(ecs::Entity entity, IMeshRenderer* meshRenderer, std::vector<DrawData>& opaque, std::vector<DrawData>& transparent)
@@ -51,7 +53,7 @@ void Scene::GenerateMeshData(ecs::Entity entity, IMeshRenderer* meshRenderer, st
 		const glm::vec3 halfExtent = (max - min) * 0.5f;
 		glm::vec3 center = min + halfExtent;
 
-		float radius = glm::compMax(glm::abs(halfExtent)) * sqrtf(2.0f);
+		float radius = glm::compMax(glm::abs(halfExtent)) * sqrtf(3.0f);
 		meshRenderer->boundingSphere = glm::vec4(center.x, center.y, center.z, radius);
 
 		DrawData drawData = {};
@@ -617,3 +619,146 @@ void Scene::AddChild(ecs::Entity parent, ecs::Entity child)
 
 }
 
+void Scene::initializePrimitiveMesh()
+{
+	// Careful create all entity and add component first and then upload the data
+	// to prevent the invalidation of refrence when container is resized
+	std::vector<Vertex> vertices;
+	std::vector<uint32_t> indices;
+
+	{
+		mCube = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(mCube).name = "Cube";
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mCube);
+		meshRenderer.SetRenderable(false);
+		InitializeCubeMesh(vertices, indices);
+		meshRenderer.vertexBuffer.byteOffset = 0;
+		meshRenderer.vertexBuffer.byteLength = static_cast<uint32_t>(vertices.size() * sizeof(Vertex));
+		meshRenderer.indexBuffer.byteOffset = 0;
+		meshRenderer.indexBuffer.byteLength = static_cast<uint32_t>(indices.size() * sizeof(uint32_t));
+		meshRenderer.boundingBox.min = glm::vec3(-1.0f);
+		meshRenderer.boundingBox.max = glm::vec3(1.0f);
+	}
+
+	{
+		uint32_t vertexOffset = (uint32_t)vertices.size();
+		uint32_t indexOffset = (uint32_t)indices.size();
+
+		mSphere = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(mSphere).name = "Sphere";
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mSphere);
+		meshRenderer.SetRenderable(false);
+		InitializeSphereMesh(vertices, indices);
+		meshRenderer.vertexBuffer.byteOffset = vertexOffset * sizeof(Vertex);
+		meshRenderer.vertexBuffer.byteLength = static_cast<uint32_t>((vertices.size() - vertexOffset) * sizeof(Vertex));
+		meshRenderer.indexBuffer.byteOffset = indexOffset * sizeof(uint32_t);
+		meshRenderer.indexBuffer.byteLength = static_cast<uint32_t>((indices.size() - indexOffset) * sizeof(uint32_t));
+		meshRenderer.boundingBox.min = glm::vec3(-1.0f);
+		meshRenderer.boundingBox.max = glm::vec3(1.0f);
+	}
+
+	{
+		uint32_t vertexOffset = (uint32_t)vertices.size();
+		uint32_t indexOffset = (uint32_t)indices.size();
+
+		mPlane = ecs::CreateEntity();
+		mComponentManager->AddComponent<NameComponent>(mPlane).name = "Plane";
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(mPlane);
+		meshRenderer.SetRenderable(false);
+		InitializePlaneMesh(vertices, indices);
+		meshRenderer.vertexBuffer.byteOffset = vertexOffset * sizeof(Vertex);
+		meshRenderer.vertexBuffer.byteLength = static_cast<uint32_t>((vertices.size() - vertexOffset) * sizeof(Vertex));
+		meshRenderer.indexBuffer.byteOffset = indexOffset * sizeof(uint32_t);
+		meshRenderer.indexBuffer.byteLength = static_cast<uint32_t>((indices.size() - indexOffset) * sizeof(uint32_t));
+		meshRenderer.boundingBox.min = glm::vec3(-1.0f, -0.01f, -1.0f);
+		meshRenderer.boundingBox.max = glm::vec3(1.0f, 0.01f, 1.0f);
+	}
+
+	// Allocate Vertex Buffer
+	uint32_t vertexSize = static_cast<uint32_t>(sizeof(Vertex) * vertices.size());
+	gfx::GPUBufferDesc bufferDesc = { vertexSize,
+		gfx::Usage::Default,
+		gfx::BindFlag::ShaderResource };
+
+	gfx::GraphicsDevice* device = gfx::GetDevice();
+	gfx::BufferHandle vertexBuffer = device->CreateBuffer(&bufferDesc);
+	mAllocatedBuffers.push_back(vertexBuffer);
+
+	device->CopyToBuffer(vertexBuffer, vertices.data(), 0, vertexSize);
+
+	// Allocate Index Buffer
+	uint32_t indexSize = (uint32_t)(sizeof(uint32_t) * indices.size());
+
+	bufferDesc.bindFlag = gfx::BindFlag::IndexBuffer;
+	bufferDesc.size = indexSize;
+	gfx::BufferHandle indexBuffer = device->CreateBuffer(&bufferDesc);
+	mAllocatedBuffers.push_back(indexBuffer);
+	device->CopyToBuffer(indexBuffer, indices.data(), 0, indexSize);
+
+	auto updateBuffers = [&](ecs::Entity entity, gfx::BufferHandle vertexBuffer, gfx::BufferHandle indexBuffer) {
+		MeshRenderer* meshRenderer = mComponentManager->GetComponent<MeshRenderer>(entity);
+		meshRenderer->vertexBuffer.buffer = vertexBuffer;
+		meshRenderer->indexBuffer.buffer = indexBuffer;
+	};
+
+	updateBuffers(mCube, vertexBuffer, indexBuffer);
+	updateBuffers(mSphere, vertexBuffer, indexBuffer);
+	updateBuffers(mPlane, vertexBuffer, indexBuffer);
+}
+
+
+ecs::Entity Scene::CreateCube(std::string_view name)
+{
+	ecs::Entity entity = ecs::CreateEntity();
+	{
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
+		MeshRenderer* prefab = mComponentManager->GetComponent<MeshRenderer>(mCube);
+
+        // No pointer so it should be fine
+		meshRenderer = *prefab;
+
+		meshRenderer.SetRenderable(true);
+	}
+
+	if (!name.empty())
+		mComponentManager->AddComponent<NameComponent>(entity).name = name;
+
+	mComponentManager->AddComponent<TransformComponent>(entity);
+	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
+	return entity;
+}
+
+ecs::Entity Scene::CreatePlane(std::string_view name)
+{
+	ecs::Entity entity = ecs::CreateEntity();
+	if (!name.empty())
+		mComponentManager->AddComponent<NameComponent>(entity).name = name;
+	{
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
+		MeshRenderer* prefab = mComponentManager->GetComponent<MeshRenderer>(mPlane);
+		meshRenderer = *prefab;
+		meshRenderer.SetRenderable(true);
+	}
+
+	mComponentManager->AddComponent<TransformComponent>(entity);
+	mComponentManager->AddComponent<MaterialComponent>(entity);
+	return entity;
+
+}
+
+ecs::Entity Scene::CreateSphere(std::string_view name)
+{
+	ecs::Entity entity = ecs::CreateEntity();
+	if (!name.empty())
+		mComponentManager->AddComponent<NameComponent>(entity).name = name;
+
+	mComponentManager->AddComponent<TransformComponent>(entity);
+	MaterialComponent& material = mComponentManager->AddComponent<MaterialComponent>(entity);
+	{
+		MeshRenderer& meshRenderer = mComponentManager->AddComponent<MeshRenderer>(entity);
+		MeshRenderer* prefab = mComponentManager->GetComponent<MeshRenderer>(mSphere);
+		meshRenderer = *prefab;
+		meshRenderer.SetRenderable(true);
+	}
+	return entity;
+}

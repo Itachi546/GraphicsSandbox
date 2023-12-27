@@ -38,6 +38,10 @@ public:
 	ecs::Entity CreateMesh(const std::string& filename);
 	ecs::Entity CreateLight(std::string_view name = "");
 
+	ecs::Entity CreateCube(std::string_view name);
+	ecs::Entity CreateSphere(std::string_view name);
+	ecs::Entity CreatePlane(std::string_view name);
+
 	void Update(float dt);
 
 	void SetSize(int width, int height);
@@ -118,6 +122,8 @@ private:
 		gfx::BufferHandle meshletVertexBuffer,
 		gfx::BufferHandle meshletTriangleBuffer,
 		ecs::Entity entity);
+
+	void initializePrimitiveMesh();
 
 	// Debug Options
 	std::shared_ptr<ui::SceneHierarchy> mUISceneHierarchy;

@@ -167,14 +167,14 @@ namespace ui {
 	{
 		if (ImGui::BeginTabItem("Create Objects"))
 		{
-			/*
-			if (ImGui::Button(ICON_FA_CIRCLE " Sphere"))
+
+			if (ImGui::Button("Sphere"))
 				mSelected = mScene->CreateSphere("Sphere");
-			if(ImGui::Button(ICON_FA_CUBE " Cube"))
+			if(ImGui::Button("Cube"))
 				mSelected = mScene->CreateCube("Cube");
-			if(ImGui::Button(ICON_FA_SQUARE_FULL " Plane"))
+			if(ImGui::Button("Plane"))
 				mSelected = mScene->CreatePlane("Plane");
-				*/
+
 			if (ImGui::Button(ICON_FA_LIGHTBULB " Light"))
 				mSelected = mScene->CreateLight("Light");
 			/*

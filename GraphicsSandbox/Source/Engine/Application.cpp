@@ -13,20 +13,22 @@
 #include <algorithm>
 #include <sstream>
 
+Platform::WindowType Application::window = nullptr;
+
 void Application::initialize_()
 {
 	Timer timer;
 	if (mInitialized)
 		return;
 
-	if (mWindow == nullptr)
+	if (window == nullptr)
 	{
 		Utils::ShowMessageBox("Window Not Initialized", "Error");
 		exit(EXIT_ERROR);
 	}
 
 	Logger::Initialize();
-	Input::Initialize(mWindow);
+	Input::Initialize(window);
 	TextureCache::Initialize();
 	ShaderPath::LoadStringPath();
 
@@ -41,7 +43,7 @@ void Application::initialize_()
 	Logger::Debug("Intialized Application: (" + std::to_string(timer.elapsedSeconds()) + "s)");
 
 	mGuiService = ui::ImGuiService::GetInstance();
-	mGuiService->Init(mWindow, mDevice);
+	mGuiService->Init(window, mDevice);
 }
 
 void Application::Run()
@@ -68,7 +70,7 @@ void Application::Run()
 
 	mWindowTitle << "CPU Time: " << timer.elapsedMilliseconds() << "ms ";
 	mWindowTitle << "FPS: " << 1.0f / mDeltaTime << " FrameTime: " << mDeltaTime * 1000.0f << "ms ";
-	Platform::SetWindowTitle(mWindow, mWindowTitle.str().c_str());
+	Platform::SetWindowTitle(window, mWindowTitle.str().c_str());
 	mWindowTitle.str(std::string());
 	
 	Profiler::EndRangeCPU(totalTime);
@@ -80,7 +82,7 @@ void Application::update_(float dt)
 	PreUpdate(dt);
 	mScene.Update(dt);
 	mRenderer->Update(dt);
-	Input::Update(mWindow);
+	Input::Update(window);
 	PostUpdate(dt);
 }
 
@@ -109,7 +111,7 @@ void Application::render_()
 
 void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 {
-	this->mWindow = window;
+	this->window = window;
 
 #if defined(USE_VULKAN)
 	gfx::ValidationMode validationMode = gfx::ValidationMode::Enabled;
@@ -124,7 +126,7 @@ void Application::SetWindow(Platform::WindowType window, bool fullscreen)
 
 	// Create Default RenderPass
 	WindowProperties props = {};
-	Platform::GetWindowProperties(mWindow, &props);
+	Platform::GetWindowProperties(window, &props);
 	mWidth = props.width;
 	mHeight = props.height;
 	

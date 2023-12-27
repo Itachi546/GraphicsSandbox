@@ -10,6 +10,7 @@
 #include "TextureCache.h"
 #include "GUI/ImGuiService.h"
 #include "MeshData.h"
+#include "EventDispatcher.h"
 
 #include "Pass/Pass.h"
 
@@ -102,6 +103,14 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 		mFinalOutput = (uint32_t)std::distance(mOutputAttachments.begin(), found);
 	else
 		mFinalOutput = 0;
+
+	EventDispatcher::Subscribe(EventType::CubemapChanged, [&](const Event& event) {
+		auto& env = mScene->GetEnvironmentMap();
+		mEnvironmentData.brdfLUT = env->GetBRDFLUT().handle;
+		mEnvironmentData.irradianceMap = env->GetIrradianceMap().handle;
+		mEnvironmentData.prefilterEnvMap = env->GetPrefilterMap().handle;
+		return true;
+		});
 }
 
 
@@ -347,31 +356,6 @@ void Renderer::Render(gfx::CommandList* commandList)
 }
 
 /*
-void Renderer::DrawShadowMap(gfx::CommandList* commandList)
-{
-	// BeginShadow Pass
-	auto rangeId = Profiler::StartRangeGPU(commandList, "Shadow Pass");
-	mShadowMap->BeginRender(commandList);
-
-	uint32_t lastOffset = 0;
-	auto pipeline = mShadowMap->mPipeline;
-	for (auto& batch : mRenderBatches)
-	{
-		if (batch.drawCommands.size() > 0)
-		{
-			DrawBatch(commandList, batch, lastOffset, pipeline, true);
-			lastOffset += (uint32_t)batch.drawCommands.size();
-		}
-	}
-
-	DrawSkinnedMesh(commandList, 0, mShadowMap->mSkinnedPipeline, true);
-
-	mShadowMap->EndRender(commandList);
-	Profiler::EndRangeGPU(commandList, rangeId);
-}
-*/
-
-/*
 void Renderer::Render(gfx::CommandList* commandList)
 {
 
@@ -451,54 +435,6 @@ void Renderer::Render(gfx::CommandList* commandList)
 		Profiler::EndRangeGPU(commandList, bloomPass);
 	}
 
-}
-/*
-gfx::TextureHandle Renderer::GetOutputTexture(OutputTextureType colorTextureType)
-{
-	switch (colorTextureType)
-	{
-	case OutputTextureType::HDROutput:
-		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 0);
-	case OutputTextureType::HDRBrightTexture:
-		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 1);
-	case OutputTextureType::HDRDepth:
-		return mDevice->GetFramebufferAttachment(mHdrFramebuffer, 2);
-	default:
-		assert(!"Undefined output texture");
-		return gfx::INVALID_TEXTURE;
-	}
-}
-*/
-/*
-gfx::PipelineHandle Renderer::loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode)
-{
-	// Create PBR Pipeline
-	uint32_t vertexLen = 0, fragmentLen = 0;
-	char* vertexCode = Utils::ReadFile(vsPath, &vertexLen);
-	char* fragmentCode = Utils::ReadFile(fsPath, &fragmentLen);
-	assert(vertexCode != nullptr);
-	assert(fragmentCode != nullptr);
-
-	gfx::PipelineDesc pipelineDesc = {};
-	std::vector<gfx::ShaderDescription> shaders(2);
-	shaders[0] = { vertexCode, vertexLen };
-	shaders[1] = { fragmentCode, fragmentLen };
-	pipelineDesc.shaderCount = 2;
-	pipelineDesc.shaderDesc = shaders.data();
-
-	pipelineDesc.renderPass = mHdrRenderPass;
-	pipelineDesc.rasterizationState.enableDepthTest = true;
-	pipelineDesc.rasterizationState.enableDepthWrite = true;
-	pipelineDesc.rasterizationState.cullMode = cullMode;
-
-	gfx::BlendState blendState[2] = {};
-	pipelineDesc.blendState = blendState;
-	pipelineDesc.blendStateCount = static_cast<uint32_t>(std::size(blendState));
-
-	gfx::PipelineHandle handle = mDevice->CreateGraphicsPipeline(&pipelineDesc);
-	delete[] vertexCode;
-	delete[] fragmentCode;
-	return handle;
 }
 */
 void Renderer::InitializeBuffers()
@@ -647,36 +583,7 @@ void Renderer::AddUI()
 		ui::ImGuiService::GetInstance()->AddImage(csmDepth->info.texture.texture, ImVec2(256.0f, 256.0f));
 	}*/
 }
-/*
-void Renderer::DrawCubemap(gfx::CommandList* commandList, gfx::TextureHandle cubemap)
-{
-	MeshRenderer* meshRenderer = mScene->mComponentManager->GetComponent<MeshRenderer>(mScene->mCube);
 
-	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[3] = {};
-	descriptorInfos[0].buffer = mGlobalUniformBuffer;
-	descriptorInfos[0].offset = 0;
-	descriptorInfos[0].size = sizeof(GlobalUniformData);
-	descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
-
-	auto& vb = meshRenderer->vertexBuffer;
-	auto& ib = meshRenderer->indexBuffer;
-
-	descriptorInfos[1].buffer = vb.buffer;
-	descriptorInfos[1].offset = vb.byteOffset;
-	descriptorInfos[1].size = vb.byteLength;
-	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
-
-	descriptorInfos[2].texture = &cubemap;
-	descriptorInfos[2].offset = 0;
-	descriptorInfos[2].type = gfx::DescriptorType::Image;
-
-	mDevice->UpdateDescriptor(mCubemapPipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
-	mDevice->BindPipeline(commandList, mCubemapPipeline);
-	mDevice->BindIndexBuffer(commandList, ib.buffer);
-	mDevice->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
-}
-*/
 void Renderer::UpdateLights()
 {
 	// Update Light Uniform Data
@@ -838,57 +745,6 @@ void Renderer::UpdateLights()
 	}
 }
 /*
-void Renderer::DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass)
-{
-	gfx::BufferView& vbView = batch.vertexBuffer;
-	gfx::BufferView& ibView = batch.indexBuffer;
-
-	auto vb = vbView.buffer;
-	auto ib = ibView.buffer;
-
-
-	// TODO: Define static Descriptor beforehand
-	gfx::DescriptorInfo descriptorInfos[10] = {};
-
-	descriptorInfos[1] = { vb, 0, mDevice->GetBufferSize(vb), gfx::DescriptorType::StorageBuffer};
-
-	descriptorInfos[2] = { mTransformBuffer, (uint32_t)(lastOffset * sizeof(glm::mat4)), (uint32_t)(batch.transforms.size() * sizeof(glm::mat4)), gfx::DescriptorType::StorageBuffer};
-
-	uint32_t descriptorCount = 3;
-	if (shadowPass)
-	{
-		auto cascadeInfoBuffer = mShadowMap->mBuffer;
-		descriptorInfos[0] = { cascadeInfoBuffer, 0, mDevice->GetBufferSize(cascadeInfoBuffer),gfx::DescriptorType::UniformBuffer };
-	}
-	else
-	{
-		descriptorInfos[0] = { mGlobalUniformBuffer, 0, sizeof(GlobalUniformData), gfx::DescriptorType::UniformBuffer };
-		auto& envMap = mScene->GetEnvironmentMap();
-		descriptorInfos[3] = { mMaterialBuffer, (uint32_t)(lastOffset * sizeof(MaterialComponent)), (uint32_t)(batch.materials.size() * (uint32_t)sizeof(MaterialComponent)), gfx::DescriptorType::StorageBuffer };
-
-		gfx::TextureHandle irradianceMap = envMap->GetIrradianceMap();
-		descriptorInfos[4] = { &irradianceMap, 0, 0, gfx::DescriptorType::Image };
-
-		gfx::TextureHandle prefilterMap = envMap->GetPrefilterMap();
-		descriptorInfos[5] = { &prefilterMap, 0, 0, gfx::DescriptorType::Image };
-
-		gfx::TextureHandle brdfLut = envMap->GetBRDFLUT();
-		descriptorInfos[6] = { &brdfLut, 0, 0, gfx::DescriptorType::Image };
-
-		descriptorInfos[7] = mShadowMap->GetCascadeBufferDescriptor();
-		descriptorInfos[8] = mShadowMap->GetShadowMapDescriptor();
-
-		descriptorCount += 6;
-
-	}
-
-	mDevice->UpdateDescriptor(pipeline, descriptorInfos, descriptorCount);
-	mDevice->BindPipeline(commandList, pipeline);
-
-	mDevice->BindIndexBuffer(commandList, ib);
-	mDevice->DrawIndexedIndirect(commandList, mDrawIndirectBuffer, lastOffset * sizeof(gfx::DrawIndirectCommand), (uint32_t)batch.drawCommands.size(), sizeof(gfx::DrawIndirectCommand));
-}
-
 // Offset parameter is used to reuse the Material Buffer
 void Renderer::DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, gfx::PipelineHandle pipeline, bool shadowPass)
 {

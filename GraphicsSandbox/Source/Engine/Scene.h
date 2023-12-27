@@ -43,6 +43,8 @@ public:
 	ecs::Entity CreateSphere(std::string_view name);
 	ecs::Entity CreatePlane(std::string_view name);
 
+	void LoadEnvMap(const std::string& name);
+
 	void Update(float dt);
 
 	void SetSize(int width, int height);
@@ -66,6 +68,7 @@ public:
 	ecs::Entity mCube;
 	ecs::Entity mSphere;
 	ecs::Entity mPlane;
+	std::string queuedHDR;
 private:
 	ecs::Entity mSun;
 

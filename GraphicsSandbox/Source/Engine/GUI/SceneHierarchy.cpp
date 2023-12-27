@@ -6,6 +6,7 @@
 #include "../Engine/Input.h"
 #include "../Engine/DebugDraw.h"
 #include "../Engine/TextureCache.h"
+#include "../Application.h"
 
 namespace ui {
 
@@ -175,16 +176,23 @@ namespace ui {
 			if(ImGui::Button("Plane"))
 				mSelected = mScene->CreatePlane("Plane");
 
-			if (ImGui::Button(ICON_FA_LIGHTBULB " Light"))
+			if (ImGui::Button("Light"))
 				mSelected = mScene->CreateLight("Light");
-			/*
+
 			if (ImGui::Button("Mesh"))
 			{
-				std::wstring file = FileDialog::Open(L"", mWindow, L"Model(*.sbox)\0*.sbox\0\0");
+				std::wstring file = FileDialog::Open(L"", Application::window, L"Model(gltf/glb)\0*.gltf\0*.glb\0\0");
 				if (file.size() > 0)
 					mSelected = mScene->CreateMesh(Platform::WStringToString(file).c_str());
 			}
-			*/
+
+			if (ImGui::Button("HDRI"))
+			{
+				std::wstring file = FileDialog::Open(L"", Application::window, L"HDRI(hdri)\0*.hdr\0\0");
+				if (file.size() > 0)
+					mScene->queuedHDR = Platform::WStringToString(file);
+			}
+
 			ImGui::EndTabItem();
 		}
 	}

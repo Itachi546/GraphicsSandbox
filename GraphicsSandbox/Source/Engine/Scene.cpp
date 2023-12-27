@@ -8,6 +8,7 @@
 #include "GUI/ImGuiService.h"
 #include "GUI/SceneHierarchy.h"
 #include "GLTF-Mesh.h"
+#include "EventDispatcher.h"
 
 #include <meshoptimizer.h>
 #include <execution>
@@ -27,11 +28,7 @@ void Scene::Initialize()
 
 	InitializeLights();
 
-	mEnvMap = std::make_unique<EnvironmentMap>();
-	mEnvMap->CreateFromHDRI(StringConstants::HDRI_PATH);
-	mEnvMap->CalculateIrradiance();
-	mEnvMap->Prefilter();
-	mEnvMap->CalculateBRDFLUT();
+	LoadEnvMap(StringConstants::HDRI_PATH);
 
 	// Initialize debug UI
 	mUISceneHierarchy = std::make_shared<ui::SceneHierarchy>(this);
@@ -144,6 +141,12 @@ void Scene::Update(float dt)
 	mUISceneHierarchy->Update(dt);
 	if(mShowBoundingBox)
 		DrawBoundingBox();
+
+	if (queuedHDR.length() > 0) {
+		LoadEnvMap(queuedHDR);
+		queuedHDR = "";
+		EventDispatcher::DispatchEvent(Event(EventType::CubemapChanged));
+	}
 }
 
 void Scene::SetSize(int width, int height)
@@ -540,6 +543,7 @@ void Scene::updateMeshRenderer(gfx::BufferHandle vertexBuffer,
 
 ecs::Entity Scene::CreateMesh(const std::string& filename)
 {
+	Logger::Debug("Loading Mesh: " + filename);
 	tinygltf::Model model;
 	if (gltfMesh::loadFile(filename, &model))
 	{
@@ -744,6 +748,18 @@ ecs::Entity Scene::CreatePlane(std::string_view name)
 	mComponentManager->AddComponent<MaterialComponent>(entity);
 	return entity;
 
+}
+
+void Scene::LoadEnvMap(const std::string& name)
+{
+	if (mEnvMap)
+		mEnvMap->Shutdown();
+
+	mEnvMap = std::make_unique<EnvironmentMap>();
+	mEnvMap->CreateFromHDRI(name.c_str());
+	mEnvMap->CalculateIrradiance();
+	mEnvMap->Prefilter();
+	mEnvMap->CalculateBRDFLUT();
 }
 
 ecs::Entity Scene::CreateSphere(std::string_view name)

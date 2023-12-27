@@ -49,8 +49,8 @@ namespace gfx {
 
 		device->BindPipeline(commandList, pipeline);
 
-		uint32_t workGroupX = (width + 7) / 8;
-		uint32_t wworkGroupY = (height + 7) / 8;
+		uint32_t workGroupX = gfx::GetWorkSize(width, 8);
+		uint32_t wworkGroupY = gfx::GetWorkSize(height, 8);
 		device->DispatchCompute(commandList, workGroupX, wworkGroupY, 1);
 	}
 

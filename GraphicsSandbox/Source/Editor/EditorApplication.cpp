@@ -16,7 +16,7 @@ void EditorApplication::Initialize()
 	initialize_();
 
 	WindowProperties props;
-	Platform::GetWindowProperties(mWindow, &props);
+	Platform::GetWindowProperties(window, &props);
 	mWidth = (float)props.width;
 	mHeight = (float)props.height;
 	mCamera = mScene.GetCamera();
@@ -93,8 +93,8 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	//InitializeSponzaScene(&mScene);
-	InitializeAOScene(&mScene);
+	InitializeSponzaScene(&mScene);
+	//InitializeAOScene(&mScene);
 }
 
 /*

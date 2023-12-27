@@ -19,7 +19,7 @@ public:
 		ofn.lpstrInitialDir = basePath;
 		ofn.nFilterIndex = 1;
 		ofn.nMaxFileTitle = 1;
-		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
 		if (GetOpenFileName(&ofn) == TRUE)
 			return std::wstring(szFile);
 #else 

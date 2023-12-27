@@ -159,13 +159,4 @@ private:
 	void AddUI();
 	void UpdateLights();
 
-
-	/*
-	gfx::PipelineHandle loadHDRPipeline(const char* vsPath, const char* fsPath, gfx::CullMode cullMode = gfx::CullMode::Back);
-
-	void DrawShadowMap(gfx::CommandList* commandList);
-	void DrawBatch(gfx::CommandList* commandList, RenderBatch& batch, uint32_t lastOffset, gfx::PipelineHandle pipeline, bool shadowPass = false);
-	void DrawSkinnedMesh(gfx::CommandList* commandList, uint32_t offset, gfx::PipelineHandle pipeline, bool shadowPass = false);
-	uint32_t addUnique(std::array<gfx::TextureHandle, 64>& textures, uint32_t& lastIndex, gfx::TextureHandle texture);
-	*/
 };

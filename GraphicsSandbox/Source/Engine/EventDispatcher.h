@@ -9,6 +9,7 @@
 enum class EventType
 {
 	WindowResize,
+	CubemapChanged
 };
 
 class Event

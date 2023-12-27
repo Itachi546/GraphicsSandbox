@@ -41,6 +41,7 @@ public:
 
 	virtual ~Application();
 
+	static Platform::WindowType window;
 protected:
 
 	void initialize_();
@@ -48,7 +49,6 @@ protected:
 	void update_(float dt);
 
 	void render_();
-
 
 	Timer mTimer;
 
@@ -59,7 +59,6 @@ protected:
 	float mDeltaTime = 0.0f;
 	float mElapsedTime = 0.0f;
 
-	Platform::WindowType mWindow = nullptr;
 	std::shared_ptr<gfx::GraphicsDevice > mDevice = nullptr;
 	ui::ImGuiService* mGuiService = nullptr;
 

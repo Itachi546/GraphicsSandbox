@@ -3,6 +3,7 @@
 #include "../Renderer.h"
 #include "../Scene.h"
 #include "../Utils.h"
+#include "../GraphicsUtils.h"
 #include "../StringConstants.h"
 #include "../GUI/ImGuiService.h"
 #include <cassert>
@@ -16,27 +17,14 @@ namespace gfx {
 	void DrawCullPass::Initialize(RenderPassHandle renderPass)
 	{
 		ShaderPathInfo* shaderPathInfo = ShaderPath::get("drawcull_pass");
-		PipelineDesc desc;
-		desc.shaderCount = 1;
-
-		ShaderDescription shaderDesc = {};
-		uint32_t sizeInBytes = 0;
-		const char* code = Utils::ReadFile(shaderPathInfo->shaders[0], &sizeInBytes);
-		assert(code != nullptr);
-		shaderDesc.code = code;
-		shaderDesc.sizeInByte = sizeInBytes;
-		desc.shaderDesc = &shaderDesc;
-
 		gfx::GraphicsDevice* device = gfx::GetDevice();
-		pipeline = device->CreateComputePipeline(&desc);
+		pipeline = gfx::CreateComputePipeline(shaderPathInfo->shaders[0], device);
 
 		gfx::GPUBufferDesc bufferDesc = {};
 		bufferDesc.size = sizeof(uint32_t);
 		bufferDesc.usage = gfx::Usage::Upload;
 		bufferDesc.bindFlag = gfx::BindFlag::ShaderResource;
 		visibleMeshCountBuffer = device->CreateBuffer(&bufferDesc);
-
-		delete[] code;
 	}
 
 	void DrawCullPass::Render(CommandList* commandList, Scene* scene)
@@ -100,7 +88,7 @@ namespace gfx {
 			uint32_t extraPushConstants[] = { batch.count, enableFrustumCulling ? 1u : 0u };
 			device->PushConstants(commandList, pipeline, gfx::ShaderStage::Compute, (void*) &extraPushConstants, sizeof(uint32_t) * 2, sizeof(glm::vec4) * 6);
 			device->BindPipeline(commandList, pipeline);
-			device->DispatchCompute(commandList, uint32_t((batch.count + 31) / 32), 1, 1);
+			device->DispatchCompute(commandList, gfx::GetWorkSize(batch.count, 32), 1, 1);
 
 			sumDIBufferSize += diBufferSize;
 			sumDICBufferSize += sizeof(uint32_t);

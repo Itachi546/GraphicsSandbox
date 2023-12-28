@@ -76,9 +76,6 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 		pass->Initialize(node->renderPass);
 	};
 
-	DebugDraw::Initialize(mSwapchainRP);
-	DebugDraw::SetEnable(mEnableDebugDraw);
-
 	RegisterPass("depth_pre_pass", new gfx::DepthPrePass(this));
 	RegisterPass("gbuffer_pass", new gfx::GBufferPass(this));
 	RegisterPass("lighting_pass", new gfx::LightingPass(this));
@@ -103,6 +100,9 @@ Renderer::Renderer(uint32_t width, uint32_t height) : mDevice(gfx::GetDevice()),
 		mFinalOutput = (uint32_t)std::distance(mOutputAttachments.begin(), found);
 	else
 		mFinalOutput = 0;
+
+	DebugDraw::Initialize(mFrameGraphBuilder.AccessNode("transparent_pass")->renderPass);
+	DebugDraw::SetEnable(mEnableDebugDraw);
 
 	EventDispatcher::Subscribe(EventType::CubemapChanged, [&](const Event& event) {
 		auto& env = mScene->GetEnvironmentMap();

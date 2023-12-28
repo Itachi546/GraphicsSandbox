@@ -216,11 +216,15 @@
         }
       ],
       "name": "transparent_pass",
-      "enabled": false,
+      "enabled": true,
       "outputs": [
         {
           "type": "reference",
           "name": "lighting"
+        },
+        {
+          "type": "buffer",
+          "name": "dummy_buffer"
         }
       ]
     },
@@ -233,7 +237,12 @@
         {
           "type": "attachment",
           "name":  "lighting"
+        },
+        {
+          "type": "buffer",
+          "name": "dummy_buffer"
         }
+
       ],
       "name": "bloom_pass",
       "enabled": true,

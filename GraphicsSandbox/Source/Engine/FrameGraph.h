@@ -56,6 +56,7 @@ namespace gfx
 		FrameGraphResourceType type;
 		FrameGraphResourceInfo info;
 		std::string name;
+		std::string alias;
 	};
 
 	struct FrameGraphResource {

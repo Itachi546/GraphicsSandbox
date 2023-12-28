@@ -41,20 +41,15 @@ namespace gfx
 	void BloomPass::Render(CommandList* commandList, Scene* scene)
 	{
 		gfx::TextureHandle inputTexture = mRenderer->mFrameGraphBuilder.AccessResource("luminance")->info.texture.texture;
-		RangeId bloomDownsample = Profiler::StartRangeGPU(commandList, "Bloom Downsample");
 		GenerateDownSamples(commandList, inputTexture);
-		Profiler::EndRangeGPU(commandList, bloomDownsample);
 
-		RangeId bloomUpsample = Profiler::StartRangeGPU(commandList, "Bloom Upsample");
 		GenerateUpSamples(commandList, mBlurRadius);
-		Profiler::EndRangeGPU(commandList, bloomUpsample);
 
 		Composite(commandList);
 	}
 
 	void BloomPass::Composite(gfx::CommandList* commandList)
 	{
-		RangeId compositeId = Profiler::StartRangeGPU(commandList, "Bloom Composite Pass");
 		// Composite Pass
 		mDevice->BeginDebugLabel(commandList, "Bloom Composite Pass");
 		gfx::ResourceBarrierInfo imageBarrierInfo[] = {
@@ -84,7 +79,6 @@ namespace gfx
 		mDevice->BindPipeline(commandList, mCompositePipeline);
 		mDevice->DispatchCompute(commandList, gfx::GetWorkSize(width, 32), gfx::GetWorkSize(height, 32), 1);
 		mDevice->EndDebugLabel(commandList);
-		Profiler::EndRangeGPU(commandList, compositeId);
 	}
 
 	void BloomPass::GenerateDownSamples(gfx::CommandList* commandList, gfx::TextureHandle brightTexture)

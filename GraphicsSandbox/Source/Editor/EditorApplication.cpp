@@ -93,8 +93,9 @@ void EditorApplication::PostUpdate(float dt) {
 
 void EditorApplication::InitializeScene()
 {
-	InitializeSponzaScene(&mScene);
+	//InitializeSponzaScene(&mScene);
 	//InitializeAOScene(&mScene);
+	InitializeGroundProjectedScene(&mScene);
 }
 
 /*

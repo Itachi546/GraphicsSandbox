@@ -10,7 +10,7 @@ struct ShaderPathInfo {
 
 namespace StringConstants {
 	// HDRI
-	constexpr const char* HDRI_PATH = "Assets/EnvironmentMap/sunset.hdr";
+	constexpr const char* HDRI_PATH = "Assets/EnvironmentMap/daytime.hdr";
 }
 
 namespace ShaderPath {

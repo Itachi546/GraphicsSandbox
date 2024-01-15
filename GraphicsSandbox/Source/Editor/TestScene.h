@@ -51,3 +51,18 @@ void InitializeAOScene(Scene* scene) {
 	ecs::Entity sphere = scene->CreateSphere("Sphere");
 	compMgr->GetComponent<TransformComponent>(sphere)->position = glm::vec3(0.0f, 1.0f, 3.0f);
 }
+
+
+void InitializeGroundProjectedScene(Scene* scene) {
+	Camera* camera = scene->GetCamera();
+	camera->SetPosition({ 5.0f, 3.0f, 0.0f });
+	camera->SetRotation({ 0.0f, -glm::pi<float>() * 0.5f, 0.0f });
+	camera->SetNearPlane(0.2f);
+	camera->SetFarPlane(500.0f);
+
+	auto compMgr = scene->GetComponentManager();
+	ecs::Entity e1 = scene->CreateMesh("C:/Users/Dell/OneDrive/Documents/3D-Assets/Models/damagedHelmet/damagedHelmet.gltf");
+	TransformComponent* transform = compMgr->GetComponent<TransformComponent>(e1);
+	transform->scale = glm::vec3(0.5f);
+	transform->position += glm::vec3{ 3.0f, 1.0f, 0.0f };
+}

@@ -89,7 +89,13 @@ void gfx::LightingPass::Render(CommandList* commandList, Scene* scene)
 void gfx::LightingPass::drawCubemap(gfx::CommandList* commandList, Scene* scene)
 {
 	// TODO: Define static Descriptor beforehand
-	MeshRenderer* cubeRenderer = scene->GetComponentManager()->GetComponent<MeshRenderer>(scene->mCube);
+	std::unique_ptr<EnvironmentMap>& envMap = scene->GetEnvironmentMap();
+
+	MeshRenderer* meshRenderer = nullptr;
+	if (envMap->enableGroundProjection)
+		meshRenderer = scene->GetComponentManager()->GetComponent<MeshRenderer>(scene->mSphere);
+	else 
+		meshRenderer = scene->GetComponentManager()->GetComponent<MeshRenderer>(scene->mCube);
 
 	gfx::DescriptorInfo descriptorInfos[3] = {};
 	descriptorInfos[0].buffer = renderer->mGlobalUniformBuffer;
@@ -97,15 +103,14 @@ void gfx::LightingPass::drawCubemap(gfx::CommandList* commandList, Scene* scene)
 	descriptorInfos[0].size = sizeof(GlobalUniformData);
 	descriptorInfos[0].type = gfx::DescriptorType::UniformBuffer;
 
-	auto& vb = cubeRenderer->vertexBuffer;
-	auto& ib = cubeRenderer->indexBuffer;
+	auto& vb = meshRenderer->vertexBuffer;
+	auto& ib = meshRenderer->indexBuffer;
 
 	descriptorInfos[1].buffer = vb.buffer;
 	descriptorInfos[1].offset = vb.byteOffset;
 	descriptorInfos[1].size = vb.byteLength;
 	descriptorInfos[1].type = gfx::DescriptorType::StorageBuffer;
 
-	std::unique_ptr<EnvironmentMap>& envMap = scene->GetEnvironmentMap();
 	TextureHandle texture = envMap->GetCubemap();
 	descriptorInfos[2].texture = &texture;
 	descriptorInfos[2].offset = 0;
@@ -115,11 +120,24 @@ void gfx::LightingPass::drawCubemap(gfx::CommandList* commandList, Scene* scene)
 	gfx::GraphicsDevice* device = gfx::GetDevice();
 	device->UpdateDescriptor(cubemapPipeline, descriptorInfos, static_cast<uint32_t>(std::size(descriptorInfos)));
 	device->BindPipeline(commandList, cubemapPipeline);
-	float bloomThreshold = renderer->mEnvironmentData.bloomThreshold;
-	device->PushConstants(commandList, cubemapPipeline, ShaderStage::Fragment, &bloomThreshold, (uint32_t)sizeof(float));
+
+	glm::vec3 camPos = scene->GetCamera()->GetPosition();
+	float pushData[] = {
+		camPos.x, camPos.y, camPos.z,
+		renderer->mEnvironmentData.bloomThreshold,
+		envMap->height, envMap->radius
+	};
+
+	device->PushConstants(commandList, cubemapPipeline, ShaderStage::Fragment, pushData, (uint32_t)(sizeof(float) * 6));
 
 	device->BindIndexBuffer(commandList, ib.buffer);
-	device->DrawIndexed(commandList, cubeRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
+	device->DrawIndexed(commandList, meshRenderer->GetIndexCount(), 1, ib.byteOffset / sizeof(uint32_t));
+
+	// @TEMP
+	if (ImGui::CollapsingHeader("Projected EnvMap")) {
+		ImGui::DragFloat("EnvMapRadius", &envMap->radius, 0.01f);
+		ImGui::DragFloat("EnvMapHeight", &envMap->height, 0.01f);
+	}
 }
 
 

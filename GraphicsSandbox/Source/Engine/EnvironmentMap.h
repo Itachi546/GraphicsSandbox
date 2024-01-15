@@ -27,6 +27,10 @@ public:
 
 	void Shutdown();
 	virtual ~EnvironmentMap() = default;
+
+	bool enableGroundProjection = true;
+	float radius = 100.0f;
+	float height = 10.0f;
 private:
 	gfx::PipelineHandle mHdriToCubemap;
 	gfx::PipelineHandle mIrradiancePipeline;

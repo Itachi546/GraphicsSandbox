@@ -31,9 +31,9 @@ void gfx::TransparentPass::Initialize(RenderPassHandle renderPass)
 
 	pipelineDesc.renderPass = renderPass;
 	pipelineDesc.rasterizationState.enableDepthTest = true;
-	pipelineDesc.rasterizationState.enableDepthWrite = true;
+	pipelineDesc.rasterizationState.enableDepthWrite = false;
 	pipelineDesc.rasterizationState.enableDepthClamp = true;
-	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::None;
+	pipelineDesc.rasterizationState.cullMode = gfx::CullMode::Back;
 
 	gfx::BlendState blendState = {};
 	blendState.enable = true;

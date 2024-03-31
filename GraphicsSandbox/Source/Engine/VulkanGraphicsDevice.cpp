@@ -1354,6 +1354,10 @@ namespace gfx {
         queueCreateInfo.queueCount = 1;
         queueCreateInfo.queueFamilyIndex = queueFamilyIndices_;
 
+        features2_.sType = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+        features12_.sType = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+        features11_.sType = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+
         // Enable required features
         features2_.features.multiDrawIndirect = true;
         features2_.features.pipelineStatisticsQuery = true;
